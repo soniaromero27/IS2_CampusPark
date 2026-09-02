@@ -1,7 +1,7 @@
-#IS2 CampusPark
+# CampusPark
 Trabajo Grupal de Ingenieria de Software II
 
-CampusPark — Sistema de Gestión de Estacionamiento Universitario
+CampusPark — Sistema de Gestión de Estacionamiento para campus universitario
 
 Descripción
 
