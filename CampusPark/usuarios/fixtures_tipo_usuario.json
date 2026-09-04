@@ -1,0 +1,32 @@
+[
+  {
+    "model": "usuarios.tipousuario",
+    "pk": 1,
+    "fields": {"nombre": "Docente", "descripcion": "Docente de la universidad"}
+  },
+  {
+    "model": "usuarios.tipousuario",
+    "pk": 2,
+    "fields": {"nombre": "Estudiante", "descripcion": "Estudiante de la universidad"}
+  },
+  {
+    "model": "usuarios.tipousuario",
+    "pk": 3,
+    "fields": {"nombre": "Funcionario", "descripcion": "Funcionario de la universidad"}
+  },
+  {
+    "model": "usuarios.tipousuario",
+    "pk": 4,
+    "fields": {"nombre": "Externo", "descripcion": "Usuario externo a la comunidad universitaria"}
+  },
+  {
+    "model": "usuarios.tipousuario",
+    "pk": 5,
+    "fields": {"nombre": "Administrador", "descripcion": "Administrador del sistema"}
+  },
+  {
+    "model": "usuarios.tipousuario",
+    "pk": 6,
+    "fields": {"nombre": "Personal de estacionamiento", "descripcion": "Controla ingresos y salidas"}
+  }
+]

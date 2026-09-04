@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Mis vehículos</h2>
+<a href="{% url 'vehiculos:agregar' %}">+ Registrar vehículo</a>
+<table>
+  <tr><th>Matrícula</th><th>Marca</th><th>Modelo</th><th>Color</th></tr>
+  {% for v in vehiculos %}
+  <tr>
+    <td>{{ v.matricula }}</td>
+    <td>{{ v.marca }}</td>
+    <td>{{ v.modelo }}</td>
+    <td>{{ v.color }}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="4">Todavía no registraste vehículos.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}
