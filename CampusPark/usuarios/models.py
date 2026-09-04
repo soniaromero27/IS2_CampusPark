@@ -30,6 +30,7 @@ class Usuario(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="perfil"
     )
     nombre = models.CharField(max_length=150)
+    apellido = models.CharField(max_length=150)
     documento = models.CharField(max_length=20, unique=True)
     correo = models.EmailField(unique=True)
     telefono = models.CharField(max_length=30, blank=True)

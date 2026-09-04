@@ -11,7 +11,8 @@ class RegistroUsuarioForm(UserCreationForm):
     Crea en un mismo paso el User de Django (login) y el perfil
     Usuario del dominio (nombre, documento, correo, telefono, tipo).
     """
-    nombre = forms.CharField(max_length=150, label="Nombre completo")
+    nombre = forms.CharField(max_length=150, label="Nombre")
+    apellido = forms.CharField(max_length=150, label="Apellido")
     documento = forms.CharField(max_length=20, label="Documento")
     correo = forms.EmailField(label="Correo electrónico")
     telefono = forms.CharField(max_length=30, required=False, label="Teléfono")
@@ -41,6 +42,7 @@ class RegistroUsuarioForm(UserCreationForm):
             Usuario.objects.create(
                 user=user,
                 nombre=self.cleaned_data["nombre"],
+                apellido=self.cleaned_data["apellido"],
                 documento=self.cleaned_data["documento"],
                 correo=self.cleaned_data["correo"],
                 telefono=self.cleaned_data.get("telefono", ""),
