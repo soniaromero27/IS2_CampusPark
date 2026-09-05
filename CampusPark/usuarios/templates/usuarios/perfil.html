@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Mi perfil</h2>
+<table>
+  <tr><th>Nombre</th><td>{{ perfil.nombre }}</td></tr>
+  <tr><th>Apellido</th><td>{{ perfil.apellido }}</td></tr>
+  <tr><th>Documento</th><td>{{ perfil.documento }}</td></tr>
+  <tr><th>Correo</th><td>{{ perfil.correo }}</td></tr>
+  <tr><th>Teléfono</th><td>{{ perfil.telefono }}</td></tr>
+  <tr><th>Tipo de usuario</th><td>{{ perfil.tipo }}</td></tr>
+  <tr><th>Fecha de registro</th><td>{{ perfil.fecha_registro }}</td></tr>
+</table>
+{% endblock %}

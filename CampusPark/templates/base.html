@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>CampusPark</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 640px; margin: 40px auto; color: #222; }
+    nav { margin-bottom: 24px; }
+    nav a { margin-right: 12px; }
+    .form-row { margin-bottom: 12px; }
+    label { display: block; font-weight: bold; margin-bottom: 4px; }
+    input, select { width: 100%; padding: 6px; box-sizing: border-box; }
+    button { padding: 8px 16px; background: #1a3e72; color: white; border: none; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+    .errorlist { color: #b00020; }
+  </style>
+</head>
+<body>
+  <h1>CampusPark</h1>
+  <nav>
+    {% if user.is_authenticated %}
+      <a href="{% url 'usuarios:perfil' %}">Mi perfil</a>
+      <a href="{% url 'vehiculos:lista' %}">Mis vehículos</a>
+      <a href="{% url 'usuarios:logout' %}">Cerrar sesión</a>
+    {% else %}
+      <a href="{% url 'usuarios:login' %}">Ingresar</a>
+      <a href="{% url 'usuarios:registro' %}">Registrarme</a>
+    {% endif %}
+  </nav>
+  {% block content %}{% endblock %}
+</body>
+</html>
