@@ -21,7 +21,7 @@ urlpatterns = [
     path("usuarios/", include("usuarios.urls")),
     path('', include('espacios.urls')),
     path('', include('movimientos.urls')),
-    path('', include('reglas.urls')),
+    #path('', include('reglas.urls')),
     path('', include('reservas.urls')),
     path("vehiculos/", include("vehiculos.urls")),
     path('', include('zonas.urls')),
