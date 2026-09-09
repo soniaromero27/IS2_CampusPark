@@ -308,9 +308,10 @@
                     Mis vehículos
                 </a>
 
-                <a href="{% url 'usuarios:logout' %}" class="logout">
-                    Cerrar sesión
-                </a>
+               <form method="post" action="{% url 'usuarios:logout' %}" style="display:inline">
+	                {% csrf_token %}
+	                 <button type="submit" style="background:none;border:none;color:#1155CC;text-decoration:underline;cursor:pointer;padding:0;font:inherit;">Cerrar sesión</button>
+	             </form>
 
             {% else %}
 

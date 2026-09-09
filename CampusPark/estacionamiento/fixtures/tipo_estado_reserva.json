@@ -1,0 +1,6 @@
+[
+  {"model": "estacionamiento.tipoestadoreserva", "pk": 1, "fields": {"nombre_estado_reserva": "Pendiente"}},
+  {"model": "estacionamiento.tipoestadoreserva", "pk": 2, "fields": {"nombre_estado_reserva": "Confirmada"}},
+  {"model": "estacionamiento.tipoestadoreserva", "pk": 3, "fields": {"nombre_estado_reserva": "Cancelada"}},
+  {"model": "estacionamiento.tipoestadoreserva", "pk": 4, "fields": {"nombre_estado_reserva": "Finalizada"}}
+]

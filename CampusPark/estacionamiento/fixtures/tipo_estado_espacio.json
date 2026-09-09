@@ -1,0 +1,6 @@
+[
+  {"model": "estacionamiento.tipoestadoespacio", "pk": 1, "fields": {"nombre_estado": "Libre"}},
+  {"model": "estacionamiento.tipoestadoespacio", "pk": 2, "fields": {"nombre_estado": "Ocupado"}},
+  {"model": "estacionamiento.tipoestadoespacio", "pk": 3, "fields": {"nombre_estado": "Reservado"}},
+  {"model": "estacionamiento.tipoestadoespacio", "pk": 4, "fields": {"nombre_estado": "Fuera de servicio"}}
+]

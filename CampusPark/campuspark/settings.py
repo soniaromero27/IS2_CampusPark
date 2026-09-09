@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'usuarios',
     'espacios',
+    'estacionamiento',
     'movimientos',
     'reglas',
     'reservas',
