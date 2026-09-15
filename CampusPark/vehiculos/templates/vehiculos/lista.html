@@ -2,18 +2,10 @@
 {% block content %}
 <h2>Mis vehículos</h2>
 
-<<<<<<< Updated upstream
-<form method="post" action="{% url 'vehiculos:agregar' %}" style="display:inline">
-	                {% csrf_token %}
-	                 <button type="submit">+ Agregar vehículo</button>
-</form>
-=======
 <a href="{% url 'vehiculos:agregar' %}" style="display:inline">
 	<button type="submit">Agregar vehículo</button>
 </a>
->>>>>>> Stashed changes
-				 
-<!--<a href="{% url 'vehiculos:agregar' %}">+ Agregar vehículo</a>-->
+
 <table>
   <tr><th>Matrícula</th><th>Marca</th><th>Modelo</th><th>Color</th></tr>
   {% for v in vehiculos %}
