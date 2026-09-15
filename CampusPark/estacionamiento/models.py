@@ -17,9 +17,9 @@ class Zona(models.Model):
         return self.nombre
 
 
-class TipoEstadoEspacio(models.Model):
+class TipoEstado(models.Model):
     """
-    Entidad 'tipo_estado_espacio' del DER: catálogo de estados posibles de un
+    Entidad 'tipo_estado' del DER: catálogo de estados posibles de un
     espacio (Libre, Ocupado, Reservado, Fuera de servicio, etc.).
     """
     nombre_estado = models.CharField(max_length=50, unique=True)
@@ -36,11 +36,11 @@ class Espacio(models.Model):
     """Entidad 'espacio' del DER."""
     numero = models.IntegerField()
     estado_espacio = models.IntegerField(
-        default=1, help_text="Código de estado (redundante con tipo_estado_espacio, tal como en el DER)."
+        default=1, help_text="Código de estado (redundante con tipo_estado, tal como en el DER)."
     )
     zona = models.ForeignKey(Zona, on_delete=models.CASCADE, related_name="espacios")
-    tipo_estado_espacio = models.ForeignKey(
-        TipoEstadoEspacio, on_delete=models.PROTECT, related_name="espacios"
+    tipo_estado = models.ForeignKey(
+        TipoEstado, on_delete=models.PROTECT, related_name="espacios"
     )
 
     class Meta:

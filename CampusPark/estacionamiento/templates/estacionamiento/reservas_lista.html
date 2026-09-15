@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Mis reservas</h2>
+				 
+<a href="{% url 'estacionamiento:reserva_crear' %}" style="display:inline">
+	                 <button>Nueva Reserva</button>
+	             </a>
+<table>
+  <tr>
+    <th>Zona</th><th>Espacio</th><th>Desde</th><th>Hasta</th><th>Estado</th><th></th>
+  </tr>
+  {% for r in reservas %}
+  <tr>
+    <td>{{ r.espacio.zona }}</td>
+    <td>N°{{ r.espacio.numero }}</td>
+    <td>{{ r.fecha_inicio }}</td>
+    <td>{{ r.fecha_fin }}</td>
+    <td>{{ r.tipo_estado_reserva }}</td>
+    <td>
+      {% if r.tipo_estado_reserva.nombre_estado_reserva != "Cancelada" %}
+        <a href="{% url 'estacionamiento:reserva_cancelar' r.pk %}">Cancelar</a>
+      {% endif %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="6">Todavía no tenés reservas.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

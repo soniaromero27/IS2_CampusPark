@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Mis vehículos</h2>
-<a href="{% url 'vehiculos:agregar' %}">+ Agregar vehículo</a>
+
+<a href="{% url 'vehiculos:agregar' %}" style="display:inline">
+	<button type="submit">Agregar vehículo</button>
+</a>
+
 <table>
   <tr><th>Matrícula</th><th>Marca</th><th>Modelo</th><th>Color</th></tr>
   {% for v in vehiculos %}
