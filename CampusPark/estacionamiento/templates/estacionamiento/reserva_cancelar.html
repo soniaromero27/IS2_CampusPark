@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Cancelar reserva</h2>
+<p>
+  ¿Confirmás que querés cancelar la reserva del espacio N°{{ reserva.espacio.numero }}
+  ({{ reserva.espacio.zona }}) del {{ reserva.fecha_inicio }} al {{ reserva.fecha_fin }}?
+</p>
+<form method="post">
+  {% csrf_token %}
+  <button type="submit">Sí, cancelar</button>
+</form>
+<p><a href="{% url 'estacionamiento:reservas_lista' %}">Volver</a></p>
+{% endblock %}

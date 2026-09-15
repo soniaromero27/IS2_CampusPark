@@ -1,0 +1,60 @@
+[
+  {
+    "model": "estacionamiento.zona",
+    "pk": 1,
+    "fields": {
+      "nombre": "Zona A",
+      "descripcion": "Estacionamiento principal frente al edificio central"
+    }
+  },
+  {
+    "model": "estacionamiento.espacio",
+    "pk": 1,
+    "fields": {"numero": 1, "estado_espacio": 1, "zona": 1, "tipo_estado": 1}
+  },
+  {
+    "model": "estacionamiento.espacio",
+    "pk": 2,
+    "fields": {"numero": 2, "estado_espacio": 1, "zona": 1, "tipo_estado": 1}
+  },
+  {
+    "model": "estacionamiento.espacio",
+    "pk": 3,
+    "fields": {"numero": 3, "estado_espacio": 1, "zona": 1, "tipo_estado": 1}
+  },
+  {
+    "model": "estacionamiento.espacio",
+    "pk": 4,
+    "fields": {"numero": 4, "estado_espacio": 1, "zona": 1, "tipo_estado": 1}
+  },
+  {
+    "model": "estacionamiento.espacio",
+    "pk": 5,
+    "fields": {"numero": 5, "estado_espacio": 1, "zona": 1, "tipo_estado": 1}
+  },
+  {
+    "model": "estacionamiento.espacio",
+    "pk": 6,
+    "fields": {"numero": 6, "estado_espacio": 1, "zona": 1, "tipo_estado": 1}
+  },
+  {
+    "model": "estacionamiento.espacio",
+    "pk": 7,
+    "fields": {"numero": 7, "estado_espacio": 1, "zona": 1, "tipo_estado": 1}
+  },
+  {
+    "model": "estacionamiento.espacio",
+    "pk": 8,
+    "fields": {"numero": 8, "estado_espacio": 1, "zona": 1, "tipo_estado": 1}
+  },
+  {
+    "model": "estacionamiento.espacio",
+    "pk": 9,
+    "fields": {"numero": 9, "estado_espacio": 1, "zona": 1, "tipo_estado": 1}
+  },
+  {
+    "model": "estacionamiento.espacio",
+    "pk": 10,
+    "fields": {"numero": 10, "estado_espacio": 1, "zona": 1, "tipo_estado": 1}
+  }
+]

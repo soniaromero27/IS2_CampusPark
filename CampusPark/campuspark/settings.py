@@ -38,13 +38,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'usuarios',
-    'espacios',
+    #'espacios',
     'estacionamiento',
-    'movimientos',
+    #'movimientos',
     'reglas',
-    'reservas',
+    #'reservas',
     'vehiculos',
-    'zonas'
+    #'zonas'
 ]
 
 MIDDLEWARE = [

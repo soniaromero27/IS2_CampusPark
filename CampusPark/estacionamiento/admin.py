@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Espacio, Movimiento, Reserva, TipoEstadoEspacio, TipoEstadoReserva, Zona
+from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona
 
 
 @admin.register(Zona)
@@ -8,15 +8,15 @@ class ZonaAdmin(admin.ModelAdmin):
     list_display = ("id", "nombre", "descripcion")
 
 
-@admin.register(TipoEstadoEspacio)
-class TipoEstadoEspacioAdmin(admin.ModelAdmin):
+@admin.register(TipoEstado)
+class TipoEstadoAdmin(admin.ModelAdmin):
     list_display = ("id", "nombre_estado")
 
 
 @admin.register(Espacio)
 class EspacioAdmin(admin.ModelAdmin):
-    list_display = ("id", "zona", "numero", "tipo_estado_espacio", "estado_espacio")
-    list_filter = ("zona", "tipo_estado_espacio")
+    list_display = ("id", "zona", "numero", "tipo_estado", "estado_espacio")
+    list_filter = ("zona", "tipo_estado")
 
 
 @admin.register(TipoEstadoReserva)

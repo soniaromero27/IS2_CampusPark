@@ -308,6 +308,10 @@
                     Mis vehículos
                 </a>
 
+				<a href="{% url 'estacionamiento:reservas_lista' %}">
+					Mis reservas
+				</a>
+
                <form method="post" action="{% url 'usuarios:logout' %}" style="display:inline">
 	                {% csrf_token %}
 	                 <button type="submit">Cerrar sesión</button>
@@ -344,7 +348,7 @@
     <!-- PIE DE PÁGINA -->
 
     <footer>
-        CampusPark © 2026 · Sistema de gestión de estacionamiento
+        CampusPark© 2026 · Sistema de Gestión de Estacionamiento
     </footer>
 
 </body>
