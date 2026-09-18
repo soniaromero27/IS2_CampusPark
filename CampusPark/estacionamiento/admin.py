@@ -15,7 +15,7 @@ class TipoEstadoAdmin(admin.ModelAdmin):
 
 @admin.register(Espacio)
 class EspacioAdmin(admin.ModelAdmin):
-    list_display = ("id", "zona", "numero", "tipo_estado", "estado_espacio")
+    list_display = ("id", "zona", "numero", "tipo_estado")
     list_filter = ("zona", "tipo_estado")
 
 

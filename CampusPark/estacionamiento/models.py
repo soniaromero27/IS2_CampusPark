@@ -35,9 +35,7 @@ class TipoEstado(models.Model):
 class Espacio(models.Model):
     """Entidad 'espacio' del DER."""
     numero = models.IntegerField()
-    estado_espacio = models.IntegerField(
-        default=1, help_text="Código de estado (redundante con tipo_estado, tal como en el DER)."
-    )
+    
     zona = models.ForeignKey(Zona, on_delete=models.CASCADE, related_name="espacios")
     tipo_estado = models.ForeignKey(
         TipoEstado, on_delete=models.PROTECT, related_name="espacios"
@@ -66,8 +64,8 @@ class TipoEstadoReserva(models.Model):
 
 class Reserva(models.Model):
     """Entidad 'reserva' del DER."""
-    fecha_inicio = models.DateField()
-    fecha_fin = models.DateField()
+    fecha_inicio = models.DateTimeField()
+    fecha_fin = models.DateTimeField()
     estado_reserva = models.IntegerField(
         default=1, help_text="Código de estado (redundante con tipo_estado_reserva, tal como en el DER)."
     )
