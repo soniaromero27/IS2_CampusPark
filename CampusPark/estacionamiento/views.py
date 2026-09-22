@@ -65,7 +65,7 @@ def lista_movimientos_view(request):
     ).order_by("-fecha_hora_ingreso")
     return render(request, "estacionamiento/movimientos_lista.html", {"movimientos": movimientos})
 
-
+'''
 @personal_requerido
 def registrar_ingreso_view(request):
     """
@@ -90,7 +90,42 @@ def registrar_ingreso_view(request):
     else:
         form = IngresoForm()
     return render(request, "estacionamiento/ingreso_form.html", {"form": form})
+'''
 
+
+@personal_requerido
+def registrar_ingreso_view(request):
+    """
+    Registrar ingreso de vehículo: sólo Personal de Estacionamiento o
+    Administrador. Se ingresa únicamente la patente; si coincide con un
+    Vehiculo registrado se linkea (y con él su Usuario dueño), y si no,
+    el movimiento se crea igual, sin Vehiculo asociado ("Desconocido"),
+    sin crear ningún Vehiculo ni Usuario nuevo. Marca el espacio
+    elegido como 'Ocupado'.
+    """
+    if request.method == "POST":
+        form = IngresoForm(request.POST)
+        if form.is_valid():
+            patente = form.cleaned_data["patente"]
+            espacio = form.cleaned_data["espacio"]
+            vehiculo = Vehiculo.objects.filter(matricula=patente).select_related("usuario").first()
+ 
+            Movimiento.objects.create(
+                patente=patente,
+                vehiculo=vehiculo,
+                espacio=espacio,
+                fecha_hora_ingreso=timezone.now(),
+            )
+ 
+            estado_ocupado, _ = TipoEstado.objects.get_or_create(nombre_estado="Ocupado")
+            espacio.tipo_estado = estado_ocupado
+            espacio.save()
+ 
+            return redirect("estacionamiento:movimientos_lista")
+    else:
+        form = IngresoForm()
+    return render(request, "estacionamiento/ingreso_form.html", {"form": form})
+ 
 
 @personal_requerido
 def registrar_salida_view(request, pk):
