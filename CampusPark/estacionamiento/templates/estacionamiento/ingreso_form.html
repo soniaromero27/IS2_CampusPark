@@ -13,5 +13,11 @@
   {% endfor %}
   <button type="submit">Ingresar vehículo</button>
 </form>
+
+<datalist id="patentes-datalist">
+  {% for p in patentes %}
+    <option value="{{ p }}"></option>
+  {% endfor %}
+</datalist>
 <p><a href="{% url 'estacionamiento:movimientos_lista' %}">Volver</a></p>
 {% endblock %}

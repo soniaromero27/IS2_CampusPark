@@ -82,6 +82,8 @@ class Reserva(models.Model):
     def __str__(self):
         return f"Reserva #{self.id} - {self.usuario} - {self.espacio}"
 
+
+
 class Movimiento(models.Model):
     """
     Entidad 'movimiento' del DER. El DER tipa fecha_hora_ingreso y
@@ -121,4 +123,3 @@ class Movimiento(models.Model):
         if self.vehiculo_id and self.vehiculo.usuario_id:
             return f"{self.vehiculo.usuario.nombre} {self.vehiculo.usuario.apellido}"
         return "Desconocido"
- 
