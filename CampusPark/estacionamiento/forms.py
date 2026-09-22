@@ -1,6 +1,8 @@
 from django import forms
 
-from .models import Reserva
+from .models import Espacio, Movimiento, Reserva
+from vehiculos.models import Vehiculo
+from datetime import timedelta
 
 
 class ReservaForm(forms.ModelForm):
@@ -8,8 +10,8 @@ class ReservaForm(forms.ModelForm):
         model = Reserva
         fields = ["espacio", "fecha_inicio", "fecha_fin"]
         widgets = {
-            "fecha_inicio": forms.DateInput(attrs={"type": "date"}),
-            "fecha_fin": forms.DateInput(attrs={"type": "date"}),
+            "fecha_inicio": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "fecha_fin": forms.DateTimeInput(attrs={"type": "datetime-local"}),
         }
 
     def clean(self):
@@ -39,3 +41,92 @@ class ReservaForm(forms.ModelForm):
                 )
 
         return cleaned_data
+
+'''
+class VehiculoChoiceField(forms.ModelChoiceField):
+    """Muestra matrícula + dueño, para que el personal identifique el vehículo."""
+
+    def label_from_instance(self, obj):
+        return f"{obj.matricula} — {obj.usuario.nombre} {obj.usuario.apellido}"
+
+
+class IngresoForm(forms.ModelForm):
+    """
+    Registrar ingreso de vehículo. Sólo la usan Personal de Estacionamiento
+    o Administrador (ver estacionamiento.decorators.personal_requerido), por
+    eso permite elegir el vehículo de CUALQUIER usuario registrado, no sólo
+    los propios.
+    """
+
+    vehiculo = VehiculoChoiceField(
+        queryset=Vehiculo.objects.select_related("usuario").order_by(
+            "usuario__apellido", "usuario__nombre", "matricula"
+        ),
+        label="Vehículo",
+    )
+
+    class Meta:
+        model = Movimiento
+        fields = ["vehiculo", "espacio"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["espacio"].queryset = Espacio.objects.filter(
+            tipo_estado__nombre_estado="Libre"
+        ).select_related("zona")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        vehiculo = cleaned_data.get("vehiculo")
+
+        if vehiculo and Movimiento.objects.filter(
+            vehiculo=vehiculo, fecha_hora_salida__isnull=True
+        ).exists():
+            raise forms.ValidationError(
+                "Ese vehículo ya tiene un ingreso registrado sin salida."
+            )
+
+        return cleaned_data
+'''
+
+
+class IngresoForm(forms.Form):
+    """
+    Registrar ingreso de vehículo. Sólo la usan Personal de Estacionamiento
+    o Administrador (ver estacionamiento.decorators.personal_requerido).
+ 
+    El personal ingresa únicamente la patente; la vista se encarga de
+    buscar si corresponde a un Vehiculo/Usuario ya registrado. No hace
+    falta que el vehículo exista de antemano: si la patente no está
+    registrada, el movimiento igual se crea, quedando asociado a un
+    usuario "Desconocido" (sin crear ningún Vehiculo ni Usuario nuevo).
+    """
+ 
+    patente = forms.CharField(max_length=15, label="Chapa / Patente")
+    espacio = forms.ModelChoiceField(queryset=Espacio.objects.none(), label="Espacio")
+ 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["espacio"].queryset = Espacio.objects.filter(
+            tipo_estado__nombre_estado="Libre"
+        ).select_related("zona")
+ 
+    def clean_patente(self):
+        patente = self.cleaned_data["patente"].strip().upper()
+        if not patente:
+            raise forms.ValidationError("Ingresá una patente válida.")
+        return patente
+ 
+    def clean(self):
+        cleaned_data = super().clean()
+        patente = cleaned_data.get("patente")
+ 
+        if patente and Movimiento.objects.filter(
+            patente=patente, fecha_hora_salida__isnull=True
+        ).exists():
+            raise forms.ValidationError(
+                "Esa patente ya tiene un ingreso registrado sin salida."
+            )
+ 
+        return cleaned_data
+         

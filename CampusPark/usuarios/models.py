@@ -1,6 +1,10 @@
 from django.conf import settings
 from django.db import models
 
+# Nombres de TipoUsuario que tienen permisos de "personal" del estacionamiento
+# (pueden registrar ingresos y salidas de cualquier vehículo).
+TIPOS_PERSONAL = ("personal de estacionamiento", "administrador")
+
 
 class TipoUsuario(models.Model):
     """
@@ -45,3 +49,8 @@ class Usuario(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.tipo})"
+
+    @property
+    def es_personal(self):
+        """True si el tipo de usuario es Personal de Estacionamiento o Administrador."""
+        return self.tipo.nombre.strip().lower() in TIPOS_PERSONAL
