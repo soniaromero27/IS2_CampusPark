@@ -5,6 +5,7 @@ from django.utils import timezone
 from .decorators import personal_requerido
 from .forms import IngresoForm, ReservaForm
 from .models import Movimiento, Reserva, TipoEstado, TipoEstadoReserva
+from vehiculos.models import Vehiculo
 
 
 @login_required
@@ -70,26 +71,39 @@ def lista_movimientos_view(request):
 def registrar_ingreso_view(request):
     """
     Registrar ingreso de vehículo: sólo Personal de Estacionamiento o
-    Administrador. Pueden elegir el vehículo de cualquier usuario
-    registrado (ver IngresoForm). Crea el Movimiento con la fecha/hora
-    actual y marca el espacio elegido como 'Ocupado'.
+    Administrador. Se ingresa únicamente la patente; si coincide con un
+    Vehiculo registrado se linkea (y con él su Usuario dueño), y si no,
+    el movimiento se crea igual, sin Vehiculo asociado ("Desconocido"),
+    sin crear ningún Vehiculo ni Usuario nuevo. Marca el espacio
+    elegido como 'Ocupado'.
     """
     if request.method == "POST":
         form = IngresoForm(request.POST)
         if form.is_valid():
-            movimiento = form.save(commit=False)
-            movimiento.fecha_hora_ingreso = timezone.now()
-            movimiento.save()
+            patente = form.cleaned_data["patente"]
+            espacio = form.cleaned_data["espacio"]
+            vehiculo = Vehiculo.objects.filter(matricula=patente).select_related("usuario").first()
+
+            Movimiento.objects.create(
+                patente=patente,
+                vehiculo=vehiculo,
+                espacio=espacio,
+                fecha_hora_ingreso=timezone.now(),
+            )
 
             estado_ocupado, _ = TipoEstado.objects.get_or_create(nombre_estado="Ocupado")
-            espacio = movimiento.espacio
             espacio.tipo_estado = estado_ocupado
             espacio.save()
 
             return redirect("estacionamiento:movimientos_lista")
     else:
         form = IngresoForm()
-    return render(request, "estacionamiento/ingreso_form.html", {"form": form})
+    patentes = Vehiculo.objects.order_by("matricula").values_list("matricula", flat=True)
+    return render(
+        request,
+        "estacionamiento/ingreso_form.html",
+        {"form": form, "patentes": patentes},
+    )
 
 
 @personal_requerido

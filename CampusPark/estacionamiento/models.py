@@ -83,21 +83,43 @@ class Reserva(models.Model):
         return f"Reserva #{self.id} - {self.usuario} - {self.espacio}"
 
 
+
 class Movimiento(models.Model):
     """
     Entidad 'movimiento' del DER. El DER tipa fecha_hora_ingreso y
     fecha_hora_salida como DATE; se implementan como DateTimeField
     porque el sistema necesita registrar la hora exacta de ingreso y
     salida para poder calcular el cobro por hora (ver Tarifa).
+ 
+    El personal de estacionamiento registra el movimiento ingresando
+    sólo la patente. 'patente' guarda siempre lo tipeado, exista o no
+    un Vehiculo registrado con esa matrícula. Si existe, se linkea en
+    'vehiculo' (y de ahí se conoce el usuario dueño); si no existe,
+    'vehiculo' queda en null y el movimiento se considera de un
+    usuario "Desconocido", sin crear ningún Vehiculo ni Usuario nuevo.
     """
     fecha_hora_ingreso = models.DateTimeField()
     fecha_hora_salida = models.DateTimeField(null=True, blank=True)
-    vehiculo = models.ForeignKey(Vehiculo, on_delete=models.CASCADE, related_name="movimientos")
+    patente = models.CharField(max_length=15, default="SIN CHAPA")
+    vehiculo = models.ForeignKey(
+        Vehiculo,
+        on_delete=models.SET_NULL,
+        related_name="movimientos",
+        null=True,
+        blank=True,
+    )
     espacio = models.ForeignKey(Espacio, on_delete=models.CASCADE, related_name="movimientos")
-
+ 
     class Meta:
         verbose_name = "Movimiento"
         verbose_name_plural = "Movimientos"
-
+ 
     def __str__(self):
-        return f"Movimiento #{self.id} - {self.vehiculo}"
+        return f"Movimiento #{self.id} - {self.patente}"
+ 
+    @property
+    def usuario_nombre(self):
+        """Nombre del dueño si la patente está registrada, si no 'Desconocido'."""
+        if self.vehiculo_id and self.vehiculo.usuario_id:
+            return f"{self.vehiculo.usuario.nombre} {self.vehiculo.usuario.apellido}"
+        return "Desconocido"
