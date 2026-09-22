@@ -307,11 +307,17 @@
                 <a href="{% url 'vehiculos:lista' %}">
                     Mis vehículos
                 </a>
-
+				
 				<a href="{% url 'estacionamiento:reservas_lista' %}">
 					Mis reservas
 				</a>
-
+ 
+			{% if user.perfil.es_personal %}
+				<a href="{% url 'estacionamiento:movimientos_lista' %}">
+					Ingresos y salidas
+				</a>
+				{% endif %}
+ 
                <form method="post" action="{% url 'usuarios:logout' %}" style="display:inline">
 	                {% csrf_token %}
 	                 <button type="submit">Cerrar sesión</button>

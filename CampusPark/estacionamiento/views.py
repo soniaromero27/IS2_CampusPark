@@ -1,8 +1,10 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
-from .forms import ReservaForm
-from .models import Reserva, TipoEstadoReserva
+from .decorators import personal_requerido
+from .forms import IngresoForm, ReservaForm
+from .models import Movimiento, Reserva, TipoEstado, TipoEstadoReserva
 
 
 @login_required
@@ -50,3 +52,66 @@ def cancelar_reserva_view(request, pk):
         reserva.save()
         return redirect("estacionamiento:reservas_lista")
     return render(request, "estacionamiento/reserva_cancelar.html", {"reserva": reserva})
+
+
+@personal_requerido
+def lista_movimientos_view(request):
+    """
+    Consultar ingresos y salidas: sólo Personal de Estacionamiento o
+    Administrador. Muestra TODOS los movimientos, de cualquier usuario.
+    """
+    movimientos = Movimiento.objects.all().select_related(
+        "vehiculo", "vehiculo__usuario", "espacio", "espacio__zona"
+    ).order_by("-fecha_hora_ingreso")
+    return render(request, "estacionamiento/movimientos_lista.html", {"movimientos": movimientos})
+
+
+@personal_requerido
+def registrar_ingreso_view(request):
+    """
+    Registrar ingreso de vehículo: sólo Personal de Estacionamiento o
+    Administrador. Pueden elegir el vehículo de cualquier usuario
+    registrado (ver IngresoForm). Crea el Movimiento con la fecha/hora
+    actual y marca el espacio elegido como 'Ocupado'.
+    """
+    if request.method == "POST":
+        form = IngresoForm(request.POST)
+        if form.is_valid():
+            movimiento = form.save(commit=False)
+            movimiento.fecha_hora_ingreso = timezone.now()
+            movimiento.save()
+
+            estado_ocupado, _ = TipoEstado.objects.get_or_create(nombre_estado="Ocupado")
+            espacio = movimiento.espacio
+            espacio.tipo_estado = estado_ocupado
+            espacio.save()
+
+            return redirect("estacionamiento:movimientos_lista")
+    else:
+        form = IngresoForm()
+    return render(request, "estacionamiento/ingreso_form.html", {"form": form})
+
+
+@personal_requerido
+def registrar_salida_view(request, pk):
+    """
+    Registrar salida de vehículo: sólo Personal de Estacionamiento o
+    Administrador. Puede cerrar el movimiento de cualquier usuario
+    (mientras siga sin fecha_hora_salida) y libera el espacio.
+    """
+    movimiento = get_object_or_404(
+        Movimiento,
+        pk=pk,
+        fecha_hora_salida__isnull=True,
+    )
+    if request.method == "POST":
+        movimiento.fecha_hora_salida = timezone.now()
+        movimiento.save()
+
+        estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
+        espacio = movimiento.espacio
+        espacio.tipo_estado = estado_libre
+        espacio.save()
+
+        return redirect("estacionamiento:movimientos_lista")
+    return render(request, "estacionamiento/salida_confirmar.html", {"movimiento": movimiento})

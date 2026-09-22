@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Página no encontrada - CampusPark</title>
+
+    <style>
+        /* ===== ESTILOS BASE (Mantenidos de base.html) ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: #f4f7fb;
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: linear-gradient(135deg, #0f2d52, #1d4f91);
+            color: white;
+            padding: 0 40px;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: white;
+        }
+
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            background: white;
+            color: #174a86;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .logo-text {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        nav a:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        main {
+            width: 70%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 25px; /* Aumentado el padding para el 404 */
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(15, 45, 82, 0.08);
+            border: 1px solid #e7edf5;
+            width: 100%;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 11px 20px;
+            background: #1d5fa7;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #154b86;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(21, 75, 134, 0.25);
+        }
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        /* ===== ESTILOS ESPECÍFICOS PARA 404 ===== */
+        
+        .error-container {
+            text-align: center;
+            padding: 50px 30px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .error-code {
+            font-size: 120px;
+            font-weight: 800;
+            color: #1d5fa7;
+            line-height: 1;
+            margin-bottom: 10px;
+            text-shadow: 5px 5px 0px #edf4fb;
+            letter-spacing: -5px;
+        }
+
+        .error-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .error-title {
+            color: #163b68;
+            font-size: 28px;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .error-text {
+            color: #64748b;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .error-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #1d5fa7;
+            border: 2px solid #1d5fa7;
+        }
+
+        .btn-outline:hover {
+            background: #edf4fb;
+            color: #154b86;
+            box-shadow: none;
+        }
+
+        @media (max-width: 800px) {
+            header {
+                height: auto;
+                padding: 18px 20px;
+                flex-direction: column;
+                gap: 15px;
+            }
+            nav {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            main {
+                width: 90%;
+                padding: 30px 15px;
+            }
+            .error-code {
+                font-size: 90px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- BARRA SUPERIOR -->
+    <header>
+        <a href="/" class="logo">
+            <div class="logo-icon">P</div>
+            <span class="logo-text">CampusPark</span>
+        </a>
+
+        <nav>
+            <a href="/">Volver al inicio</a>
+        </nav>
+    </header>
+
+    <!-- CONTENIDO 404 -->
+    <main>
+        <div class="card error-container">
+            <span class="error-icon">🚗💨</span>
+            <div class="error-code">404</div>
+            <h2 class="error-title">¡Espacio no encontrado!</h2>
+            <p class="error-text">
+                Parece que te has perdido por el campus. El lugar de estacionamiento o la página que buscas no existe, fue movida o está ocupada en este momento.
+            </p>
+            
+            <div class="error-actions">
+                <a href="javascript:history.back()" class="btn btn-outline">Regresar</a>
+                <a href="/" class="btn">Ir a la página principal</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- PIE DE PÁGINA -->
+    <footer>
+        CampusPark© 2026 · Sistema de Gestión de Estacionamiento
+    </footer>
+
+</body>
+</html>

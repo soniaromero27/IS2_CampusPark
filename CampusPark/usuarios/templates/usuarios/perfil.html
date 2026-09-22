@@ -10,4 +10,14 @@
   <tr><th>Tipo de usuario</th><td>{{ perfil.tipo }}</td></tr>
   <tr><th>Fecha de registro</th><td>{{ perfil.fecha_registro }}</td></tr>
 </table>
+
+
+<div class="menu-acciones" style="margin-top:1em; display:flex; gap:0.5em; flex-wrap:wrap;">
+  <a href="{% url 'vehiculos:lista' %}"><button>Mis vehículos</button></a>
+  <a href="{% url 'estacionamiento:reservas_lista' %}"><button>Mis reservas</button></a>
+  {% if user.perfil.es_personal %}
+  <a href="{% url 'estacionamiento:movimientos_lista' %}"><button>Ingresos y salidas</button></a>
+  <a href="{% url 'estacionamiento:movimiento_ingreso' %}"><button>Registrar ingreso</button></a>
+  {% endif %}
+</div>
 {% endblock %}

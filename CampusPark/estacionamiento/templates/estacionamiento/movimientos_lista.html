@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Ingresos y salidas</h2>
+
+<a href="{% url 'estacionamiento:movimiento_ingreso' %}" style="display:inline">
+	<button>Registrar ingreso</button>
+</a>
+
+<table>
+  <tr>
+    <th>Usuario</th><th>Vehículo</th><th>Zona</th><th>Espacio</th><th>Ingreso</th><th>Salida</th><th></th>
+  </tr>
+  {% for m in movimientos %}
+  <tr>
+    <td>{{ m.vehiculo.usuario.nombre }} {{ m.vehiculo.usuario.apellido }}</td>
+    <td>{{ m.vehiculo.matricula }}</td>
+    <td>{{ m.espacio.zona }}</td>
+    <td>N°{{ m.espacio.numero }}</td>
+    <td>{{ m.fecha_hora_ingreso }}</td>
+    <td>
+      {% if m.fecha_hora_salida %}
+        {{ m.fecha_hora_salida }}
+      {% else %}
+        En curso
+      {% endif %}
+    </td>
+    <td>
+      {% if not m.fecha_hora_salida %}
+        <a href="{% url 'estacionamiento:movimiento_salida' m.pk %}">Registrar salida</a>
+      {% endif %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="7">Todavía no hay movimientos registrados.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}
