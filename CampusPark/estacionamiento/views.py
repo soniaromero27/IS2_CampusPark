@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from .decorators import personal_requerido
 from .forms import IngresoForm, ReservaForm
-from .models import Movimiento, Reserva, TipoEstado, TipoEstadoReserva
+from .models import Vehiculo, Movimiento, Reserva, TipoEstado, TipoEstadoReserva
 
 
 @login_required
