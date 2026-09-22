@@ -66,7 +66,7 @@ def lista_movimientos_view(request):
     ).order_by("-fecha_hora_ingreso")
     return render(request, "estacionamiento/movimientos_lista.html", {"movimientos": movimientos})
 
-'''
+
 @personal_requerido
 def registrar_ingreso_view(request):
     """

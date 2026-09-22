@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Usuarios registrados</h2>
+<table>
+  <tr>
+    <th>Nombre</th><th>Apellido</th><th>Documento</th><th>Correo</th>
+    <th>Teléfono</th><th>Tipo</th><th>Fecha de registro</th>
+  </tr>
+  {% for u in usuarios %}
+  <tr>
+    <td>{{ u.nombre }}</td>
+    <td>{{ u.apellido }}</td>
+    <td>{{ u.documento }}</td>
+    <td>{{ u.correo }}</td>
+    <td>{{ u.telefono }}</td>
+    <td>{{ u.tipo }}</td>
+    <td>{{ u.fecha_registro }}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="7">No hay usuarios registrados.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

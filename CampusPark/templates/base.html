@@ -312,10 +312,18 @@
 					Mis reservas
 				</a>
  
-			{% if user.perfil.es_personal %}
-				<a href="{% url 'estacionamiento:movimientos_lista' %}">
-					Ingresos y salidas
-				</a>
+				{% if user.perfil.es_personal %}
+					<a href="{% url 'estacionamiento:movimientos_lista' %}">
+						Ingresos y salidas
+					</a>
+					
+					<a href="{% url 'usuarios:lista' %}">
+						Usuarios
+					</a>
+					<a href="{% url 'vehiculos:lista_todos' %}">
+						Vehículos
+					</a>
+				
 				{% endif %}
  
                <form method="post" action="{% url 'usuarios:logout' %}" style="display:inline">

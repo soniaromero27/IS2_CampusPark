@@ -1,6 +1,8 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
+from usuarios.decorators import personal_requerido
+
 from .forms import VehiculoForm
 from .models import Vehiculo
 
@@ -25,3 +27,16 @@ def agregar_vehiculo_view(request):
     else:
         form = VehiculoForm()
     return render(request, "vehiculos/agregar.html", {"form": form})
+
+
+@personal_requerido
+def lista_todos_vehiculos_view(request):
+    """
+    Consultar todos los vehículos registrados, con su dueño: sólo
+    Personal de Estacionamiento o Administrador.
+    """
+    vehiculos = Vehiculo.objects.select_related("usuario").order_by(
+        "usuario__apellido", "usuario__nombre", "matricula"
+    )
+    return render(request, "vehiculos/lista_todos.html", {"vehiculos": vehiculos})
+ 

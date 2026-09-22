@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Vehículos registrados</h2>
+<table>
+  <tr>
+    <th>Matrícula</th><th>Marca</th><th>Modelo</th><th>Color</th>
+    <th>Dueño</th><th>Fecha de registro</th>
+  </tr>
+  {% for v in vehiculos %}
+  <tr>
+    <td>{{ v.matricula }}</td>
+    <td>{{ v.marca }}</td>
+    <td>{{ v.modelo }}</td>
+    <td>{{ v.color }}</td>
+    <td>{{ v.usuario.nombre }} {{ v.usuario.apellido }}</td>
+    <td>{{ v.fecha_registro }}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="6">No hay vehículos registrados.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

@@ -85,9 +85,9 @@ class IngresoForm(forms.Form):
             )
 
         return cleaned_data
+        
+        
 '''
-
-
 class IngresoForm(forms.Form):
     """
     Registrar ingreso de vehículo. Sólo la usan Personal de Estacionamiento
@@ -127,4 +127,5 @@ class IngresoForm(forms.Form):
             )
  
         return cleaned_data
-         
+ '''
+ 
