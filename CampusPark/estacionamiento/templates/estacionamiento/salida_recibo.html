@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Salida registrada</h2>
+
+<div class="card">
+  <p><strong>Patente:</strong> {{ movimiento.patente }}</p>
+  <p><strong>Usuario:</strong> {{ movimiento.usuario_nombre }}</p>
+  <p><strong>Espacio:</strong> {{ movimiento.espacio.zona }} - N°{{ movimiento.espacio.numero }}</p>
+  <p><strong>Ingreso:</strong> {{ movimiento.fecha_hora_ingreso }}</p>
+  <p><strong>Salida:</strong> {{ movimiento.fecha_hora_salida }}</p>
+
+  {% if cobro.monto is not None %}
+    <h3>Monto a cobrar: ${{ cobro.monto }}</h3>
+    <p>
+      {{ cobro.horas }} hora{{ cobro.horas|pluralize }} × ${{ cobro.tarifa.valor_por_hora }}/h —
+      tarifa "{{ cobro.tarifa.descripcion }}" ({{ cobro.tipo }})
+    </p>
+  {% else %}
+    <p>
+      No hay una tarifa configurada para el tipo de usuario "{{ cobro.tipo|default:"Externo" }}".
+      No se pudo calcular el monto.
+    </p>
+  {% endif %}
+</div>
+
+<p><a href="{% url 'estacionamiento:movimientos_lista' %}">Volver a la lista</a></p>
+{% endblock %}

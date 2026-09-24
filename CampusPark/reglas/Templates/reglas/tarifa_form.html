@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{% if modo == "editar" %}Editar tarifa{% else %}Nueva tarifa{% endif %}</h2>
+<form method="post">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  {% for field in form %}
+    <div class="form-row">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {{ field.errors }}
+    </div>
+  {% endfor %}
+  <button type="submit">{% if modo == "editar" %}Guardar cambios{% else %}Crear tarifa{% endif %}</button>
+</form>
+<p><a href="{% url 'reglas:tarifas_lista' %}">Volver</a></p>
+{% endblock %}

@@ -1,5 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
+
+
+<style>
+  th a, th a:visited, th a:hover, th a:active {
+    color: inherit;
+    text-decoration: none;
+  }
+</style>
+
 <h2>Ingresos y salidas</h2>
 
 <a href="{% url 'estacionamiento:movimiento_ingreso' %}" style="display:inline">
@@ -7,13 +16,45 @@
 </a>
 
 <table>
+
   <tr>
-    <th>Usuario</th><th>Vehículo</th><th>Zona</th><th>Espacio</th><th>Ingreso</th><th>Salida</th><th></th>
+    <th>
+      <a href="?orden=usuario&dir={% if orden == 'usuario' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+        Usuario{% if orden == 'usuario' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=vehiculo&dir={% if orden == 'vehiculo' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+        Vehículo{% if orden == 'vehiculo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=zona&dir={% if orden == 'zona' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+        Zona{% if orden == 'zona' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=espacio&dir={% if orden == 'espacio' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+        Espacio{% if orden == 'espacio' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=ingreso&dir={% if orden == 'ingreso' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+        Ingreso{% if orden == 'ingreso' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=salida&dir={% if orden == 'salida' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+        Salida{% if orden == 'salida' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th></th>
   </tr>
+  
   {% for m in movimientos %}
   <tr>
-    <td>{{ m.vehiculo.usuario.nombre }} {{ m.vehiculo.usuario.apellido }}</td>
-    <td>{{ m.vehiculo.matricula }}</td>
+    <td>{{ m.usuario_nombre }}</td>
+    <td>{{ m.patente }}</td>
     <td>{{ m.espacio.zona }}</td>
     <td>N°{{ m.espacio.numero }}</td>
     <td>{{ m.fecha_hora_ingreso }}</td>

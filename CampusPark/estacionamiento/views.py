@@ -56,17 +56,58 @@ def cancelar_reserva_view(request, pk):
 
 
 @personal_requerido
+def lista_todas_reservas_view(request):
+    """
+    Consultar todas las reservas, de cualquier usuario: sólo Personal
+    de Estacionamiento o Administrador.
+    """
+    reservas = Reserva.objects.select_related(
+        "usuario", "espacio", "espacio__zona", "tipo_estado_reserva"
+    ).order_by("-fecha_inicio")
+    return render(request, "estacionamiento/reservas_lista_todas.html", {"reservas": reservas})
+ 
+
+
+@personal_requerido
 def lista_movimientos_view(request):
     """
     Consultar ingresos y salidas: sólo Personal de Estacionamiento o
     Administrador. Muestra TODOS los movimientos, de cualquier usuario.
+    Se puede ordenar por cualquier columna, ascendente o descendente,
+    con los parámetros GET ?orden=<campo>&dir=<asc|desc>.
     """
-    movimientos = Movimiento.objects.all().select_related(
+
+    campos_orden = {
+        "usuario": ["vehiculo__usuario__apellido", "vehiculo__usuario__nombre"],
+        "vehiculo": ["patente"],
+        "zona": ["espacio__zona__nombre"],
+        "espacio": ["espacio__numero"],
+        "ingreso": ["fecha_hora_ingreso"],
+        "salida": ["fecha_hora_salida"],
+    }
+    
+    orden = request.GET.get("orden", "ingreso")
+    if orden not in campos_orden:
+        orden = "ingreso"
+ 
+    direccion = request.GET.get("dir", "desc")
+    if direccion not in ("asc", "desc"):
+        direccion = "desc"
+ 
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+ 
+    movimientos = Movimiento.objects.select_related(
         "vehiculo", "vehiculo__usuario", "espacio", "espacio__zona"
-    ).order_by("-fecha_hora_ingreso")
-    return render(request, "estacionamiento/movimientos_lista.html", {"movimientos": movimientos})
-
-
+    ).order_by(*campos)
+ 
+    return render(
+        request,
+        "estacionamiento/movimientos_lista.html",
+        {"movimientos": movimientos, "orden": orden, "dir": direccion},
+    )
+ 
 @personal_requerido
 def registrar_ingreso_view(request):
     """
@@ -104,7 +145,7 @@ def registrar_ingreso_view(request):
         "estacionamiento/ingreso_form.html",
         {"form": form, "patentes": patentes},
     )
-
+'''
 @personal_requerido
 def registrar_ingreso_view(request):
     """
@@ -137,7 +178,7 @@ def registrar_ingreso_view(request):
     else:
         form = IngresoForm()
     return render(request, "estacionamiento/ingreso_form.html", {"form": form})
- 
+ '''
 
 @personal_requerido
 def registrar_salida_view(request, pk):
@@ -159,6 +200,16 @@ def registrar_salida_view(request, pk):
         espacio = movimiento.espacio
         espacio.tipo_estado = estado_libre
         espacio.save()
-
-        return redirect("estacionamiento:movimientos_lista")
-    return render(request, "estacionamiento/salida_confirmar.html", {"movimiento": movimiento})
+        
+        cobro = movimiento.calcular_cobro()
+        return render(
+            request, "estacionamiento/salida_recibo.html", {"movimiento": movimiento, "cobro": cobro}
+        )
+ 
+    cobro_estimado = movimiento.calcular_cobro()
+    return render(
+        request,
+        "estacionamiento/salida_confirmar.html",
+        {"movimiento": movimiento, "cobro": cobro_estimado},
+    )
+ 

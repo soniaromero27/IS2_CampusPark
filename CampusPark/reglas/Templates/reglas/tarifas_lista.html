@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Tarifas</h2>
+
+<a href="{% url 'reglas:tarifa_crear' %}" style="display:inline">
+	<button>Nueva tarifa</button>
+</a>
+
+<table>
+  <tr>
+    <th>Descripción</th><th>Tipo de usuario</th><th>Valor por hora</th><th>Vigencia</th><th></th>
+  </tr>
+  {% for t in tarifas %}
+  <tr>
+    <td>{{ t.descripcion }}</td>
+    <td>{{ t.tipo }}</td>
+    <td>Gs. {{ t.valor_por_hora }}</td>
+    <td>{{ t.vigencia }}</td>
+    <td><a href="{% url 'reglas:tarifa_editar' t.pk %}">Editar</a></td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="5">Todavía no hay tarifas cargadas.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

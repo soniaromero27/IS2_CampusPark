@@ -316,14 +316,18 @@
 					<a href="{% url 'estacionamiento:movimientos_lista' %}">
 						Ingresos y salidas
 					</a>
-					
+					<a href="{% url 'estacionamiento:reservas_lista_todas' %}">
+						Reservas
+					</a>				
 					<a href="{% url 'usuarios:lista' %}">
 						Usuarios
 					</a>
 					<a href="{% url 'vehiculos:lista_todos' %}">
 						Vehículos
 					</a>
-				
+					<a href="{% url 'reglas:tarifas_lista' %}">
+						Tarifas
+					</a>
 				{% endif %}
  
                <form method="post" action="{% url 'usuarios:logout' %}" style="display:inline">
