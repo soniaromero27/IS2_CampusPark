@@ -25,6 +25,7 @@ urlpatterns = [
     #path('', include('reservas.urls')),
     #path('', include('zonas.urls')),
     #path('', include('estacionamiento.urls')),
+    #path('/', include("usuarios.urls")),
     path("estacionamiento/", include("estacionamiento.urls")),
     path("usuarios/", include("usuarios.urls")),
     path("vehiculos/", include("vehiculos.urls")),

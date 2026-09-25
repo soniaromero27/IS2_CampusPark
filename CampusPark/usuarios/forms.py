@@ -50,6 +50,7 @@ class RegistroUsuarioForm(UserCreationForm):
                 user=user,
                 nombre=self.cleaned_data["nombre"],
                 apellido=self.cleaned_data["apellido"],
+                documento=self.cleaned_data["documento"],
                 fecha_nacimiento=self.cleaned_data["fecha_nacimiento"],
                 correo=self.cleaned_data["correo"],
                 telefono=self.cleaned_data.get("telefono", ""),
