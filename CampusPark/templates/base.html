@@ -330,6 +330,12 @@
 					</a>
 				{% endif %}
  
+				{% if user.perfil.es_administrador %}
+				<a href="{% url 'estacionamiento:zonas_lista' %}">
+					Zonas
+				</a>
+				{% endif %}
+				
                <form method="post" action="{% url 'usuarios:logout' %}" style="display:inline">
 	                {% csrf_token %}
 	                 <button type="submit">Cerrar sesión</button>

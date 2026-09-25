@@ -1,13 +1,14 @@
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-
-from .decorators import personal_requerido
-from .forms import IngresoForm, ReservaForm
-from .models import Movimiento, Reserva, TipoEstado, TipoEstadoReserva
+ 
+from usuarios.decorators import admin_requerido, personal_requerido
+ 
+from .forms import EspaciosForm, IngresoForm, ReservaForm, ZonaForm
+from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona
 from vehiculos.models import Vehiculo
-
-
+ 
 @login_required
 def lista_reservas_view(request):
     """Consulta de las reservas del usuario autenticado."""
@@ -145,40 +146,6 @@ def registrar_ingreso_view(request):
         "estacionamiento/ingreso_form.html",
         {"form": form, "patentes": patentes},
     )
-'''
-@personal_requerido
-def registrar_ingreso_view(request):
-    """
-    Registrar ingreso de vehículo: sólo Personal de Estacionamiento o
-    Administrador. Se ingresa únicamente la patente; si coincide con un
-    Vehiculo registrado se linkea (y con él su Usuario dueño), y si no,
-    el movimiento se crea igual, sin Vehiculo asociado ("Desconocido"),
-    sin crear ningún Vehiculo ni Usuario nuevo. Marca el espacio
-    elegido como 'Ocupado'.
-    """
-    if request.method == "POST":
-        form = IngresoForm(request.POST)
-        if form.is_valid():
-            patente = form.cleaned_data["patente"]
-            espacio = form.cleaned_data["espacio"]
-            vehiculo = Vehiculo.objects.filter(matricula=patente).select_related("usuario").first()
- 
-            Movimiento.objects.create(
-                patente=patente,
-                vehiculo=vehiculo,
-                espacio=espacio,
-                fecha_hora_ingreso=timezone.now(),
-            )
- 
-            estado_ocupado, _ = TipoEstado.objects.get_or_create(nombre_estado="Ocupado")
-            espacio.tipo_estado = estado_ocupado
-            espacio.save()
- 
-            return redirect("estacionamiento:movimientos_lista")
-    else:
-        form = IngresoForm()
-    return render(request, "estacionamiento/ingreso_form.html", {"form": form})
- '''
 
 @personal_requerido
 def registrar_salida_view(request, pk):
@@ -212,4 +179,50 @@ def registrar_salida_view(request, pk):
         "estacionamiento/salida_confirmar.html",
         {"movimiento": movimiento, "cobro": cobro_estimado},
     )
+ 
+ 
+@admin_requerido
+def lista_zonas_view(request):
+    """Ver todas las zonas y cuántos espacios tiene cada una. Sólo Administrador."""
+    zonas = Zona.objects.annotate(cantidad_espacios=Count("espacios")).order_by("nombre")
+    return render(request, "estacionamiento/zonas_lista.html", {"zonas": zonas})
+ 
+ 
+@admin_requerido
+def crear_zona_view(request):
+    """Alta manual de una zona. Sólo Administrador."""
+    if request.method == "POST":
+        form = ZonaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("estacionamiento:zonas_lista")
+    else:
+        form = ZonaForm()
+    return render(request, "estacionamiento/zona_form.html", {"form": form})
+ 
+ 
+@admin_requerido
+def crear_espacios_view(request):
+    """
+    Alta masiva de espacios dentro de una zona, indicando la cantidad
+    a crear. Sólo Administrador.
+    """
+    if request.method == "POST":
+        form = EspaciosForm(request.POST)
+        if form.is_valid():
+            zona = form.cleaned_data["zona"]
+            cantidad = form.cleaned_data["cantidad"]
+            numero_inicial = form.cleaned_data["numero_inicial"]
+ 
+            estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
+            nuevos = [
+                Espacio(zona=zona, numero=numero_inicial + i, tipo_estado=estado_libre)
+                for i in range(cantidad)
+            ]
+            Espacio.objects.bulk_create(nuevos)
+ 
+            return redirect("estacionamiento:zonas_lista")
+    else:
+        form = EspaciosForm()
+    return render(request, "estacionamiento/espacios_form.html", {"form": form})
  

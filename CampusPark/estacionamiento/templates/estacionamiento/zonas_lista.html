@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Zonas</h2>
+
+<a href="{% url 'estacionamiento:zona_crear' %}" style="display:inline">
+	<button>Nueva zona</button>
+</a>
+<a href="{% url 'estacionamiento:espacios_crear' %}" style="display:inline">
+	<button>Crear espacios</button>
+</a>
+
+<table>
+  <tr>
+    <th>Nombre</th><th>Descripción</th><th>Cantidad de espacios</th>
+  </tr>
+  {% for z in zonas %}
+  <tr>
+    <td>{{ z.nombre }}</td>
+    <td>{{ z.descripcion }}</td>
+    <td>{{ z.cantidad_espacios }}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="3">Todavía no hay zonas cargadas.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

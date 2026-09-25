@@ -58,3 +58,10 @@ class Usuario(models.Model):
     def es_personal(self):
         """True si el tipo de usuario es Personal de Estacionamiento o Administrador."""
         return self.tipo.nombre.strip().lower() in TIPOS_PERSONAL
+        
+
+    @property
+    def es_administrador(self):
+        """True sólo si el tipo de usuario es exactamente Administrador."""
+        return self.tipo.nombre.strip().lower() == "administrador"
+ 
