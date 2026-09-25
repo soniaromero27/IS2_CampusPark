@@ -7,13 +7,20 @@
 </a>
 
 <table>
-  <tr><th>Matrícula</th><th>Marca</th><th>Modelo</th><th>Color</th></tr>
+  <tr>
+    <th>Matrícula</th><th>Tipo</th><th>Cédula verde</th><th>Marca</th>
+    <th>Modelo</th><th>Color</th><th>Año</th><th>Chassis</th>
+  </tr>
   {% for v in vehiculos %}
   <tr>
     <td>{{ v.matricula }}</td>
+    <td>{{ v.tipo_vehiculo }}</td>
+    <td>{{ v.cedula_verde }}</td>
     <td>{{ v.marca }}</td>
     <td>{{ v.modelo }}</td>
     <td>{{ v.color }}</td>
+    <td>{{ v.anho }}</td>
+    <td>{{ v.chassis }}</td>
   </tr>
   {% empty %}
   <tr><td colspan="4">Todavía no registraste vehículos.</td></tr>
