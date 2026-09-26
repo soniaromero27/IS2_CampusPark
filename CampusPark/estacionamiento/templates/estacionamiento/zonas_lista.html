@@ -9,6 +9,12 @@
 	<button>Crear espacios</button>
 </a>
 
+<form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:500px; margin-top:1em;">
+  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre o descripción..." style="width:100%;">
+  <button type="submit">Buscar</button>
+  {% if q %}<a href="{% url 'estacionamiento:zonas_lista' %}">Limpiar</a>{% endif %}
+</form>
+
 <table>
   <tr>
     <th>Nombre</th><th>Descripción</th><th>Cantidad de espacios</th>
@@ -20,7 +26,7 @@
     <td>{{ z.cantidad_espacios }}</td>
   </tr>
   {% empty %}
-  <tr><td colspan="3">Todavía no hay zonas cargadas.</td></tr>
+  <tr><td colspan="3">No hay zonas que coincidan con la búsqueda.</td></tr>
   {% endfor %}
 </table>
 {% endblock %}

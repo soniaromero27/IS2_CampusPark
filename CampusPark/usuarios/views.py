@@ -1,11 +1,11 @@
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.shortcuts import redirect, render
 
 from .decorators import personal_requerido
 from .forms import RegistroUsuarioForm, UsuarioEditForm
 from .models import Usuario
- 
 
 
 def registro_view(request):
@@ -44,16 +44,23 @@ def editar_perfil_view(request):
     else:
         form = UsuarioEditForm(instance=perfil)
     return render(request, "usuarios/perfil_editar.html", {"form": form})
- 
+
 
 @personal_requerido
 def lista_usuarios_view(request):
     """
     Consultar todos los usuarios registrados: sólo Personal de
-    Estacionamiento o Administrador.
+    Estacionamiento o Administrador. Admite búsqueda por ?q=... sobre
+    nombre, apellido, documento, correo y tipo de usuario.
     """
-    usuarios = Usuario.objects.select_related("user", "tipo").order_by(
-        "apellido", "nombre"
-    )
-    return render(request, "usuarios/usuarios_lista.html", {"usuarios": usuarios})
- 
+    q = request.GET.get("q", "").strip()
+    usuarios = Usuario.objects.select_related("user", "tipo").order_by("apellido", "nombre")
+    if q:
+        usuarios = usuarios.filter(
+            Q(nombre__icontains=q)
+            | Q(apellido__icontains=q)
+            | Q(documento__icontains=q)
+            | Q(correo__icontains=q)
+            | Q(tipo__nombre__icontains=q)
+        )
+    return render(request, "usuarios/usuarios_lista.html", {"usuarios": usuarios, "q": q})

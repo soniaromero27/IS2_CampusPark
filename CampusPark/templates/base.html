@@ -283,7 +283,8 @@
 
     <header>
 
-        <a href="{% url 'usuarios:login' %}" class="logo">
+        <a href="{% if user.is_authenticated %}{% url 'usuarios:perfil' %}
+		{% else %}{% url 'usuarios:login' %}{% endif %}" class="logo">
 
             <div class="logo-icon">
                 P

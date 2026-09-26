@@ -1,10 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Usuarios registrados</h2>
-<table>
 
+<form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:500px;">
+  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre, documento, correo, tipo..." style="width:100%;">
+  <button type="submit">Buscar</button>
+  {% if q %}<a href="{% url 'usuarios:lista' %}">Limpiar</a>{% endif %}
+</form>
+
+<table>
   <tr>
-    <th>Nombre</th><th>Apellido</th><th>Documento</th><th>Fecha nac.</th>
+    <th>Nombre</th><th>Apellido</th><th>Documento</th><!--th>Fecha nac.</th-->
     <th>Correo</th><th>Teléfono</th><!--th>N° licencia</th--><th>Tipo</th><th>Fecha de registro</th>
   </tr>
   {% for u in usuarios %}
@@ -12,7 +18,7 @@
     <td>{{ u.nombre }}</td>
     <td>{{ u.apellido }}</td>
     <td>{{ u.documento }}</td>
-    <td>{{ u.fecha_nacimiento }}</td>
+    <!--td>{{ u.fecha_nacimiento }}</td-->
     <td>{{ u.correo }}</td>
     <td>{{ u.telefono }}</td>
     <!--td>{{ u.nro_licencia|default:"—" }}</td-->
@@ -20,7 +26,7 @@
     <td>{{ u.fecha_registro }}</td>
   </tr>
   {% empty %}
-  <tr><td colspan="7">No hay usuarios registrados.</td></tr>
+  <tr><td colspan="9">No hay usuarios que coincidan con la búsqueda.</td></tr>
   {% endfor %}
 </table>
 {% endblock %}

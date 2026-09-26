@@ -1,26 +1,33 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Vehículos registrados</h2>
+
+<form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:500px;">
+  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por matrícula, marca, modelo, dueño..." style="width:100%;">
+  <button type="submit">Buscar</button>
+  {% if q %}<a href="{% url 'vehiculos:lista_todos' %}">Limpiar</a>{% endif %}
+</form>
+
 <table>
   <tr>
-    <th>Matrícula</th><th>Tipo</th><th>Cédula verde</th><th>Marca</th><th>Modelo</th>
-    <th>Color</th><th>Año</th><th>Chassis</th><th>Dueño</th><th>Fecha de registro</th>
+    <th>Matrícula</th><th>Tipo</th><!--th>Cédula verde</th--><th>Marca</th><th>Modelo</th>
+    <th>Color</th><th>Año</th><!--th>Chassis</th--><th>Dueño</th><th>Fecha de registro</th>
   </tr>
   {% for v in vehiculos %}
   <tr>
     <td>{{ v.matricula }}</td>
     <td>{{ v.tipo_vehiculo }}</td>
-    <td>{{ v.cedula_verde }}</td>
+    <!--td>{{ v.cedula_verde }}</td-->
     <td>{{ v.marca }}</td>
     <td>{{ v.modelo }}</td>
     <td>{{ v.color }}</td>
     <td>{{ v.anho }}</td>
-    <td>{{ v.chassis }}</td>
+    <!--td>{{ v.chassis }}</td-->
     <td>{{ v.usuario.nombre }} {{ v.usuario.apellido }}</td>
     <td>{{ v.fecha_registro }}</td>
   </tr>
   {% empty %}
-  <tr><td colspan="6">No hay vehículos registrados.</td></tr>
+  <tr><td colspan="10">No hay vehículos que coincidan con la búsqueda.</td></tr>
   {% endfor %}
 </table>
 {% endblock %}
