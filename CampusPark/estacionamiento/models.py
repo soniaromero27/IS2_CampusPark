@@ -1,5 +1,7 @@
 from django.db import models
-
+from django.utils import timezone
+import math
+ 
 from usuarios.models import Usuario
 from vehiculos.models import Vehiculo
 
@@ -123,3 +125,42 @@ class Movimiento(models.Model):
         if self.vehiculo_id and self.vehiculo.usuario_id:
             return f"{self.vehiculo.usuario.nombre} {self.vehiculo.usuario.apellido}"
         return "Desconocido"
+
+    def calcular_cobro(self):
+        """
+        Calcula el monto a cobrar según la tarifa vigente para el tipo
+        de usuario dueño del vehículo. Si la patente no está registrada
+        (o no tiene usuario asociado), se cobra como tipo 'Externo'.
+ 
+        Usa fecha_hora_salida si ya está cargada, o timezone.now() como
+        estimación (para mostrar un monto antes de confirmar la salida).
+        Las horas se redondean hacia arriba, con un mínimo de 1 hora.
+ 
+        Devuelve un dict: {"tipo", "horas", "tarifa", "monto"}.
+        'tarifa' y 'monto' quedan en None si no hay ninguna tarifa
+        configurada (con vigencia <= la fecha de salida) para ese tipo.
+        """
+        from reglas.models import Tarifa
+        from usuarios.models import TipoUsuario
+ 
+        if self.vehiculo_id and self.vehiculo.usuario_id:
+            tipo = self.vehiculo.usuario.tipo
+        else:
+            tipo = TipoUsuario.objects.filter(nombre__iexact="Externo").first()
+ 
+        fin = self.fecha_hora_salida or timezone.now()
+        segundos = (fin - self.fecha_hora_ingreso).total_seconds()
+        horas = max(1, math.ceil(segundos / 3600))
+ 
+        tarifa = None
+        if tipo is not None:
+            tarifa = (
+                Tarifa.objects.filter(tipo=tipo, vigencia__lte=fin.date())
+                .order_by("-vigencia")
+                .first()
+            )
+ 
+        monto = tarifa.valor_por_hora * horas if tarifa else None
+ 
+        return {"tipo": tipo, "horas": horas, "tarifa": tarifa, "monto": monto}
+ 

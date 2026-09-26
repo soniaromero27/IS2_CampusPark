@@ -2,7 +2,10 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
-from .forms import RegistroUsuarioForm
+from .decorators import personal_requerido
+from .forms import RegistroUsuarioForm, UsuarioEditForm
+from .models import Usuario
+ 
 
 
 def registro_view(request):
@@ -23,3 +26,34 @@ def perfil_view(request):
     """Pantalla de confirmación: muestra los datos del usuario registrado."""
     perfil = request.user.perfil
     return render(request, "usuarios/perfil.html", {"perfil": perfil})
+
+
+@login_required
+def editar_perfil_view(request):
+    """
+    Cada usuario puede editar su propio perfil (nombre, apellido,
+    documento, fecha de nacimiento, correo, teléfono, n° de licencia).
+    No se puede cambiar el tipo de usuario ni el username de login.
+    """
+    perfil = request.user.perfil
+    if request.method == "POST":
+        form = UsuarioEditForm(request.POST, instance=perfil)
+        if form.is_valid():
+            form.save()
+            return redirect("usuarios:perfil")
+    else:
+        form = UsuarioEditForm(instance=perfil)
+    return render(request, "usuarios/perfil_editar.html", {"form": form})
+ 
+
+@personal_requerido
+def lista_usuarios_view(request):
+    """
+    Consultar todos los usuarios registrados: sólo Personal de
+    Estacionamiento o Administrador.
+    """
+    usuarios = Usuario.objects.select_related("user", "tipo").order_by(
+        "apellido", "nombre"
+    )
+    return render(request, "usuarios/usuarios_lista.html", {"usuarios": usuarios})
+ 

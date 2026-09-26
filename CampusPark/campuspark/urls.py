@@ -19,14 +19,16 @@ from django.urls import path, include
 
 urlpatterns = [
     
-    path('', include('espacios.urls')),
-    path('', include('movimientos.urls')),
+    #path('', include('espacios.urls')),
+    #path('', include('movimientos.urls')),
     #path('', include('reglas.urls')),
-    path('', include('reservas.urls')),
-    path('', include('zonas.urls')),
+    #path('', include('reservas.urls')),
+    #path('', include('zonas.urls')),
     #path('', include('estacionamiento.urls')),
+    #path('/', include("usuarios.urls")),
     path("estacionamiento/", include("estacionamiento.urls")),
     path("usuarios/", include("usuarios.urls")),
     path("vehiculos/", include("vehiculos.urls")),
+    path("reglas/", include("reglas.urls")),
     path('admin/', admin.site.urls),
 ]

@@ -283,7 +283,7 @@
 
     <header>
 
-        <a href="/" class="logo">
+        <a href="{% url 'usuarios:login' %}" class="logo">
 
             <div class="logo-icon">
                 P
@@ -312,12 +312,30 @@
 					Mis reservas
 				</a>
  
-			{% if user.perfil.es_personal %}
-				<a href="{% url 'estacionamiento:movimientos_lista' %}">
-					Ingresos y salidas
-				</a>
+				{% if user.perfil.es_personal %}
+					<a href="{% url 'estacionamiento:movimientos_lista' %}">
+						Ingresos y salidas
+					</a>
+					<a href="{% url 'estacionamiento:reservas_lista_todas' %}">
+						Reservas
+					</a>				
+					<a href="{% url 'usuarios:lista' %}">
+						Usuarios
+					</a>
+					<a href="{% url 'vehiculos:lista_todos' %}">
+						Vehículos
+					</a>
+					<a href="{% url 'reglas:tarifas_lista' %}">
+						Tarifas
+					</a>
 				{% endif %}
  
+				{% if user.perfil.es_administrador %}
+				<a href="{% url 'estacionamiento:zonas_lista' %}">
+					Zonas
+				</a>
+				{% endif %}
+				
                <form method="post" action="{% url 'usuarios:logout' %}" style="display:inline">
 	                {% csrf_token %}
 	                 <button type="submit">Cerrar sesión</button>

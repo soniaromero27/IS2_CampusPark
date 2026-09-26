@@ -36,8 +36,12 @@ class Usuario(models.Model):
     nombre = models.CharField(max_length=150)
     apellido = models.CharField(max_length=150)
     documento = models.CharField(max_length=20, unique=True)
+    fecha_nacimiento = models.DateField()
     correo = models.EmailField(unique=True)
     telefono = models.CharField(max_length=30, blank=True)
+    nro_licencia = models.IntegerField(
+        null=True, blank=True, help_text="Número de licencia de conducir (si aplica)."
+    )
     tipo = models.ForeignKey(
         TipoUsuario, on_delete=models.PROTECT, related_name="usuarios"
     )
@@ -54,3 +58,10 @@ class Usuario(models.Model):
     def es_personal(self):
         """True si el tipo de usuario es Personal de Estacionamiento o Administrador."""
         return self.tipo.nombre.strip().lower() in TIPOS_PERSONAL
+        
+
+    @property
+    def es_administrador(self):
+        """True sólo si el tipo de usuario es exactamente Administrador."""
+        return self.tipo.nombre.strip().lower() == "administrador"
+ 

@@ -1,15 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Mis vehículos</h2>
-
-<a href="{% url 'vehiculos:agregar' %}" style="display:inline">
-	<button type="submit">Agregar vehículo</button>
-</a>
-
+<h2>Vehículos registrados</h2>
 <table>
   <tr>
-    <th>Matrícula</th><th>Tipo</th><th>Cédula verde</th><th>Marca</th>
-    <th>Modelo</th><th>Color</th><th>Año</th><th>Chassis</th>
+    <th>Matrícula</th><th>Tipo</th><th>Cédula verde</th><th>Marca</th><th>Modelo</th>
+    <th>Color</th><th>Año</th><th>Chassis</th><th>Dueño</th><th>Fecha de registro</th>
   </tr>
   {% for v in vehiculos %}
   <tr>
@@ -21,9 +16,11 @@
     <td>{{ v.color }}</td>
     <td>{{ v.anho }}</td>
     <td>{{ v.chassis }}</td>
+    <td>{{ v.usuario.nombre }} {{ v.usuario.apellido }}</td>
+    <td>{{ v.fecha_registro }}</td>
   </tr>
   {% empty %}
-  <tr><td colspan="4">Todavía no registraste vehículos.</td></tr>
+  <tr><td colspan="6">No hay vehículos registrados.</td></tr>
   {% endfor %}
 </table>
 {% endblock %}

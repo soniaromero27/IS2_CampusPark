@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Todas las reservas</h2>
+<table>
+  <tr>
+    <th>Usuario</th><th>Zona</th><th>Espacio</th><th>Desde</th><th>Hasta</th><th>Estado</th>
+  </tr>
+  {% for r in reservas %}
+  <tr>
+    <td>{{ r.usuario.nombre }} {{ r.usuario.apellido }}</td>
+    <td>{{ r.espacio.zona }}</td>
+    <td>N°{{ r.espacio.numero }}</td>
+    <td>{{ r.fecha_inicio }}</td>
+    <td>{{ r.fecha_fin }}</td>
+    <td>{{ r.tipo_estado_reserva }}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="6">No hay reservas registradas.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

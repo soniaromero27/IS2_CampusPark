@@ -6,6 +6,23 @@
   N°{{ movimiento.espacio.numero }} ({{ movimiento.espacio.zona }})?
   Ingresó el {{ movimiento.fecha_hora_ingreso }}.
 </p>
+
+<div class="card">
+  {% if cobro.monto is not None %}
+    <p>
+      Monto estimado si se registra la salida ahora mismo:
+      <strong>Gs. {{ cobro.monto }}</strong>
+      ({{ cobro.horas }} hora{{ cobro.horas|pluralize }} × Gs. {{ cobro.tarifa.valor_por_hora }}/h,
+      tarifa "{{ cobro.tarifa.descripcion }}" — {{ cobro.tipo }})
+    </p>
+  {% else %}
+    <p>
+      No hay una tarifa configurada para el tipo de usuario "{{ cobro.tipo|default:"Externo" }}",
+      así que no se puede estimar el monto todavía.
+    </p>
+  {% endif %}
+</div>
+
 <form method="post">
   {% csrf_token %}
   <button type="submit">Sí, registrar salida</button>

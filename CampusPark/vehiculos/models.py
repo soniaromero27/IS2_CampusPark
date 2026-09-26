@@ -4,11 +4,15 @@ from usuarios.models import Usuario
 
 
 class Vehiculo(models.Model):
-    """Corresponde a la entidad 'vehiculo' del DER (Sprint 1)."""
+    """Corresponde a la entidad 'vehiculo' del DER."""
     matricula = models.CharField(max_length=15, unique=True)
+    tipo_vehiculo = models.CharField(max_length=50)
+    cedula_verde = models.CharField(max_length=30)
     marca = models.CharField(max_length=50)
     modelo = models.CharField(max_length=50)
     color = models.CharField(max_length=30)
+    anho = models.IntegerField(verbose_name="Año")
+    chassis = models.CharField(max_length=50)
     usuario = models.ForeignKey(
         Usuario, on_delete=models.CASCADE, related_name="vehiculos"
     )

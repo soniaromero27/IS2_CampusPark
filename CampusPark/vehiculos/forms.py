@@ -6,7 +6,17 @@ from .models import Vehiculo
 class VehiculoForm(forms.ModelForm):
     class Meta:
         model = Vehiculo
-        fields = ["matricula", "marca", "modelo", "color"]
+       
+        fields = [
+            "matricula",
+            "tipo_vehiculo",
+            "cedula_verde",
+            "marca",
+            "modelo",
+            "color",
+            "anho",
+            "chassis",
+        ]
 
     def clean_matricula(self):
         matricula = self.cleaned_data["matricula"].upper().strip()
