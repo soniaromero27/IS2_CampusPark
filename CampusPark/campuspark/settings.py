@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'reglas',
     #'reservas',
     'vehiculos',
+    'universidad',
     #'zonas'
 ]
 

@@ -86,24 +86,23 @@ class IngresoForm(forms.Form):
             )
 
         return cleaned_data
-        
-        
+
 
 class ZonaForm(forms.ModelForm):
     """Crear una zona manualmente. Sólo Administrador."""
- 
+
     class Meta:
         model = Zona
-        fields = ["nombre", "descripcion"]
- 
- 
+        fields = ["nombre", "descripcion", "facultad"]
+
+
 class EspaciosForm(forms.Form):
     """
     Crear varios espacios de una zona, indicando cuántos (cantidad).
     Sólo Administrador. Si no se indica 'numero_inicial', continúa
     después del último número ya usado en esa zona.
     """
- 
+
     zona = forms.ModelChoiceField(queryset=Zona.objects.all(), label="Zona")
     cantidad = forms.IntegerField(min_value=1, label="Cantidad de espacios a crear")
     numero_inicial = forms.IntegerField(
@@ -112,19 +111,19 @@ class EspaciosForm(forms.Form):
         label="Número inicial (opcional)",
         help_text="Si lo dejás vacío, se continúa después del último número usado en la zona.",
     )
- 
+
     def clean(self):
         cleaned_data = super().clean()
         zona = cleaned_data.get("zona")
         cantidad = cleaned_data.get("cantidad")
         numero_inicial = cleaned_data.get("numero_inicial")
- 
+
         if zona and cantidad:
             if not numero_inicial:
                 ultimo = Espacio.objects.filter(zona=zona).aggregate(Max("numero"))["numero__max"] or 0
                 numero_inicial = ultimo + 1
                 cleaned_data["numero_inicial"] = numero_inicial
- 
+
             rango = range(numero_inicial, numero_inicial + cantidad)
             existentes = list(
                 Espacio.objects.filter(zona=zona, numero__in=rango).values_list("numero", flat=True)
@@ -134,6 +133,5 @@ class EspaciosForm(forms.Form):
                 raise forms.ValidationError(
                     f"Ya existen espacios con esos números en la zona '{zona}': {numeros}."
                 )
- 
+
         return cleaned_data
- 

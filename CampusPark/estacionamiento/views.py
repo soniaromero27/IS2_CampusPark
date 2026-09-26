@@ -201,9 +201,13 @@ def lista_zonas_view(request):
     Administrador. Admite búsqueda por ?q=... sobre nombre y descripción.
     """
     q = request.GET.get("q", "").strip()
-    zonas = Zona.objects.annotate(cantidad_espacios=Count("espacios")).order_by("nombre")
+    zonas = Zona.objects.select_related("facultad").annotate(
+        cantidad_espacios=Count("espacios")
+    ).order_by("nombre")
     if q:
-        zonas = zonas.filter(Q(nombre__icontains=q) | Q(descripcion__icontains=q))
+        zonas = zonas.filter(
+            Q(nombre__icontains=q) | Q(descripcion__icontains=q) | Q(facultad__nombre__icontains=q)
+        )
     return render(request, "estacionamiento/zonas_lista.html", {"zonas": zonas, "q": q})
 
 

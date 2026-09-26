@@ -1,7 +1,8 @@
 from django.db import models
 from django.utils import timezone
 import math
- 
+
+from universidad.models import Facultad
 from usuarios.models import Usuario
 from vehiculos.models import Vehiculo
 
@@ -10,6 +11,14 @@ class Zona(models.Model):
     """Entidad 'zona' del DER (HU04 - Gestionar zonas de estacionamiento)."""
     nombre = models.CharField(max_length=100, unique=True)
     descripcion = models.CharField(max_length=255, blank=True)
+    facultad = models.ForeignKey(
+        Facultad,
+        on_delete=models.PROTECT,
+        related_name="zonas",
+        null=True,
+        help_text="Obligatoria para zonas nuevas (ver ZonaForm). Puede haber zonas "
+        "viejas sin facultad hasta que se completen a mano.",
+    )
 
     class Meta:
         verbose_name = "Zona"
@@ -37,7 +46,7 @@ class TipoEstado(models.Model):
 class Espacio(models.Model):
     """Entidad 'espacio' del DER."""
     numero = models.IntegerField()
-    
+
     zona = models.ForeignKey(Zona, on_delete=models.CASCADE, related_name="espacios")
     tipo_estado = models.ForeignKey(
         TipoEstado, on_delete=models.PROTECT, related_name="espacios"
@@ -85,14 +94,13 @@ class Reserva(models.Model):
         return f"Reserva #{self.id} - {self.usuario} - {self.espacio}"
 
 
-
 class Movimiento(models.Model):
     """
     Entidad 'movimiento' del DER. El DER tipa fecha_hora_ingreso y
     fecha_hora_salida como DATE; se implementan como DateTimeField
     porque el sistema necesita registrar la hora exacta de ingreso y
     salida para poder calcular el cobro por hora (ver Tarifa).
- 
+
     El personal de estacionamiento registra el movimiento ingresando
     sólo la patente. 'patente' guarda siempre lo tipeado, exista o no
     un Vehiculo registrado con esa matrícula. Si existe, se linkea en
@@ -102,7 +110,7 @@ class Movimiento(models.Model):
     """
     fecha_hora_ingreso = models.DateTimeField()
     fecha_hora_salida = models.DateTimeField(null=True, blank=True)
-    patente = models.CharField(max_length=15, default="SIN CHAPA")
+    patente = models.CharField(max_length=15)
     vehiculo = models.ForeignKey(
         Vehiculo,
         on_delete=models.SET_NULL,
@@ -111,47 +119,47 @@ class Movimiento(models.Model):
         blank=True,
     )
     espacio = models.ForeignKey(Espacio, on_delete=models.CASCADE, related_name="movimientos")
- 
+
     class Meta:
         verbose_name = "Movimiento"
         verbose_name_plural = "Movimientos"
- 
+
     def __str__(self):
         return f"Movimiento #{self.id} - {self.patente}"
- 
+
     @property
     def usuario_nombre(self):
-        """Nombre del dueño si la patente está registrada, si no 'Desconocido'."""
+        """Nombre del dueño si la patente está registrada, si no 'No registrado'."""
         if self.vehiculo_id and self.vehiculo.usuario_id:
             return f"{self.vehiculo.usuario.nombre} {self.vehiculo.usuario.apellido}"
-        return "Desconocido"
+        return "No registrado"
 
     def calcular_cobro(self):
         """
         Calcula el monto a cobrar según la tarifa vigente para el tipo
         de usuario dueño del vehículo. Si la patente no está registrada
         (o no tiene usuario asociado), se cobra como tipo 'Externo'.
- 
+
         Usa fecha_hora_salida si ya está cargada, o timezone.now() como
         estimación (para mostrar un monto antes de confirmar la salida).
         Las horas se redondean hacia arriba, con un mínimo de 1 hora.
- 
+
         Devuelve un dict: {"tipo", "horas", "tarifa", "monto"}.
         'tarifa' y 'monto' quedan en None si no hay ninguna tarifa
         configurada (con vigencia <= la fecha de salida) para ese tipo.
         """
         from reglas.models import Tarifa
         from usuarios.models import TipoUsuario
- 
+
         if self.vehiculo_id and self.vehiculo.usuario_id:
             tipo = self.vehiculo.usuario.tipo
         else:
             tipo = TipoUsuario.objects.filter(nombre__iexact="Externo").first()
- 
+
         fin = self.fecha_hora_salida or timezone.now()
         segundos = (fin - self.fecha_hora_ingreso).total_seconds()
         horas = max(1, math.ceil(segundos / 3600))
- 
+
         tarifa = None
         if tipo is not None:
             tarifa = (
@@ -159,8 +167,7 @@ class Movimiento(models.Model):
                 .order_by("-vigencia")
                 .first()
             )
- 
+
         monto = tarifa.valor_por_hora * horas if tarifa else None
- 
+
         return {"tipo": tipo, "horas": horas, "tarifa": tarifa, "monto": monto}
- 

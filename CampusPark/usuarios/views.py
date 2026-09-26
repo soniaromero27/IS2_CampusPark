@@ -54,7 +54,7 @@ def lista_usuarios_view(request):
     nombre, apellido, documento, correo y tipo de usuario.
     """
     q = request.GET.get("q", "").strip()
-    usuarios = Usuario.objects.select_related("user", "tipo").order_by("apellido", "nombre")
+    usuarios = Usuario.objects.select_related("user", "tipo", "facultad").order_by("apellido", "nombre")
     if q:
         usuarios = usuarios.filter(
             Q(nombre__icontains=q)
@@ -62,5 +62,6 @@ def lista_usuarios_view(request):
             | Q(documento__icontains=q)
             | Q(correo__icontains=q)
             | Q(tipo__nombre__icontains=q)
+            | Q(facultad__nombre__icontains=q)
         )
     return render(request, "usuarios/usuarios_lista.html", {"usuarios": usuarios, "q": q})

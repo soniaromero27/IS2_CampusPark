@@ -11,7 +11,7 @@
 <table>
   <tr>
     <th>Nombre</th><th>Apellido</th><th>Documento</th><!--th>Fecha nac.</th-->
-    <th>Correo</th><th>Teléfono</th><!--th>N° licencia</th--><th>Tipo</th><th>Fecha de registro</th>
+    <th>Correo</th><th>Teléfono</th><!--th>N° licencia</th--><th>Tipo</th><th>Facultad</th><th>Fecha de registro</th>
   </tr>
   {% for u in usuarios %}
   <tr>
@@ -23,10 +23,11 @@
     <td>{{ u.telefono }}</td>
     <!--td>{{ u.nro_licencia|default:"—" }}</td-->
     <td>{{ u.tipo }}</td>
+    <td>{{ u.facultad|default:"—" }}</td>
     <td>{{ u.fecha_registro }}</td>
   </tr>
   {% empty %}
-  <tr><td colspan="9">No hay usuarios que coincidan con la búsqueda.</td></tr>
+  <tr><td colspan="10">No hay usuarios que coincidan con la búsqueda.</td></tr>
   {% endfor %}
 </table>
 {% endblock %}
