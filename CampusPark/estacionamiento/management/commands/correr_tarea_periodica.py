@@ -26,7 +26,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--intervalo",
             type=int,
-            default=1800,
+            default=60,
             help="Segundos entre cada corrida (default: 900 = 15 minutos).",
         )
 
