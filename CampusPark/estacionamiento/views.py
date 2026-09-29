@@ -111,9 +111,9 @@ def lista_movimientos_view(request):
         "salida": ["fecha_hora_salida"],
     }
 
-    orden = request.GET.get("orden", "ingreso")
+    orden = request.GET.get("orden", "salida")
     if orden not in campos_orden:
-        orden = "ingreso"
+        orden = "salida"
 
     direccion = request.GET.get("dir", "desc")
     if direccion not in ("asc", "desc"):
