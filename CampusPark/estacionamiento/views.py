@@ -1,5 +1,5 @@
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -22,10 +22,13 @@ def lista_reservas_view(request):
 @login_required
 def crear_reserva_view(request):
     """
-    Alta de una reserva: valida solapamiento de fechas para el mismo
-    espacio (ver ReservaForm), sólo ofrece espacios de zonas que el
-    usuario puede usar (sin facultad, o de su propia facultad), y la
-    crea en estado 'Pendiente'.
+    Alta de una reserva: sólo se pide el día y la hora de entrada (ver
+    ReservaForm, que calcula fecha_inicio/fecha_fin), sólo ofrece
+    espacios de zonas que el usuario puede usar, y la crea en estado
+    'Pendiente'. Si la reserva es para HOY, marca el espacio como
+    'Reservado' al toque; si es para un día futuro, lo deja como está
+    y lo activa la tarea programada al empezar ese día (ver el comando
+    actualizar_estados_espacios).
     """
     usuario = request.user.perfil
     if request.method == "POST":
@@ -39,15 +42,27 @@ def crear_reserva_view(request):
             reserva.tipo_estado_reserva = estado_pendiente
             reserva.estado_reserva = 1
             reserva.save()
+
+            if timezone.localdate(reserva.fecha_inicio) == timezone.localdate():
+                estado_reservado, _ = TipoEstado.objects.get_or_create(nombre_estado="Reservado")
+                espacio = reserva.espacio
+                espacio.tipo_estado = estado_reservado
+                espacio.save()
+
             return redirect("estacionamiento:reservas_lista")
     else:
         form = ReservaForm(usuario=usuario)
-    return render(request, "estacionamiento/reserva_form.html", {"form": form})
+    horas_sugeridas = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 30)]
+    return render(
+        request,
+        "estacionamiento/reserva_form.html",
+        {"form": form, "horas_sugeridas": horas_sugeridas},
+    )
 
 
 @login_required
 def cancelar_reserva_view(request, pk):
-    """Cancela una reserva propia del usuario autenticado."""
+    """Cancela una reserva propia del usuario autenticado y libera el espacio."""
     reserva = get_object_or_404(Reserva, pk=pk, usuario=request.user.perfil)
     if request.method == "POST":
         estado_cancelada, _ = TipoEstadoReserva.objects.get_or_create(
@@ -56,6 +71,12 @@ def cancelar_reserva_view(request, pk):
         reserva.tipo_estado_reserva = estado_cancelada
         reserva.estado_reserva = 0
         reserva.save()
+
+        estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
+        espacio = reserva.espacio
+        espacio.tipo_estado = estado_libre
+        espacio.save()
+
         return redirect("estacionamiento:reservas_lista")
     return render(request, "estacionamiento/reserva_cancelar.html", {"reserva": reserva})
 
@@ -214,13 +235,32 @@ def lista_zonas_view(request):
     return render(request, "estacionamiento/zonas_lista.html", {"zonas": zonas, "q": q})
 
 
+def _crear_espacios(zona, cantidad):
+    """
+    Crea 'cantidad' espacios nuevos en 'zona', numerados a partir del
+    último número ya usado ahí (o desde 1 si no tiene ninguno). No hace
+    nada si cantidad es 0/None. Usado tanto al crear como al editar
+    una zona (ZonaForm) y en el alta masiva aparte (EspaciosForm).
+    """
+    if not cantidad:
+        return
+    ultimo = Espacio.objects.filter(zona=zona).aggregate(Max("numero"))["numero__max"] or 0
+    estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
+    nuevos = [
+        Espacio(zona=zona, numero=ultimo + i, tipo_estado=estado_libre)
+        for i in range(1, cantidad + 1)
+    ]
+    Espacio.objects.bulk_create(nuevos)
+
+
 @admin_requerido
 def crear_zona_view(request):
-    """Alta manual de una zona. Sólo Administrador."""
+    """Alta manual de una zona, con la opción de crear espacios de una. Sólo Administrador."""
     if request.method == "POST":
         form = ZonaForm(request.POST)
         if form.is_valid():
-            form.save()
+            zona = form.save()
+            _crear_espacios(zona, form.cleaned_data.get("cantidad_espacios"))
             return redirect("estacionamiento:zonas_lista")
     else:
         form = ZonaForm()
@@ -255,12 +295,17 @@ def crear_espacios_view(request):
 
 @admin_requerido
 def editar_zona_view(request, pk):
-    """Modificar una zona existente, incluyendo su facultad. Sólo Administrador."""
+    """
+    Modificar una zona existente, incluyendo su facultad. También
+    permite crear espacios nuevos de una (ver ZonaForm/_crear_espacios).
+    Sólo Administrador.
+    """
     zona = get_object_or_404(Zona, pk=pk)
     if request.method == "POST":
         form = ZonaForm(request.POST, instance=zona)
         if form.is_valid():
-            form.save()
+            zona = form.save()
+            _crear_espacios(zona, form.cleaned_data.get("cantidad_espacios"))
             return redirect("estacionamiento:zonas_lista")
     else:
         form = ZonaForm(instance=zona)

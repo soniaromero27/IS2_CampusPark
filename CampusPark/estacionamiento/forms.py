@@ -1,27 +1,43 @@
 from django import forms
 from django.db.models import Max
+from django.utils import timezone
 
 from vehiculos.models import Vehiculo
 
 from .models import Espacio, Movimiento, Reserva, Zona
-from datetime import timedelta
+from datetime import datetime, timedelta
+from datetime import time as time_cls
 
 
 class ReservaForm(forms.ModelForm):
     """
-    Reservar un espacio. Si se pasa 'usuario', sólo se ofrecen (y se
-    aceptan) espacios de zonas que ese usuario puede usar: zonas sin
-    facultad (libres para todos) o de su propia facultad. Los usuarios
-    Externos sólo ven zonas sin facultad. Ver Zona.permitidas_para.
+    Reservar un espacio. Sólo se pide el día a reservar y la hora de
+    entrada (llegada); fecha_inicio/fecha_fin del modelo se calculan
+    solos: fecha_inicio queda en la medianoche de ese día, y fecha_fin
+    en la hora de entrada + 30 minutos de tolerancia. Es decir, el
+    espacio queda bloqueado como "Reservado" desde el inicio del día
+    hasta ese horario (ver estacionamiento.views.crear_reserva_view).
+
+    Si se pasa 'usuario', sólo se ofrecen (y se aceptan) espacios de
+    zonas que ese usuario puede usar: zonas sin facultad (libres para
+    todos) o de su propia facultad. Los usuarios Externos sólo ven
+    zonas sin facultad. Ver Zona.permitidas_para.
     """
+
+    fecha = forms.DateField(
+        label="Día a reservar", widget=forms.DateInput(attrs={"type": "date"})
+    )
+    hora_entrada = forms.TimeField(
+        label="Hora de entrada",
+        widget=forms.TimeInput(
+            attrs={"type": "time", "step": 1800, "list": "horas-datalist"}
+        ),
+        help_text="El espacio queda reservado desde el inicio del día hasta esta hora + 30 min.",
+    )
 
     class Meta:
         model = Reserva
-        fields = ["espacio", "fecha_inicio", "fecha_fin"]
-        widgets = {
-            "fecha_inicio": forms.DateTimeInput(attrs={"type": "datetime-local"}),
-            "fecha_fin": forms.DateTimeInput(attrs={"type": "datetime-local"}),
-        }
+        fields = ["espacio"]
 
     def __init__(self, *args, usuario=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -35,16 +51,27 @@ class ReservaForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        fecha_inicio = cleaned_data.get("fecha_inicio")
-        fecha_fin = cleaned_data.get("fecha_fin")
+        fecha = cleaned_data.get("fecha")
+        hora_entrada = cleaned_data.get("hora_entrada")
         espacio = cleaned_data.get("espacio")
 
-        if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
-            raise forms.ValidationError(
-                "La fecha de fin no puede ser anterior a la fecha de inicio."
-            )
+        if not (fecha and hora_entrada):
+            return cleaned_data
 
-        if espacio and fecha_inicio and fecha_fin:
+        fecha_inicio = datetime.combine(fecha, time_cls.min)
+        fecha_fin = datetime.combine(fecha, hora_entrada) + timedelta(minutes=30)
+        if timezone.is_naive(fecha_inicio):
+            fecha_inicio = timezone.make_aware(fecha_inicio)
+        if timezone.is_naive(fecha_fin):
+            fecha_fin = timezone.make_aware(fecha_fin)
+
+        # fecha_inicio/fecha_fin no son campos de este form (se calculan
+        # acá), así que se asignan directo a la instancia para que
+        # self.save() los guarde.
+        self.instance.fecha_inicio = fecha_inicio
+        self.instance.fecha_fin = fecha_fin
+
+        if espacio:
             solapadas = Reserva.objects.filter(
                 espacio=espacio,
                 fecha_inicio__lte=fecha_fin,
@@ -56,7 +83,7 @@ class ReservaForm(forms.ModelForm):
                 solapadas = solapadas.exclude(pk=self.instance.pk)
             if solapadas.exists():
                 raise forms.ValidationError(
-                    "Ese espacio ya tiene una reserva activa que se solapa con esas fechas."
+                    "Ese espacio ya tiene una reserva activa que se solapa con ese día/horario."
                 )
 
         return cleaned_data
@@ -138,11 +165,30 @@ class IngresoForm(forms.Form):
 
 
 class ZonaForm(forms.ModelForm):
-    """Crear una zona manualmente. Sólo Administrador."""
+    """
+    Crear o editar una zona manualmente. Sólo Administrador. La
+    facultad es opcional: dejarla en 'Ninguna' crea una zona pública,
+    sin restricción de acceso por facultad (ver Zona.permite_a).
+    Permite indicar de una vez cuántos espacios crear en esa zona: se
+    numeran a partir del último número ya usado (o desde 1 si es una
+    zona nueva sin espacios todavía). Dejarlo en 0 no crea ninguno.
+    """
+
+    cantidad_espacios = forms.IntegerField(
+        min_value=0,
+        required=False,
+        initial=0,
+        label="Cantidad de espacios a crear",
+        help_text="Se numeran a partir del último número usado en la zona (o desde 1 si es nueva).",
+    )
 
     class Meta:
         model = Zona
         fields = ["nombre", "descripcion", "facultad"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["facultad"].empty_label = "Ninguna (zona pública)"
 
 
 class EspaciosForm(forms.Form):

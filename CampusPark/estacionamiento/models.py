@@ -16,8 +16,8 @@ class Zona(models.Model):
         on_delete=models.PROTECT,
         related_name="zonas",
         null=True,
-        help_text="Obligatoria para zonas nuevas (ver ZonaForm). Puede haber zonas "
-        "viejas sin facultad hasta que se completen a mano.",
+        blank=True,
+        help_text="Dejar en 'Ninguna' para que sea una zona pública, sin restricción de facultad.",
     )
 
     class Meta:
@@ -32,9 +32,12 @@ class Zona(models.Model):
         """
         Zonas que un usuario puede usar (para reservar o estacionar):
         - Zonas sin facultad (facultad nula): libres para todos.
-        - Zonas con facultad: sólo para usuarios de esa misma facultad.
-        - usuario=None (patente no registrada) o usuario Externo: sólo
-          las zonas sin facultad.
+        - Zonas con facultad: sólo para usuarios que pertenezcan a esa
+          misma facultad. No importa el tipo de usuario -- Docente,
+          Estudiante, Funcionario, Personal de Estacionamiento o
+          Administrador acceden igual si tienen esa facultad cargada.
+        - usuario=None (patente no registrada) o usuario Externo (nunca
+          tiene facultad): sólo las zonas sin facultad.
         """
         libres = models.Q(facultad__isnull=True)
         if usuario is None or usuario.es_externo or usuario.facultad_id is None:
