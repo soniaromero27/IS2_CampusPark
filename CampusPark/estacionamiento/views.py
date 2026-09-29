@@ -23,13 +23,16 @@ def lista_reservas_view(request):
 def crear_reserva_view(request):
     """
     Alta de una reserva: valida solapamiento de fechas para el mismo
-    espacio (ver ReservaForm) y la crea en estado 'Pendiente'.
+    espacio (ver ReservaForm), sólo ofrece espacios de zonas que el
+    usuario puede usar (sin facultad, o de su propia facultad), y la
+    crea en estado 'Pendiente'.
     """
+    usuario = request.user.perfil
     if request.method == "POST":
-        form = ReservaForm(request.POST)
+        form = ReservaForm(request.POST, usuario=usuario)
         if form.is_valid():
             reserva = form.save(commit=False)
-            reserva.usuario = request.user.perfil
+            reserva.usuario = usuario
             estado_pendiente, _ = TipoEstadoReserva.objects.get_or_create(
                 nombre_estado_reserva="Pendiente"
             )
@@ -38,7 +41,7 @@ def crear_reserva_view(request):
             reserva.save()
             return redirect("estacionamiento:reservas_lista")
     else:
-        form = ReservaForm()
+        form = ReservaForm(usuario=usuario)
     return render(request, "estacionamiento/reserva_form.html", {"form": form})
 
 
@@ -248,3 +251,17 @@ def crear_espacios_view(request):
     else:
         form = EspaciosForm()
     return render(request, "estacionamiento/espacios_form.html", {"form": form})
+
+
+@admin_requerido
+def editar_zona_view(request, pk):
+    """Modificar una zona existente, incluyendo su facultad. Sólo Administrador."""
+    zona = get_object_or_404(Zona, pk=pk)
+    if request.method == "POST":
+        form = ZonaForm(request.POST, instance=zona)
+        if form.is_valid():
+            form.save()
+            return redirect("estacionamiento:zonas_lista")
+    else:
+        form = ZonaForm(instance=zona)
+    return render(request, "estacionamiento/zona_form.html", {"form": form, "zona": zona})

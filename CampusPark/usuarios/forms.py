@@ -56,10 +56,16 @@ class RegistroUsuarioForm(UserCreationForm):
         cleaned_data = super().clean()
         tipo = cleaned_data.get("tipo")
         facultad = cleaned_data.get("facultad")
-        if tipo and tipo.nombre.strip().lower() in ("docente", "estudiante", "funcionario") and not facultad:
+        nombre_tipo = tipo.nombre.strip().lower() if tipo else ""
+        if nombre_tipo in ("docente", "estudiante", "funcionario") and not facultad:
             self.add_error(
                 "facultad",
                 "Los usuarios de tipo Docente, Estudiante o Funcionario deben indicar una facultad.",
+            )
+        if nombre_tipo == "externo" and facultad:
+            self.add_error(
+                "facultad",
+                "Los usuarios Externos no pueden pertenecer a una facultad.",
             )
         return cleaned_data
 
@@ -129,5 +135,10 @@ class UsuarioEditForm(forms.ModelForm):
             self.add_error(
                 "facultad",
                 "Los usuarios de tipo Docente, Estudiante o Funcionario deben indicar una facultad.",
+            )
+        if self.instance.es_externo and facultad:
+            self.add_error(
+                "facultad",
+                "Los usuarios Externos no pueden pertenecer a una facultad.",
             )
         return cleaned_data

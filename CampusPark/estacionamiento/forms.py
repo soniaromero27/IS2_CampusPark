@@ -1,11 +1,20 @@
 from django import forms
 from django.db.models import Max
 
+from vehiculos.models import Vehiculo
+
 from .models import Espacio, Movimiento, Reserva, Zona
 from datetime import timedelta
 
 
 class ReservaForm(forms.ModelForm):
+    """
+    Reservar un espacio. Si se pasa 'usuario', sólo se ofrecen (y se
+    aceptan) espacios de zonas que ese usuario puede usar: zonas sin
+    facultad (libres para todos) o de su propia facultad. Los usuarios
+    Externos sólo ven zonas sin facultad. Ver Zona.permitidas_para.
+    """
+
     class Meta:
         model = Reserva
         fields = ["espacio", "fecha_inicio", "fecha_fin"]
@@ -13,6 +22,16 @@ class ReservaForm(forms.ModelForm):
             "fecha_inicio": forms.DateTimeInput(attrs={"type": "datetime-local"}),
             "fecha_fin": forms.DateTimeInput(attrs={"type": "datetime-local"}),
         }
+
+    def __init__(self, *args, usuario=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.usuario = usuario
+        if usuario is not None:
+            self.fields["espacio"].queryset = (
+                Espacio.objects.filter(zona__in=Zona.permitidas_para(usuario))
+                .select_related("zona")
+                .order_by("zona__nombre", "numero")
+            )
 
     def clean(self):
         cleaned_data = super().clean()
@@ -77,6 +96,7 @@ class IngresoForm(forms.Form):
     def clean(self):
         cleaned_data = super().clean()
         patente = cleaned_data.get("patente")
+        espacio = cleaned_data.get("espacio")
 
         if patente and Movimiento.objects.filter(
             patente=patente, fecha_hora_salida__isnull=True
@@ -84,6 +104,35 @@ class IngresoForm(forms.Form):
             raise forms.ValidationError(
                 "Esa patente ya tiene un ingreso registrado sin salida."
             )
+
+        if patente and espacio:
+            vehiculo = (
+                Vehiculo.objects.filter(matricula=patente)
+                .select_related("usuario", "usuario__tipo")
+                .first()
+            )
+            usuario = vehiculo.usuario if vehiculo else None
+            zona = espacio.zona
+
+            if not zona.permite_a(usuario):
+                if usuario is None:
+                    msg = (
+                        f"La patente {patente} no está registrada, por lo que sólo puede "
+                        f"estacionar en zonas sin facultad. La zona '{zona}' pertenece a "
+                        f"la facultad {zona.facultad}."
+                    )
+                elif usuario.es_externo:
+                    msg = (
+                        f"{usuario.nombre} {usuario.apellido} es usuario Externo: sólo puede "
+                        f"estacionar en zonas sin facultad. La zona '{zona}' pertenece a "
+                        f"la facultad {zona.facultad}."
+                    )
+                else:
+                    msg = (
+                        f"{usuario.nombre} {usuario.apellido} no puede estacionar en la zona "
+                        f"'{zona}': pertenece a la facultad {zona.facultad}."
+                    )
+                self.add_error("espacio", msg)
 
         return cleaned_data
 

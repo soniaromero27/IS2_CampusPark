@@ -27,6 +27,28 @@ class Zona(models.Model):
     def __str__(self):
         return self.nombre
 
+    @classmethod
+    def permitidas_para(cls, usuario):
+        """
+        Zonas que un usuario puede usar (para reservar o estacionar):
+        - Zonas sin facultad (facultad nula): libres para todos.
+        - Zonas con facultad: sólo para usuarios de esa misma facultad.
+        - usuario=None (patente no registrada) o usuario Externo: sólo
+          las zonas sin facultad.
+        """
+        libres = models.Q(facultad__isnull=True)
+        if usuario is None or usuario.es_externo or usuario.facultad_id is None:
+            return cls.objects.filter(libres)
+        return cls.objects.filter(libres | models.Q(facultad_id=usuario.facultad_id))
+
+    def permite_a(self, usuario):
+        """True si 'usuario' (o None = no registrado) puede usar esta zona."""
+        if self.facultad_id is None:
+            return True
+        if usuario is None or usuario.es_externo:
+            return False
+        return usuario.facultad_id == self.facultad_id
+
 
 class TipoEstado(models.Model):
     """

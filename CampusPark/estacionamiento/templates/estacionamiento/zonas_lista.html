@@ -17,7 +17,7 @@
 
 <table>
   <tr>
-    <th>Nombre</th><th>Facultad</th><th>Descripción</th><th>Cantidad de espacios</th>
+    <th>Nombre</th><th>Facultad</th><th>Descripción</th><th>Cantidad de espacios</th><th></th>
   </tr>
   {% for z in zonas %}
   <tr>
@@ -25,9 +25,10 @@
     <td>{{ z.facultad|default:"—" }}</td>
     <td>{{ z.descripcion }}</td>
     <td>{{ z.cantidad_espacios }}</td>
+    <td><a href="{% url 'estacionamiento:zona_editar' z.pk %}">Editar</a></td>
   </tr>
   {% empty %}
-  <tr><td colspan="4">No hay zonas que coincidan con la búsqueda.</td></tr>
+  <tr><td colspan="5">No hay zonas que coincidan con la búsqueda.</td></tr>
   {% endfor %}
 </table>
 {% endblock %}

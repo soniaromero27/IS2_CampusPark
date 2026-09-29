@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>{% if zona %}Editar zona{% else %}Nueva zona{% endif %}</h2>
+<h2>{% if facultad %}Editar facultad{% else %}Nueva facultad{% endif %}</h2>
 <form method="post">
   {% csrf_token %}
   {{ form.non_field_errors }}
@@ -11,7 +11,7 @@
       {{ field.errors }}
     </div>
   {% endfor %}
-  <button type="submit">{% if zona %}Guardar cambios{% else %}Crear zona{% endif %}</button>
+  <button type="submit">{% if facultad %}Guardar cambios{% else %}Crear facultad{% endif %}</button>
 </form>
-<p><a href="{% url 'estacionamiento:zonas_lista' %}">Volver</a></p>
+<p><a href="{% url 'universidad:facultades_lista' %}">Volver</a></p>
 {% endblock %}

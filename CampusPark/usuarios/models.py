@@ -81,3 +81,8 @@ class Usuario(models.Model):
     def requiere_facultad(self):
         """True si el tipo de usuario es Docente, Estudiante o Funcionario."""
         return self.tipo.nombre.strip().lower() in TIPOS_CON_FACULTAD
+
+    @property
+    def es_externo(self):
+        """True si el tipo de usuario es Externo (nunca pertenece a una facultad)."""
+        return self.tipo.nombre.strip().lower() == "externo"
