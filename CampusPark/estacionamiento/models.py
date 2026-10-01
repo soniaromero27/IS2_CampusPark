@@ -102,9 +102,7 @@ class Reserva(models.Model):
     """Entidad 'reserva' del DER."""
     fecha_inicio = models.DateTimeField()
     fecha_fin = models.DateTimeField()
-    estado_reserva = models.IntegerField(
-        default=1, help_text="Código de estado (redundante con tipo_estado_reserva, tal como en el DER)."
-    )
+
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="reservas")
     espacio = models.ForeignKey(Espacio, on_delete=models.CASCADE, related_name="reservas")
     tipo_estado_reserva = models.ForeignKey(
