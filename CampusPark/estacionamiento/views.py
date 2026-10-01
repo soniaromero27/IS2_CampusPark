@@ -13,11 +13,49 @@ from vehiculos.models import Vehiculo
 
 @login_required
 def lista_reservas_view(request):
-    """Consulta de las reservas del usuario autenticado."""
-    reservas = Reserva.objects.filter(
-        usuario=request.user.perfil
-    ).select_related("espacio", "espacio__zona", "tipo_estado_reserva").order_by("-fecha_inicio")
-    return render(request, "estacionamiento/reservas_lista.html", {"reservas": reservas})
+    """
+    Consulta de las reservas del usuario autenticado. Se puede ordenar
+    por cualquier columna, ascendente o descendente, con los parámetros
+    GET ?orden=<campo>&dir=<asc|desc>, y buscar con ?q=... sobre zona
+    y estado.
+    """
+    campos_orden = {
+        "zona": ["espacio__zona__nombre"],
+        "espacio": ["espacio__numero"],
+        "desde": ["fecha_inicio"],
+        "hasta": ["fecha_fin"],
+        "estado": ["tipo_estado_reserva__nombre_estado_reserva"],
+    }
+
+    orden = request.GET.get("orden", "desde")
+    if orden not in campos_orden:
+        orden = "desde"
+
+    direccion = request.GET.get("dir", "desc")
+    if direccion not in ("asc", "desc"):
+        direccion = "desc"
+
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+
+    q = request.GET.get("q", "").strip()
+
+    reservas = Reserva.objects.filter(usuario=request.user.perfil).select_related(
+        "espacio", "espacio__zona", "tipo_estado_reserva"
+    )
+    if q:
+        reservas = reservas.filter(
+            Q(espacio__zona__nombre__icontains=q)
+            | Q(tipo_estado_reserva__nombre_estado_reserva__icontains=q)
+        )
+    reservas = reservas.order_by(*campos)
+
+    return render(
+        request,
+        "estacionamiento/reservas_lista.html",
+        {"reservas": reservas, "orden": orden, "dir": direccion, "q": q},
+    )
 
 
 @login_required
@@ -86,12 +124,52 @@ def cancelar_reserva_view(request, pk):
 def lista_todas_reservas_view(request):
     """
     Consultar todas las reservas, de cualquier usuario: sólo Personal
-    de Estacionamiento o Administrador.
+    de Estacionamiento o Administrador. Se puede ordenar por cualquier
+    columna, ascendente o descendente, con ?orden=<campo>&dir=<asc|desc>,
+    y buscar con ?q=... sobre nombre, apellido y documento del usuario,
+    zona y estado.
     """
+    campos_orden = {
+        "usuario": ["usuario__apellido", "usuario__nombre"],
+        "zona": ["espacio__zona__nombre"],
+        "espacio": ["espacio__numero"],
+        "desde": ["fecha_inicio"],
+        "hasta": ["fecha_fin"],
+        "estado": ["tipo_estado_reserva__nombre_estado_reserva"],
+    }
+
+    orden = request.GET.get("orden", "desde")
+    if orden not in campos_orden:
+        orden = "desde"
+
+    direccion = request.GET.get("dir", "desc")
+    if direccion not in ("asc", "desc"):
+        direccion = "desc"
+
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+
+    q = request.GET.get("q", "").strip()
+
     reservas = Reserva.objects.select_related(
         "usuario", "espacio", "espacio__zona", "tipo_estado_reserva"
-    ).order_by("-fecha_inicio")
-    return render(request, "estacionamiento/reservas_lista_todas.html", {"reservas": reservas})
+    )
+    if q:
+        reservas = reservas.filter(
+            Q(usuario__nombre__icontains=q)
+            | Q(usuario__apellido__icontains=q)
+            | Q(usuario__documento__icontains=q)
+            | Q(espacio__zona__nombre__icontains=q)
+            | Q(tipo_estado_reserva__nombre_estado_reserva__icontains=q)
+        )
+    reservas = reservas.order_by(*campos)
+
+    return render(
+        request,
+        "estacionamiento/reservas_lista_todas.html",
+        {"reservas": reservas, "orden": orden, "dir": direccion, "q": q},
+    )
 
 
 @personal_requerido
@@ -155,9 +233,12 @@ def registrar_ingreso_view(request):
     sin crear ningún Vehiculo ni Usuario nuevo.
 
     Si el dueño tiene una reserva vigente ahora mismo, IngresoForm ya
-    resolvió el espacio como el reservado (ver form.reserva_activa);
-    acá sólo falta marcar esa reserva como 'Confirmada'. En cualquier
-    caso, marca el espacio como 'Ocupado'.
+    resolvió el espacio como el reservado (ver form.reserva_activa) o,
+    si ese espacio estaba ocupado, por otro libre de la misma zona (ver
+    form.reasignado/form.espacio_original); acá sólo falta marcar esa
+    reserva como 'Confirmada' (actualizando su espacio si hubo
+    reasignación) y avisar del cambio. En cualquier caso, marca el
+    espacio final como 'Ocupado'.
     """
     if request.method == "POST":
         form = IngresoForm(request.POST)
@@ -178,18 +259,38 @@ def registrar_ingreso_view(request):
             espacio.save()
 
             if form.reserva_activa:
-                estado_en_curso, _ = TipoEstadoReserva.objects.get_or_create(
+                estado_confirmada, _ = TipoEstadoReserva.objects.get_or_create(
                     nombre_estado_reserva="Confirmada"
                 )
                 reserva = form.reserva_activa
-                reserva.tipo_estado_reserva = estado_en_curso
+                reserva.tipo_estado_reserva = estado_confirmada
                 reserva.estado_reserva = 2
+                if form.reasignado:
+                    reserva.espacio = espacio
                 reserva.save()
-                messages.success(
-                    request,
-                    f"{patente} tenía una reserva vigente: se lo asignó automáticamente a la "
-                    f"zona '{espacio.zona}', espacio N°{espacio.numero}.",
-                )
+
+                if form.reasignado:
+                    if form.cambio_de_zona:
+                        messages.warning(
+                            request,
+                            f"{patente} tenía reservado el espacio N°{form.espacio_original.numero} "
+                            f"de la zona '{form.espacio_original.zona}', pero estaba ocupado y no "
+                            f"había otro libre ahí: se lo asignó al espacio N°{espacio.numero} de "
+                            f"la zona '{espacio.zona}'.",
+                        )
+                    else:
+                        messages.warning(
+                            request,
+                            f"{patente} tenía reservado el espacio N°{form.espacio_original.numero} "
+                            f"de la zona '{espacio.zona}', pero estaba ocupado: se lo reasignó al "
+                            f"espacio N°{espacio.numero} de la misma zona.",
+                        )
+                else:
+                    messages.success(
+                        request,
+                        f"{patente} tenía una reserva vigente: se lo asignó automáticamente a "
+                        f"la zona '{espacio.zona}', espacio N°{espacio.numero}.",
+                    )
 
             return redirect("estacionamiento:movimientos_lista")
     else:

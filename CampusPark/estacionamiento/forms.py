@@ -5,18 +5,14 @@ from django.utils import timezone
 from vehiculos.models import Vehiculo
 
 from .models import Espacio, Movimiento, Reserva, Zona
-from datetime import datetime, timedelta
-from datetime import time as time_cls
+from datetime import datetime
 
 
 class ReservaForm(forms.ModelForm):
     """
-    Reservar un espacio. Sólo se pide el día a reservar y la hora de
-    entrada (llegada); fecha_inicio/fecha_fin del modelo se calculan
-    solos: fecha_inicio queda en la medianoche de ese día, y fecha_fin
-    en la hora de entrada + 30 minutos de tolerancia. Es decir, el
-    espacio queda bloqueado como "Reservado" desde el inicio del día
-    hasta ese horario (ver estacionamiento.views.crear_reserva_view).
+    Reservar un espacio. Se elige el día, la hora de inicio y la hora
+    de fin; se asume que la reserva termina el mismo día que empieza
+    (fecha_inicio y fecha_fin del modelo quedan en ese único día).
 
     Si se pasa 'usuario', sólo se ofrecen (y se aceptan) espacios de
     zonas que ese usuario puede usar: zonas sin facultad (libres para
@@ -27,13 +23,19 @@ class ReservaForm(forms.ModelForm):
     fecha = forms.DateField(
         label="Día a reservar", widget=forms.DateInput(attrs={"type": "date"})
     )
-    hora_entrada = forms.TimeField(
-        label="Hora de entrada",
+    hora_inicio = forms.TimeField(
+        label="Hora de inicio",
         widget=forms.TimeInput(
             attrs={"type": "time", "step": 1800, "list": "horas-datalist"}
         ),
-        help_text="Podés escribirla a mano o elegirla de la lista (cada 30 minutos). "
-        "El espacio queda reservado desde el inicio del día hasta esta hora + 30 min.",
+        help_text="Podés escribirla a mano o elegirla de la lista (cada 30 minutos).",
+    )
+    hora_fin = forms.TimeField(
+        label="Hora de fin",
+        widget=forms.TimeInput(
+            attrs={"type": "time", "step": 1800, "list": "horas-datalist"}
+        ),
+        help_text="Del mismo día. Podés escribirla a mano o elegirla de la lista.",
     )
 
     class Meta:
@@ -53,14 +55,21 @@ class ReservaForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         fecha = cleaned_data.get("fecha")
-        hora_entrada = cleaned_data.get("hora_entrada")
+        hora_inicio = cleaned_data.get("hora_inicio")
+        hora_fin = cleaned_data.get("hora_fin")
         espacio = cleaned_data.get("espacio")
 
-        if not (fecha and hora_entrada):
+        if not (fecha and hora_inicio and hora_fin):
             return cleaned_data
 
-        fecha_inicio = datetime.combine(fecha, time_cls.min)
-        fecha_fin = datetime.combine(fecha, hora_entrada) + timedelta(minutes=30)
+        if hora_fin <= hora_inicio:
+            self.add_error(
+                "hora_fin", "La hora de fin debe ser posterior a la hora de inicio."
+            )
+            return cleaned_data
+
+        fecha_inicio = datetime.combine(fecha, hora_inicio)
+        fecha_fin = datetime.combine(fecha, hora_fin)
         if timezone.is_naive(fecha_inicio):
             fecha_inicio = timezone.make_aware(fecha_inicio)
         if timezone.is_naive(fecha_fin):
@@ -102,11 +111,22 @@ class IngresoForm(forms.Form):
     usuario "No registrado" (sin crear ningún Vehiculo ni Usuario nuevo).
 
     Si el dueño del vehículo tiene una reserva vigente AHORA MISMO
-    (Pendiente, dentro de su franja horaria: desde el inicio del día
-    hasta la hora de entrada + 30 min), se ignora el espacio elegido y
-    se usa el de esa reserva -- queda guardada en self.reserva_activa
-    para que la vista la marque 'Confirmada'. Si no hay reserva vigente,
-    el espacio pasa a ser obligatorio y se elige a mano.
+    (Pendiente, dentro de su franja horaria), se ignora el espacio
+    elegido y se usa el de esa reserva -- queda guardada en
+    self.reserva_activa para que la vista la marque 'Confirmada'. Si
+    ese espacio ya está ocupado por otro vehículo (por ejemplo porque
+    el anterior no salió a tiempo):
+      1. Se busca otro espacio libre en la MISMA zona y se reasigna
+         ahí automáticamente (self.reasignado = True,
+         self.espacio_original guarda el que tenía reservado).
+      2. Si no hay NINGÚN otro libre en esa zona, se expulsa al
+         vehículo que está ocupando el espacio reservado: su
+         Movimiento se cierra con la salida en este mismo momento
+         (self.expulsa_movimiento queda con ese Movimiento, para que
+         la vista lo cierre y libere la reserva que tuviera), y el
+         espacio reservado queda para el dueño de la reserva.
+    Si no hay reserva vigente, el espacio pasa a ser obligatorio y se
+    elige a mano.
     """
 
     patente = forms.CharField(
@@ -128,6 +148,9 @@ class IngresoForm(forms.Form):
             tipo_estado__nombre_estado="Libre"
         ).select_related("zona")
         self.reserva_activa = None
+        self.reasignado = False
+        self.cambio_de_zona = False
+        self.espacio_original = None
 
     def clean_patente(self):
         patente = self.cleaned_data["patente"].strip().upper()
@@ -172,15 +195,55 @@ class IngresoForm(forms.Form):
                         "Finalizada",
                     ]
                 )
-                .select_related("espacio", "espacio__zona")
+                .select_related("espacio", "espacio__zona", "espacio__tipo_estado")
                 .order_by("fecha_inicio")
                 .first()
             )
 
         if self.reserva_activa:
-            # Hay reserva vigente: se usa el espacio reservado, se
-            # ignora lo que se haya elegido (o dejado vacío).
-            espacio = self.reserva_activa.espacio
+            espacio_reservado = self.reserva_activa.espacio
+            espacio_elegido_a_mano = espacio  # lo que vino del campo, antes de pisarlo
+
+            if espacio_reservado.tipo_estado.nombre_estado == "Ocupado":
+                # Otro vehículo está en el espacio reservado (por ejemplo,
+                # el anterior no salió a tiempo): reasignar a otro espacio
+                # libre de la MISMA zona, para no bloquear el ingreso.
+                alternativo = (
+                    Espacio.objects.filter(
+                        zona=espacio_reservado.zona,
+                        tipo_estado__nombre_estado="Libre",
+                    )
+                    .exclude(pk=espacio_reservado.pk)
+                    .order_by("numero")
+                    .first()
+                )
+                if alternativo:
+                    espacio = alternativo
+                    self.reasignado = True
+                    self.espacio_original = espacio_reservado
+                elif espacio_elegido_a_mano:
+                    # No hay lugar en la zona reservada, pero el personal
+                    # ya eligió otro espacio a mano (puede ser de otra
+                    # zona): se usa ese, sujeto igual al chequeo de
+                    # facultad de más abajo.
+                    espacio = espacio_elegido_a_mano
+                    self.reasignado = True
+                    self.cambio_de_zona = True
+                    self.espacio_original = espacio_reservado
+                else:
+                    self.espacio_original = espacio_reservado
+                    self.add_error(
+                        "espacio",
+                        f"El espacio reservado (N°{espacio_reservado.numero}) de la zona "
+                        f"'{espacio_reservado.zona}' está ocupado y no hay otro libre ahí. "
+                        f"Elegí otro espacio de la lista (puede ser de otra zona) para "
+                        f"continuar, o no registres el ingreso si el vehículo se retira "
+                        f"del campus.",
+                    )
+                    espacio = None
+            else:
+                espacio = espacio_reservado
+
             cleaned_data["espacio"] = espacio
         elif not espacio:
             self.add_error(
