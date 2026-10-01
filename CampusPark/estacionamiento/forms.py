@@ -146,7 +146,7 @@ class IngresoForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields["espacio"].queryset = Espacio.objects.filter(
             tipo_estado__nombre_estado="Libre"
-        ).select_related("zona")
+        ).select_related("zona").order_by('id')
         self.reserva_activa = None
         self.reasignado = False
         self.cambio_de_zona = False
