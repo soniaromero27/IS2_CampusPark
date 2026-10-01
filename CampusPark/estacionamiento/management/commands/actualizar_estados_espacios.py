@@ -34,10 +34,18 @@ class Command(BaseCommand):
         estado_reservado, _ = TipoEstado.objects.get_or_create(nombre_estado="Reservado")
         estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
 
-        # 1) Activar: reservas de HOY, no canceladas.
+        # 1) Activar: reservas de HOY que siguen 'Pendiente' (si ya
+        #    están 'Confirmada' o 'Finalizada' no hay que tocarlas -- el
+        #    espacio ya está en 'Ocupado' o 'Libre' según corresponda).
         reservas_hoy = (
             Reserva.objects.filter(fecha_inicio__gte=hoy_inicio, fecha_inicio__lt=hoy_fin)
-            .exclude(tipo_estado_reserva__nombre_estado_reserva="Cancelada")
+            .exclude(
+                tipo_estado_reserva__nombre_estado_reserva__in=[
+                    "Cancelada",
+                    "Confirmada",
+                    "Finalizada",
+                ]
+            )
             .select_related("espacio")
         )
 
@@ -56,7 +64,13 @@ class Command(BaseCommand):
                 fecha_fin__lt=ahora,
                 espacio__tipo_estado=estado_reservado,
             )
-            .exclude(tipo_estado_reserva__nombre_estado_reserva="Cancelada")
+            .exclude(
+                tipo_estado_reserva__nombre_estado_reserva__in=[
+                    "Cancelada",
+                    "Confirmada",
+                    "Finalizada",
+                ]
+            )
             .select_related("espacio")
         )
 

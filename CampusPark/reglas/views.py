@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404, redirect, render
 
 from usuarios.decorators import personal_requerido
+from usuarios.models import TipoUsuario
 
 from .forms import TarifaForm
 from .models import Tarifa
@@ -8,9 +9,23 @@ from .models import Tarifa
 
 @personal_requerido
 def lista_tarifas_view(request):
-    """Ver todas las tarifas: sólo Personal de Estacionamiento o Administrador."""
+    """
+    Ver todas las tarifas: sólo Personal de Estacionamiento o
+    Administrador. Se puede filtrar por el tipo de usuario al que
+    afectan con ?tipo=<id>.
+    """
+    tipos = TipoUsuario.objects.order_by("nombre")
+    tipo_id = request.GET.get("tipo", "").strip()
+
     tarifas = Tarifa.objects.select_related("tipo").order_by("-vigencia", "tipo__nombre")
-    return render(request, "reglas/tarifas_lista.html", {"tarifas": tarifas})
+    if tipo_id:
+        tarifas = tarifas.filter(tipo_id=tipo_id)
+
+    return render(
+        request,
+        "reglas/tarifas_lista.html",
+        {"tarifas": tarifas, "tipos": tipos, "tipo_id": tipo_id},
+    )
 
 
 @personal_requerido

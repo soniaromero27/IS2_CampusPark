@@ -32,7 +32,8 @@ class ReservaForm(forms.ModelForm):
         widget=forms.TimeInput(
             attrs={"type": "time", "step": 1800, "list": "horas-datalist"}
         ),
-        help_text="El espacio queda reservado desde el inicio del día hasta esta hora + 30 min.",
+        help_text="Podés escribirla a mano o elegirla de la lista (cada 30 minutos). "
+        "El espacio queda reservado desde el inicio del día hasta esta hora + 30 min.",
     )
 
     class Meta:
@@ -98,7 +99,14 @@ class IngresoForm(forms.Form):
     buscar si corresponde a un Vehiculo/Usuario ya registrado. No hace
     falta que el vehículo exista de antemano: si la patente no está
     registrada, el movimiento igual se crea, quedando asociado a un
-    usuario "Desconocido" (sin crear ningún Vehiculo ni Usuario nuevo).
+    usuario "No registrado" (sin crear ningún Vehiculo ni Usuario nuevo).
+
+    Si el dueño del vehículo tiene una reserva vigente AHORA MISMO
+    (Pendiente, dentro de su franja horaria: desde el inicio del día
+    hasta la hora de entrada + 30 min), se ignora el espacio elegido y
+    se usa el de esa reserva -- queda guardada en self.reserva_activa
+    para que la vista la marque 'Confirmada'. Si no hay reserva vigente,
+    el espacio pasa a ser obligatorio y se elige a mano.
     """
 
     patente = forms.CharField(
@@ -106,13 +114,20 @@ class IngresoForm(forms.Form):
         label="Chapa / Patente",
         widget=forms.TextInput(attrs={"list": "patentes-datalist", "autocomplete": "off"}),
     )
-    espacio = forms.ModelChoiceField(queryset=Espacio.objects.none(), label="Espacio")
+    espacio = forms.ModelChoiceField(
+        queryset=Espacio.objects.none(),
+        label="Espacio",
+        required=False,
+        help_text="No hace falta elegirlo si el vehículo tiene una reserva vigente ahora: "
+        "se usa el espacio reservado automáticamente.",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["espacio"].queryset = Espacio.objects.filter(
             tipo_estado__nombre_estado="Libre"
         ).select_related("zona")
+        self.reserva_activa = None
 
     def clean_patente(self):
         patente = self.cleaned_data["patente"].strip().upper()
@@ -132,15 +147,49 @@ class IngresoForm(forms.Form):
                 "Esa patente ya tiene un ingreso registrado sin salida."
             )
 
-        if patente and espacio:
-            vehiculo = (
-                Vehiculo.objects.filter(matricula=patente)
-                .select_related("usuario", "usuario__tipo")
+        if not patente:
+            return cleaned_data
+
+        vehiculo = (
+            Vehiculo.objects.filter(matricula=patente)
+            .select_related("usuario", "usuario__tipo")
+            .first()
+        )
+        usuario = vehiculo.usuario if vehiculo else None
+
+        if usuario is not None:
+            ahora = timezone.now()
+            self.reserva_activa = (
+                Reserva.objects.filter(
+                    usuario=usuario,
+                    fecha_inicio__lte=ahora,
+                    fecha_fin__gte=ahora,
+                )
+                .exclude(
+                    tipo_estado_reserva__nombre_estado_reserva__in=[
+                        "Cancelada",
+                        "Confirmada",
+                        "Finalizada",
+                    ]
+                )
+                .select_related("espacio", "espacio__zona")
+                .order_by("fecha_inicio")
                 .first()
             )
-            usuario = vehiculo.usuario if vehiculo else None
-            zona = espacio.zona
 
+        if self.reserva_activa:
+            # Hay reserva vigente: se usa el espacio reservado, se
+            # ignora lo que se haya elegido (o dejado vacío).
+            espacio = self.reserva_activa.espacio
+            cleaned_data["espacio"] = espacio
+        elif not espacio:
+            self.add_error(
+                "espacio",
+                "Elegí un espacio (este vehículo no tiene una reserva vigente ahora mismo).",
+            )
+
+        if espacio:
+            zona = espacio.zona
             if not zona.permite_a(usuario):
                 if usuario is None:
                     msg = (

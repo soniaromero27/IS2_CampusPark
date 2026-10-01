@@ -364,6 +364,14 @@
 
     <main>
 
+        {% if messages %}
+            {% for message in messages %}
+                <div class="card" style="border-left: 4px solid {% if message.tags == 'error' %}#b91c1c{% else %}#1d5fa7{% endif %};">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
         {% block content %}
 
         {% endblock %}

@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Max, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -150,9 +151,13 @@ def registrar_ingreso_view(request):
     Registrar ingreso de vehículo: sólo Personal de Estacionamiento o
     Administrador. Se ingresa únicamente la patente; si coincide con un
     Vehiculo registrado se linkea (y con él su Usuario dueño), y si no,
-    el movimiento se crea igual, sin Vehiculo asociado ("Desconocido"),
-    sin crear ningún Vehiculo ni Usuario nuevo. Marca el espacio
-    elegido como 'Ocupado'.
+    el movimiento se crea igual, sin Vehiculo asociado ("No registrado"),
+    sin crear ningún Vehiculo ni Usuario nuevo.
+
+    Si el dueño tiene una reserva vigente ahora mismo, IngresoForm ya
+    resolvió el espacio como el reservado (ver form.reserva_activa);
+    acá sólo falta marcar esa reserva como 'Confirmada'. En cualquier
+    caso, marca el espacio como 'Ocupado'.
     """
     if request.method == "POST":
         form = IngresoForm(request.POST)
@@ -172,6 +177,20 @@ def registrar_ingreso_view(request):
             espacio.tipo_estado = estado_ocupado
             espacio.save()
 
+            if form.reserva_activa:
+                estado_en_curso, _ = TipoEstadoReserva.objects.get_or_create(
+                    nombre_estado_reserva="Confirmada"
+                )
+                reserva = form.reserva_activa
+                reserva.tipo_estado_reserva = estado_en_curso
+                reserva.estado_reserva = 2
+                reserva.save()
+                messages.success(
+                    request,
+                    f"{patente} tenía una reserva vigente: se lo asignó automáticamente a la "
+                    f"zona '{espacio.zona}', espacio N°{espacio.numero}.",
+                )
+
             return redirect("estacionamiento:movimientos_lista")
     else:
         form = IngresoForm()
@@ -189,7 +208,9 @@ def registrar_salida_view(request, pk):
     Registrar salida de vehículo: sólo Personal de Estacionamiento o
     Administrador. Al confirmar, calcula el monto a cobrar (según la
     tarifa vigente para el tipo de usuario dueño del vehículo, o
-    'Externo' si no está registrado) y lo muestra en un recibo.
+    'Externo' si no está registrado) y lo muestra en un recibo. Si el
+    ingreso vino de una reserva 'Confirmada' en ese mismo espacio, la
+    cierra como 'Finalizada'.
     """
     movimiento = get_object_or_404(
         Movimiento,
@@ -204,6 +225,19 @@ def registrar_salida_view(request, pk):
         espacio = movimiento.espacio
         espacio.tipo_estado = estado_libre
         espacio.save()
+
+        if movimiento.vehiculo_id and movimiento.vehiculo.usuario_id:
+            reserva_en_curso = Reserva.objects.filter(
+                espacio=espacio,
+                usuario=movimiento.vehiculo.usuario,
+                tipo_estado_reserva__nombre_estado_reserva="Confirmada",
+            ).first()
+            if reserva_en_curso:
+                estado_finalizada, _ = TipoEstadoReserva.objects.get_or_create(
+                    nombre_estado_reserva="Finalizada"
+                )
+                reserva_en_curso.tipo_estado_reserva = estado_finalizada
+                reserva_en_curso.save()
 
         cobro = movimiento.calcular_cobro()
         return render(
