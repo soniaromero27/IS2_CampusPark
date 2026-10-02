@@ -1,5 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
+
+<style>
+  th a, th a:visited, th a:hover, th a:active {
+    color: inherit;
+    text-decoration: none;
+  }
+</style>
+
 <h2>Tarifas</h2>
 
 <a href="{% url 'reglas:tarifa_crear' %}" style="display:inline">
@@ -19,9 +27,32 @@
 </form>
 
 <table>
-  <tr>
-    <th>Descripción</th><th>Tipo de usuario</th><th>Valor por hora</th><th>Vigencia</th><th></th>
+	<tr>
+    <th>
+      <a href="?orden=descripcion&dir={% if orden == 'descripcion' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Descripción{% if orden == 'descripcion' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=tipo&dir={% if orden == 'tipo' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Tipo de usuario{% if orden == 'tipo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+	<th>
+      <a href="?orden=valor_hora&dir={% if orden == 'valor_hora' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Valor por hora{% if orden == 'valor_hora' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=vigencia&dir={% if orden == 'vigencia' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Vigencia{% if orden == 'vigencia' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    <th></th>
   </tr>
+  
+  <!--tr>
+    <th>Descripción</th><th>Tipo de usuario</th><th>Valor por hora</th><th>Vigencia</th><th></th>
+  </tr-->
   {% for t in tarifas %}
   <tr>
     <td>{{ t.descripcion }}</td>

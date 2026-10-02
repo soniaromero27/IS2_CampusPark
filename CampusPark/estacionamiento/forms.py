@@ -280,7 +280,12 @@ class ZonaForm(forms.ModelForm):
     """
     Crear o editar una zona manualmente. Sólo Administrador. La
     facultad es opcional: dejarla en 'Ninguna' crea una zona pública,
-    sin restricción de acceso por facultad (ver Zona.permite_a).
+    sin restricción de acceso por facultad ni por tipo de usuario (ver
+    Zona.permite_a). Si se elige una facultad, además se puede acotar
+    a ciertos tipos de usuario (Docente, Estudiante, etc.); dejar esa
+    lista vacía permite cualquier tipo de esa facultad. Una zona sin
+    facultad no puede tener tipos de usuario cargados.
+
     Permite indicar de una vez cuántos espacios crear en esa zona: se
     numeran a partir del último número ya usado (o desde 1 si es una
     zona nueva sin espacios todavía). Dejarlo en 0 no crea ninguno.
@@ -296,11 +301,30 @@ class ZonaForm(forms.ModelForm):
 
     class Meta:
         model = Zona
-        fields = ["nombre", "descripcion", "facultad"]
+        fields = ["nombre", "descripcion", "facultad", "tipos_usuario_permitidos"]
+        widgets = {
+            "tipos_usuario_permitidos": forms.CheckboxSelectMultiple,
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["facultad"].empty_label = "Ninguna (zona pública)"
+        self.fields["tipos_usuario_permitidos"].required = False
+        self.fields["tipos_usuario_permitidos"].help_text = (
+            "Opcional. Vacío = cualquier tipo de usuario de la facultad elegida arriba "
+            "puede usar la zona. No marques nada acá si la zona no tiene facultad."
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        facultad = cleaned_data.get("facultad")
+        tipos = cleaned_data.get("tipos_usuario_permitidos")
+        if not facultad and tipos:
+            self.add_error(
+                "tipos_usuario_permitidos",
+                "Una zona sin facultad (pública) no puede tener tipos de usuario asociados.",
+            )
+        return cleaned_data
 
 
 class EspaciosForm(forms.Form):

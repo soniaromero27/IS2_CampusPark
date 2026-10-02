@@ -35,6 +35,11 @@
         Facultad{% if orden == 'facultad' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
       </a>
     </th>
+	<th>
+	<a href="?orden=tipos&dir={% if orden == 'tipos' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Tipos Permitidos{% if orden == 'tipos' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+	</th>
     <th>
       <a href="?orden=descripcion&dir={% if orden == 'descripcion' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
         Descripcion{% if orden == 'descripcion' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
@@ -54,7 +59,20 @@
   {% for z in zonas %}
   <tr>
     <td>{{ z.nombre }}</td>
-    <td>{{ z.facultad|default:"—" }}</td>
+    <td>{{ z.facultad|default:"Ninguna" }}</td>
+	<td>
+      {% if not z.facultad %}
+        Todos
+      {% else %}
+        {% with tipos=z.tipos_usuario_permitidos.all %}
+          {% if tipos %}
+            {% for t in tipos %}{{ t.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+          {% else %}
+            Todos
+          {% endif %}
+        {% endwith %}
+      {% endif %}
+    </td>
     <td>{{ z.descripcion }}</td>
     <td>{{ z.cantidad_espacios }}</td>
     <td><a href="{% url 'estacionamiento:zona_editar' z.pk %}">Editar</a></td>

@@ -414,6 +414,7 @@ def lista_zonas_view(request):
     campos_orden = {
         "nombre": ["nombre"],
         "facultad": ["facultad"],
+        "tipos": ["tipos_usuario_permitidos"],
         "descripcion": ["descripcion"],
         "espacios": ["cantidad_espacios"],
     }
@@ -432,9 +433,12 @@ def lista_zonas_view(request):
 
     
     q = request.GET.get("q", "").strip()
-    zonas = Zona.objects.select_related("facultad").annotate(
-        cantidad_espacios=Count("espacios")
-    ).order_by("nombre")
+    zonas = (
+        Zona.objects.select_related("facultad")
+        .prefetch_related("tipos_usuario_permitidos")
+        .annotate(cantidad_espacios=Count("espacios"))
+        .order_by("nombre")
+    )
     
     zonas = zonas.order_by(*campos)
     

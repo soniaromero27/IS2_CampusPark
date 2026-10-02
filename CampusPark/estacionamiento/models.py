@@ -3,7 +3,7 @@ from django.utils import timezone
 import math
 
 from universidad.models import Facultad
-from usuarios.models import Usuario
+from usuarios.models import TipoUsuario, Usuario
 from vehiculos.models import Vehiculo
 
 
@@ -19,6 +19,14 @@ class Zona(models.Model):
         blank=True,
         help_text="Dejar en 'Ninguna' para que sea una zona pública, sin restricción de facultad.",
     )
+    tipos_usuario_permitidos = models.ManyToManyField(
+        TipoUsuario,
+        related_name="zonas_permitidas",
+        blank=True,
+        help_text="Tipos de usuario (Docente, Estudiante, etc.) que pueden usar esta zona, "
+        "dentro de los que pertenecen a la facultad de arriba. Vacío = cualquier tipo de "
+        "esa facultad puede entrar. Sin sentido (y no permitido) en una zona sin facultad.",
+    )
 
     class Meta:
         verbose_name = "Zona"
@@ -32,17 +40,22 @@ class Zona(models.Model):
         """
         Zonas que un usuario puede usar (para reservar o estacionar):
         - Zonas sin facultad (facultad nula): libres para todos.
-        - Zonas con facultad: sólo para usuarios que pertenezcan a esa
-          misma facultad. No importa el tipo de usuario -- Docente,
-          Estudiante, Funcionario, Personal de Estacionamiento o
-          Administrador acceden igual si tienen esa facultad cargada.
+        - Zonas con facultad: sólo para usuarios de esa misma facultad,
+          y además -si la zona tiene tipos_usuario_permitidos cargados-
+          sólo si el tipo del usuario (Docente, Estudiante, etc.) está
+          entre esos tipos. Si la zona no tiene ningún tipo cargado,
+          cualquier tipo de esa facultad puede entrar.
         - usuario=None (patente no registrada) o usuario Externo (nunca
           tiene facultad): sólo las zonas sin facultad.
         """
         libres = models.Q(facultad__isnull=True)
         if usuario is None or usuario.es_externo or usuario.facultad_id is None:
             return cls.objects.filter(libres)
-        return cls.objects.filter(libres | models.Q(facultad_id=usuario.facultad_id))
+        propias = models.Q(facultad_id=usuario.facultad_id) & (
+            models.Q(tipos_usuario_permitidos__isnull=True)
+            | models.Q(tipos_usuario_permitidos=usuario.tipo_id)
+        )
+        return cls.objects.filter(libres | propias).distinct()
 
     def permite_a(self, usuario):
         """True si 'usuario' (o None = no registrado) puede usar esta zona."""
@@ -50,7 +63,12 @@ class Zona(models.Model):
             return True
         if usuario is None or usuario.es_externo:
             return False
-        return usuario.facultad_id == self.facultad_id
+        if usuario.facultad_id != self.facultad_id:
+            return False
+        tipos_permitidos = self.tipos_usuario_permitidos.all()
+        if not tipos_permitidos.exists():
+            return True
+        return tipos_permitidos.filter(pk=usuario.tipo_id).exists()
 
 
 class TipoEstado(models.Model):
@@ -92,7 +110,8 @@ class Espacio(models.Model):
         (el vehículo que está estacionado ahí), si lo hay.
         """
         return self.movimientos.filter(fecha_hora_salida__isnull=True).first()
-        
+
+
 class TipoEstadoReserva(models.Model):
     """Entidad 'tipo_estado_reserva' del DER (Pendiente, Confirmada, etc.)."""
     nombre_estado_reserva = models.CharField(max_length=50, unique=True)
@@ -109,7 +128,6 @@ class Reserva(models.Model):
     """Entidad 'reserva' del DER."""
     fecha_inicio = models.DateTimeField()
     fecha_fin = models.DateTimeField()
-
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="reservas")
     espacio = models.ForeignKey(Espacio, on_delete=models.CASCADE, related_name="reservas")
     tipo_estado_reserva = models.ForeignKey(

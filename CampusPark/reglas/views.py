@@ -14,6 +14,25 @@ def lista_tarifas_view(request):
     Administrador. Se puede filtrar por el tipo de usuario al que
     afectan con ?tipo=<id>.
     """
+    campos_orden = {
+        "descripcion": ["descripcion"],
+        "tipo": ["tipo"],
+        "valor_hora": ["valor_por_hora"],
+        "vigencia": ["vigencia"],
+    }
+
+    orden = request.GET.get("orden", "vigencia")
+    if orden not in campos_orden:
+        orden = "vigencia"
+
+    direccion = request.GET.get("dir", "desc")
+    if direccion not in ("asc", "desc"):
+        direccion = "desc"
+
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+    
     tipos = TipoUsuario.objects.order_by("nombre")
     tipo_id = request.GET.get("tipo", "").strip()
 
@@ -21,10 +40,12 @@ def lista_tarifas_view(request):
     if tipo_id:
         tarifas = tarifas.filter(tipo_id=tipo_id)
 
+    tarifas = tarifas.order_by(*campos)
+
     return render(
         request,
         "reglas/tarifas_lista.html",
-        {"tarifas": tarifas, "tipos": tipos, "tipo_id": tipo_id},
+        {"tarifas": tarifas, "tipos": tipos, "tipo_id": tipo_id, "orden": orden, "dir": direccion},
     )
 
 
