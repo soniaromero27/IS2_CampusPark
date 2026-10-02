@@ -53,6 +53,29 @@ def lista_usuarios_view(request):
     Estacionamiento o Administrador. Admite búsqueda por ?q=... sobre
     nombre, apellido, documento, correo y tipo de usuario.
     """
+    campos_orden = {
+        "nombre": ["nombre"],
+        "apellido": ["apellido"],
+        "documento": ["documento"],
+        "correo": ["correo"],
+        "telefono": ["telefono"],
+        "tipo": ["tipo_id"],
+        "facultad": ["facultad_id"],
+        "fecha_registro": ["fecha_registro"],
+    }
+
+    orden = request.GET.get("orden", "fecha_registro")
+    if orden not in campos_orden:
+        orden = "fecha_registro"
+
+    direccion = request.GET.get("dir", "asc")
+    if direccion not in ("asc", "desc"):
+        direccion = "asc"
+
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+    
     q = request.GET.get("q", "").strip()
     usuarios = Usuario.objects.select_related("user", "tipo", "facultad").order_by("apellido", "nombre")
     if q:
@@ -64,4 +87,7 @@ def lista_usuarios_view(request):
             | Q(tipo__nombre__icontains=q)
             | Q(facultad__nombre__icontains=q)
         )
-    return render(request, "usuarios/usuarios_lista.html", {"usuarios": usuarios, "q": q})
+        
+    usuarios = usuarios.order_by(*campos)
+    
+    return render(request, "usuarios/usuarios_lista.html", {"usuarios": usuarios, "orden": orden, "dir": direccion, "q": q})
