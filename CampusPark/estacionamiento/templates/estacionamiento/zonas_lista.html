@@ -1,5 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
+
+<style>
+  th a, th a:visited, th a:hover, th a:active {
+    color: inherit;
+    text-decoration: none;
+  }
+</style>
+
 <h2>Zonas</h2>
 
 <a href="{% url 'estacionamiento:zona_crear' %}" style="display:inline">
@@ -17,8 +25,32 @@
 
 <table>
   <tr>
-    <th>Nombre</th><th>Facultad</th><th>Descripción</th><th>Cantidad de espacios</th><th></th>
+    <th>
+      <a href="?orden=nombre&dir={% if orden == 'nombre' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Nombre{% if orden == 'nombre' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=facultad&dir={% if orden == 'facultad' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Facultad{% if orden == 'facultad' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=descripcion&dir={% if orden == 'descripcion' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Descripcion{% if orden == 'descripcion' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=espacios&dir={% if orden == 'espacios' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Cantidad de Espacios{% if orden == 'espacios' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+	<th></th>
   </tr>
+
+  <!--tr>
+    <th>Nombre</th><th>Facultad</th><th>Descripción</th><th>Cantidad de espacios</th><th></th>
+  </tr-->
   {% for z in zonas %}
   <tr>
     <td>{{ z.nombre }}</td>

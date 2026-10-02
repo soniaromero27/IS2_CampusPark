@@ -173,6 +173,57 @@ def lista_todas_reservas_view(request):
 
 
 @personal_requerido
+def lista_espacios_view(request):
+    """
+    Ver todos los espacios, con su número, zona, facultad de esa zona
+    (o 'Ninguna' si es pública) y estado, y (si está Ocupado) la
+    patente del vehículo estacionado ahí. Sólo Personal de
+    Estacionamiento o Administrador. Se puede ordenar con
+    ?orden=<campo>&dir=<asc|desc> y buscar con ?q=... sobre zona,
+    facultad, estado y la patente del vehículo estacionado.
+    """
+    campos_orden = {
+        "numero": ["numero"],
+        "zona": ["zona__nombre", "numero"],
+        "facultad": ["zona__facultad__nombre", "zona__nombre", "numero"],
+        "estado": ["tipo_estado__nombre_estado", "zona__nombre", "numero"],
+    }
+
+    orden = request.GET.get("orden", "zona")
+    if orden not in campos_orden:
+        orden = "zona"
+
+    direccion = request.GET.get("dir", "asc")
+    if direccion not in ("asc", "desc"):
+        direccion = "asc"
+
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+
+    q = request.GET.get("q", "").strip()
+
+    espacios = Espacio.objects.select_related("zona", "zona__facultad", "tipo_estado")
+    if q:
+        espacios = espacios.filter(
+            Q(zona__nombre__icontains=q)
+            | Q(zona__facultad__nombre__icontains=q)
+            | Q(tipo_estado__nombre_estado__icontains=q)
+            | Q(
+                movimientos__patente__icontains=q,
+                movimientos__fecha_hora_salida__isnull=True,
+            )
+        ).distinct()
+    espacios = espacios.order_by(*campos)
+
+    return render(
+        request,
+        "estacionamiento/espacios_lista.html",
+        {"espacios": espacios, "orden": orden, "dir": direccion, "q": q},
+    )
+
+
+@personal_requerido
 def lista_movimientos_view(request):
     """
     Consultar ingresos y salidas: sólo Personal de Estacionamiento o
@@ -359,15 +410,39 @@ def lista_zonas_view(request):
     Ver todas las zonas y cuántos espacios tiene cada una. Sólo
     Administrador. Admite búsqueda por ?q=... sobre nombre y descripción.
     """
+    
+    campos_orden = {
+        "nombre": ["nombre"],
+        "facultad": ["facultad"],
+        "descripcion": ["descripcion"],
+        "espacios": ["cantidad_espacios"],
+    }
+
+    orden = request.GET.get("orden", "nombre")
+    if orden not in campos_orden:
+        orden = "nombre"
+
+    direccion = request.GET.get("dir", "asc")
+    if direccion not in ("asc", "desc"):
+        direccion = "asc"
+
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+
+    
     q = request.GET.get("q", "").strip()
     zonas = Zona.objects.select_related("facultad").annotate(
         cantidad_espacios=Count("espacios")
     ).order_by("nombre")
+    
+    zonas = zonas.order_by(*campos)
+    
     if q:
         zonas = zonas.filter(
             Q(nombre__icontains=q) | Q(descripcion__icontains=q) | Q(facultad__nombre__icontains=q)
         )
-    return render(request, "estacionamiento/zonas_lista.html", {"zonas": zonas, "q": q})
+    return render(request, "estacionamiento/zonas_lista.html", {"zonas": zonas, "orden": orden, "dir": direccion, "q": q})
 
 
 def _crear_espacios(zona, cantidad):

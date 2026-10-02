@@ -85,7 +85,14 @@ class Espacio(models.Model):
     def __str__(self):
         return f"{self.zona} - N°{self.numero}"
 
-
+    @property
+    def movimiento_actual(self):
+        """
+        El Movimiento sin fecha_hora_salida en este espacio ahora mismo
+        (el vehículo que está estacionado ahí), si lo hay.
+        """
+        return self.movimientos.filter(fecha_hora_salida__isnull=True).first()
+        
 class TipoEstadoReserva(models.Model):
     """Entidad 'tipo_estado_reserva' del DER (Pendiente, Confirmada, etc.)."""
     nombre_estado_reserva = models.CharField(max_length=50, unique=True)

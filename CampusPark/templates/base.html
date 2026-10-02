@@ -328,6 +328,9 @@
 				<a href="{% url 'reglas:tarifas_lista' %}">
 					Tarifas
 				</a>
+				<a href="{% url 'estacionamiento:espacios_lista' %}">
+					Espacios
+				</a>
 				{% endif %}
 				{% if user.perfil.es_administrador %}
 				<a href="{% url 'estacionamiento:zonas_lista' %}">
