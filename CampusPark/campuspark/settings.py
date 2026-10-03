@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'django_loaddata',
     'django.contrib.staticfiles',
     'usuarios',
     #'espacios',
@@ -45,6 +46,7 @@ INSTALLED_APPS = [
     'reglas',
     #'reservas',
     'vehiculos',
+    'universidad',
     #'zonas'
 ]
 
@@ -97,11 +99,11 @@ DATABASES = {
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "campuspark",
+        "NAME": config('DB_NAME'),
         "USER": config('DB_USER'),
         "PASSWORD": config('DB_PASSWORD'),
-        "HOST": "localhost",
-        "PORT": "5432",
+        "HOST": config('DB_HOST'),
+        "PORT": config('DB_PORT'),
     }
 }
 

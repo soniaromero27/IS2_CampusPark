@@ -1,9 +1,14 @@
 from django.conf import settings
 from django.db import models
 
+from universidad.models import Facultad
+
 # Nombres de TipoUsuario que tienen permisos de "personal" del estacionamiento
 # (pueden registrar ingresos y salidas de cualquier vehículo).
 TIPOS_PERSONAL = ("personal de estacionamiento", "administrador")
+
+# Nombres de TipoUsuario que deben tener una Facultad asociada.
+TIPOS_CON_FACULTAD = ("docente", "estudiante", "funcionario")
 
 
 class TipoUsuario(models.Model):
@@ -45,6 +50,14 @@ class Usuario(models.Model):
     tipo = models.ForeignKey(
         TipoUsuario, on_delete=models.PROTECT, related_name="usuarios"
     )
+    facultad = models.ForeignKey(
+        Facultad,
+        on_delete=models.PROTECT,
+        related_name="usuarios",
+        null=True,
+        blank=True,
+        help_text="Obligatoria para Docente, Estudiante y Funcionario (ver Usuario.requiere_facultad).",
+    )
     fecha_registro = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -58,10 +71,18 @@ class Usuario(models.Model):
     def es_personal(self):
         """True si el tipo de usuario es Personal de Estacionamiento o Administrador."""
         return self.tipo.nombre.strip().lower() in TIPOS_PERSONAL
-        
 
     @property
     def es_administrador(self):
         """True sólo si el tipo de usuario es exactamente Administrador."""
         return self.tipo.nombre.strip().lower() == "administrador"
- 
+
+    @property
+    def requiere_facultad(self):
+        """True si el tipo de usuario es Docente, Estudiante o Funcionario."""
+        return self.tipo.nombre.strip().lower() in TIPOS_CON_FACULTAD
+
+    @property
+    def es_externo(self):
+        """True si el tipo de usuario es Externo (nunca pertenece a una facultad)."""
+        return self.tipo.nombre.strip().lower() == "externo"

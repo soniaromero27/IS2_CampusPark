@@ -1,49 +1,107 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count
+from django.db.models import Count, Max, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
- 
+
 from usuarios.decorators import admin_requerido, personal_requerido
- 
+
 from .forms import EspaciosForm, IngresoForm, ReservaForm, ZonaForm
 from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona
 from vehiculos.models import Vehiculo
- 
+
+
 @login_required
 def lista_reservas_view(request):
-    """Consulta de las reservas del usuario autenticado."""
-    reservas = Reserva.objects.filter(
-        usuario=request.user.perfil
-    ).select_related("espacio", "espacio__zona", "tipo_estado_reserva").order_by("-fecha_inicio")
-    return render(request, "estacionamiento/reservas_lista.html", {"reservas": reservas})
+    """
+    Consulta de las reservas del usuario autenticado. Se puede ordenar
+    por cualquier columna, ascendente o descendente, con los parámetros
+    GET ?orden=<campo>&dir=<asc|desc>, y buscar con ?q=... sobre zona
+    y estado.
+    """
+    campos_orden = {
+        "zona": ["espacio__zona__nombre"],
+        "espacio": ["espacio__numero"],
+        "desde": ["fecha_inicio"],
+        "hasta": ["fecha_fin"],
+        "estado": ["tipo_estado_reserva__nombre_estado_reserva"],
+    }
+
+    orden = request.GET.get("orden", "desde")
+    if orden not in campos_orden:
+        orden = "desde"
+
+    direccion = request.GET.get("dir", "desc")
+    if direccion not in ("asc", "desc"):
+        direccion = "desc"
+
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+
+    q = request.GET.get("q", "").strip()
+
+    reservas = Reserva.objects.filter(usuario=request.user.perfil).select_related(
+        "espacio", "espacio__zona", "tipo_estado_reserva"
+    )
+    if q:
+        reservas = reservas.filter(
+            Q(espacio__zona__nombre__icontains=q)
+            | Q(tipo_estado_reserva__nombre_estado_reserva__icontains=q)
+        )
+    reservas = reservas.order_by(*campos)
+
+    return render(
+        request,
+        "estacionamiento/reservas_lista.html",
+        {"reservas": reservas, "orden": orden, "dir": direccion, "q": q},
+    )
 
 
 @login_required
 def crear_reserva_view(request):
     """
-    Alta de una reserva: valida solapamiento de fechas para el mismo
-    espacio (ver ReservaForm) y la crea en estado 'Pendiente'.
+    Alta de una reserva: sólo se pide el día y la hora de entrada (ver
+    ReservaForm, que calcula fecha_inicio/fecha_fin), sólo ofrece
+    espacios de zonas que el usuario puede usar, y la crea en estado
+    'Pendiente'. Si la reserva es para HOY, marca el espacio como
+    'Reservado' al toque; si es para un día futuro, lo deja como está
+    y lo activa la tarea programada al empezar ese día (ver el comando
+    actualizar_estados_espacios).
     """
+    usuario = request.user.perfil
     if request.method == "POST":
-        form = ReservaForm(request.POST)
+        form = ReservaForm(request.POST, usuario=usuario)
         if form.is_valid():
             reserva = form.save(commit=False)
-            reserva.usuario = request.user.perfil
+            reserva.usuario = usuario
             estado_pendiente, _ = TipoEstadoReserva.objects.get_or_create(
                 nombre_estado_reserva="Pendiente"
             )
             reserva.tipo_estado_reserva = estado_pendiente
             reserva.estado_reserva = 1
             reserva.save()
+
+            if timezone.localdate(reserva.fecha_inicio) == timezone.localdate():
+                estado_reservado, _ = TipoEstado.objects.get_or_create(nombre_estado="Reservado")
+                espacio = reserva.espacio
+                espacio.tipo_estado = estado_reservado
+                espacio.save()
+
             return redirect("estacionamiento:reservas_lista")
     else:
-        form = ReservaForm()
-    return render(request, "estacionamiento/reserva_form.html", {"form": form})
+        form = ReservaForm(usuario=usuario)
+    horas_sugeridas = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 30)]
+    return render(
+        request,
+        "estacionamiento/reserva_form.html",
+        {"form": form, "horas_sugeridas": horas_sugeridas},
+    )
 
 
 @login_required
 def cancelar_reserva_view(request, pk):
-    """Cancela una reserva propia del usuario autenticado."""
+    """Cancela una reserva propia del usuario autenticado y libera el espacio."""
     reserva = get_object_or_404(Reserva, pk=pk, usuario=request.user.perfil)
     if request.method == "POST":
         estado_cancelada, _ = TipoEstadoReserva.objects.get_or_create(
@@ -52,6 +110,12 @@ def cancelar_reserva_view(request, pk):
         reserva.tipo_estado_reserva = estado_cancelada
         reserva.estado_reserva = 0
         reserva.save()
+
+        estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
+        espacio = reserva.espacio
+        espacio.tipo_estado = estado_libre
+        espacio.save()
+
         return redirect("estacionamiento:reservas_lista")
     return render(request, "estacionamiento/reserva_cancelar.html", {"reserva": reserva})
 
@@ -60,13 +124,103 @@ def cancelar_reserva_view(request, pk):
 def lista_todas_reservas_view(request):
     """
     Consultar todas las reservas, de cualquier usuario: sólo Personal
-    de Estacionamiento o Administrador.
+    de Estacionamiento o Administrador. Se puede ordenar por cualquier
+    columna, ascendente o descendente, con ?orden=<campo>&dir=<asc|desc>,
+    y buscar con ?q=... sobre nombre, apellido y documento del usuario,
+    zona y estado.
     """
+    campos_orden = {
+        "usuario": ["usuario__apellido", "usuario__nombre"],
+        "zona": ["espacio__zona__nombre"],
+        "espacio": ["espacio__numero"],
+        "desde": ["fecha_inicio"],
+        "hasta": ["fecha_fin"],
+        "estado": ["tipo_estado_reserva__nombre_estado_reserva"],
+    }
+
+    orden = request.GET.get("orden", "desde")
+    if orden not in campos_orden:
+        orden = "desde"
+
+    direccion = request.GET.get("dir", "desc")
+    if direccion not in ("asc", "desc"):
+        direccion = "desc"
+
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+
+    q = request.GET.get("q", "").strip()
+
     reservas = Reserva.objects.select_related(
         "usuario", "espacio", "espacio__zona", "tipo_estado_reserva"
-    ).order_by("-fecha_inicio")
-    return render(request, "estacionamiento/reservas_lista_todas.html", {"reservas": reservas})
- 
+    )
+    if q:
+        reservas = reservas.filter(
+            Q(usuario__nombre__icontains=q)
+            | Q(usuario__apellido__icontains=q)
+            | Q(usuario__documento__icontains=q)
+            | Q(espacio__zona__nombre__icontains=q)
+            | Q(tipo_estado_reserva__nombre_estado_reserva__icontains=q)
+        )
+    reservas = reservas.order_by(*campos)
+
+    return render(
+        request,
+        "estacionamiento/reservas_lista_todas.html",
+        {"reservas": reservas, "orden": orden, "dir": direccion, "q": q},
+    )
+
+
+@personal_requerido
+def lista_espacios_view(request):
+    """
+    Ver todos los espacios, con su número, zona, facultad de esa zona
+    (o 'Ninguna' si es pública) y estado, y (si está Ocupado) la
+    patente del vehículo estacionado ahí. Sólo Personal de
+    Estacionamiento o Administrador. Se puede ordenar con
+    ?orden=<campo>&dir=<asc|desc> y buscar con ?q=... sobre zona,
+    facultad, estado y la patente del vehículo estacionado.
+    """
+    campos_orden = {
+        "numero": ["numero"],
+        "zona": ["zona__nombre", "numero"],
+        "facultad": ["zona__facultad__nombre", "zona__nombre", "numero"],
+        "estado": ["tipo_estado__nombre_estado", "zona__nombre", "numero"],
+    }
+
+    orden = request.GET.get("orden", "zona")
+    if orden not in campos_orden:
+        orden = "zona"
+
+    direccion = request.GET.get("dir", "asc")
+    if direccion not in ("asc", "desc"):
+        direccion = "asc"
+
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+
+    q = request.GET.get("q", "").strip()
+
+    espacios = Espacio.objects.select_related("zona", "zona__facultad", "tipo_estado")
+    if q:
+        espacios = espacios.filter(
+            Q(zona__nombre__icontains=q)
+            | Q(zona__facultad__nombre__icontains=q)
+            | Q(tipo_estado__nombre_estado__icontains=q)
+            | Q(
+                movimientos__patente__icontains=q,
+                movimientos__fecha_hora_salida__isnull=True,
+            )
+        ).distinct()
+    espacios = espacios.order_by(*campos)
+
+    return render(
+        request,
+        "estacionamiento/espacios_lista.html",
+        {"espacios": espacios, "orden": orden, "dir": direccion, "q": q},
+    )
 
 
 @personal_requerido
@@ -75,49 +229,67 @@ def lista_movimientos_view(request):
     Consultar ingresos y salidas: sólo Personal de Estacionamiento o
     Administrador. Muestra TODOS los movimientos, de cualquier usuario.
     Se puede ordenar por cualquier columna, ascendente o descendente,
-    con los parámetros GET ?orden=<campo>&dir=<asc|desc>.
+    con los parámetros GET ?orden=<campo>&dir=<asc|desc>, y buscar con
+    ?q=... sobre patente, usuario dueño y zona.
     """
-
     campos_orden = {
-        "usuario": ["vehiculo__usuario__apellido", "vehiculo__usuario__nombre"],
         "vehiculo": ["patente"],
+        "usuario": ["vehiculo__usuario__apellido", "vehiculo__usuario__nombre"],
         "zona": ["espacio__zona__nombre"],
         "espacio": ["espacio__numero"],
         "ingreso": ["fecha_hora_ingreso"],
         "salida": ["fecha_hora_salida"],
     }
-    
-    orden = request.GET.get("orden", "ingreso")
+
+    orden = request.GET.get("orden", "salida")
     if orden not in campos_orden:
-        orden = "ingreso"
- 
+        orden = "salida"
+
     direccion = request.GET.get("dir", "desc")
     if direccion not in ("asc", "desc"):
         direccion = "desc"
- 
+
     campos = campos_orden[orden]
     if direccion == "desc":
         campos = [f"-{c}" for c in campos]
- 
+
+    q = request.GET.get("q", "").strip()
+
     movimientos = Movimiento.objects.select_related(
         "vehiculo", "vehiculo__usuario", "espacio", "espacio__zona"
-    ).order_by(*campos)
- 
+    )
+    if q:
+        movimientos = movimientos.filter(
+            Q(patente__icontains=q)
+            | Q(vehiculo__usuario__nombre__icontains=q)
+            | Q(vehiculo__usuario__apellido__icontains=q)
+            | Q(espacio__zona__nombre__icontains=q)
+        )
+    movimientos = movimientos.order_by(*campos)
+
     return render(
         request,
         "estacionamiento/movimientos_lista.html",
-        {"movimientos": movimientos, "orden": orden, "dir": direccion},
+        {"movimientos": movimientos, "orden": orden, "dir": direccion, "q": q},
     )
- 
+
+
 @personal_requerido
 def registrar_ingreso_view(request):
     """
     Registrar ingreso de vehículo: sólo Personal de Estacionamiento o
     Administrador. Se ingresa únicamente la patente; si coincide con un
     Vehiculo registrado se linkea (y con él su Usuario dueño), y si no,
-    el movimiento se crea igual, sin Vehiculo asociado ("Desconocido"),
-    sin crear ningún Vehiculo ni Usuario nuevo. Marca el espacio
-    elegido como 'Ocupado'.
+    el movimiento se crea igual, sin Vehiculo asociado ("No registrado"),
+    sin crear ningún Vehiculo ni Usuario nuevo.
+
+    Si el dueño tiene una reserva vigente ahora mismo, IngresoForm ya
+    resolvió el espacio como el reservado (ver form.reserva_activa) o,
+    si ese espacio estaba ocupado, por otro libre de la misma zona (ver
+    form.reasignado/form.espacio_original); acá sólo falta marcar esa
+    reserva como 'Confirmada' (actualizando su espacio si hubo
+    reasignación) y avisar del cambio. En cualquier caso, marca el
+    espacio final como 'Ocupado'.
     """
     if request.method == "POST":
         form = IngresoForm(request.POST)
@@ -137,6 +309,40 @@ def registrar_ingreso_view(request):
             espacio.tipo_estado = estado_ocupado
             espacio.save()
 
+            if form.reserva_activa:
+                estado_confirmada, _ = TipoEstadoReserva.objects.get_or_create(
+                    nombre_estado_reserva="Confirmada"
+                )
+                reserva = form.reserva_activa
+                reserva.tipo_estado_reserva = estado_confirmada
+                reserva.estado_reserva = 2
+                if form.reasignado:
+                    reserva.espacio = espacio
+                reserva.save()
+
+                if form.reasignado:
+                    if form.cambio_de_zona:
+                        messages.warning(
+                            request,
+                            f"{patente} tenía reservado el espacio N°{form.espacio_original.numero} "
+                            f"de la zona '{form.espacio_original.zona}', pero estaba ocupado y no "
+                            f"había otro libre ahí: se lo asignó al espacio N°{espacio.numero} de "
+                            f"la zona '{espacio.zona}'.",
+                        )
+                    else:
+                        messages.warning(
+                            request,
+                            f"{patente} tenía reservado el espacio N°{form.espacio_original.numero} "
+                            f"de la zona '{espacio.zona}', pero estaba ocupado: se lo reasignó al "
+                            f"espacio N°{espacio.numero} de la misma zona.",
+                        )
+                else:
+                    messages.success(
+                        request,
+                        f"{patente} tenía una reserva vigente: se lo asignó automáticamente a "
+                        f"la zona '{espacio.zona}', espacio N°{espacio.numero}.",
+                    )
+
             return redirect("estacionamiento:movimientos_lista")
     else:
         form = IngresoForm()
@@ -147,12 +353,16 @@ def registrar_ingreso_view(request):
         {"form": form, "patentes": patentes},
     )
 
+
 @personal_requerido
 def registrar_salida_view(request, pk):
     """
     Registrar salida de vehículo: sólo Personal de Estacionamiento o
-    Administrador. Puede cerrar el movimiento de cualquier usuario
-    (mientras siga sin fecha_hora_salida) y libera el espacio.
+    Administrador. Al confirmar, calcula el monto a cobrar (según la
+    tarifa vigente para el tipo de usuario dueño del vehículo, o
+    'Externo' si no está registrado) y lo muestra en un recibo. Si el
+    ingreso vino de una reserva 'Confirmada' en ese mismo espacio, la
+    cierra como 'Finalizada'.
     """
     movimiento = get_object_or_404(
         Movimiento,
@@ -167,40 +377,110 @@ def registrar_salida_view(request, pk):
         espacio = movimiento.espacio
         espacio.tipo_estado = estado_libre
         espacio.save()
-        
+
+        if movimiento.vehiculo_id and movimiento.vehiculo.usuario_id:
+            reserva_en_curso = Reserva.objects.filter(
+                espacio=espacio,
+                usuario=movimiento.vehiculo.usuario,
+                tipo_estado_reserva__nombre_estado_reserva="Confirmada",
+            ).first()
+            if reserva_en_curso:
+                estado_finalizada, _ = TipoEstadoReserva.objects.get_or_create(
+                    nombre_estado_reserva="Finalizada"
+                )
+                reserva_en_curso.tipo_estado_reserva = estado_finalizada
+                reserva_en_curso.save()
+
         cobro = movimiento.calcular_cobro()
         return render(
             request, "estacionamiento/salida_recibo.html", {"movimiento": movimiento, "cobro": cobro}
         )
- 
+
     cobro_estimado = movimiento.calcular_cobro()
     return render(
         request,
         "estacionamiento/salida_confirmar.html",
         {"movimiento": movimiento, "cobro": cobro_estimado},
     )
- 
- 
+
+
 @admin_requerido
 def lista_zonas_view(request):
-    """Ver todas las zonas y cuántos espacios tiene cada una. Sólo Administrador."""
-    zonas = Zona.objects.annotate(cantidad_espacios=Count("espacios")).order_by("nombre")
-    return render(request, "estacionamiento/zonas_lista.html", {"zonas": zonas})
- 
- 
+    """
+    Ver todas las zonas y cuántos espacios tiene cada una. Sólo
+    Administrador. Admite búsqueda por ?q=... sobre nombre y descripción.
+    """
+    
+    campos_orden = {
+        "nombre": ["nombre"],
+        "facultad": ["facultad"],
+        "tipos": ["tipos_usuario_permitidos"],
+        "descripcion": ["descripcion"],
+        "espacios": ["cantidad_espacios"],
+    }
+
+    orden = request.GET.get("orden", "nombre")
+    if orden not in campos_orden:
+        orden = "nombre"
+
+    direccion = request.GET.get("dir", "asc")
+    if direccion not in ("asc", "desc"):
+        direccion = "asc"
+
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+
+    
+    q = request.GET.get("q", "").strip()
+    zonas = (
+        Zona.objects.select_related("facultad")
+        .prefetch_related("tipos_usuario_permitidos")
+        .annotate(cantidad_espacios=Count("espacios"))
+        .order_by("nombre")
+    )
+    
+    zonas = zonas.order_by(*campos)
+    
+    if q:
+        zonas = zonas.filter(
+            Q(nombre__icontains=q) | Q(descripcion__icontains=q) | Q(facultad__nombre__icontains=q)
+        )
+    return render(request, "estacionamiento/zonas_lista.html", {"zonas": zonas, "orden": orden, "dir": direccion, "q": q})
+
+
+def _crear_espacios(zona, cantidad):
+    """
+    Crea 'cantidad' espacios nuevos en 'zona', numerados a partir del
+    último número ya usado ahí (o desde 1 si no tiene ninguno). No hace
+    nada si cantidad es 0/None. Usado tanto al crear como al editar
+    una zona (ZonaForm) y en el alta masiva aparte (EspaciosForm).
+    """
+    if not cantidad:
+        return
+    ultimo = Espacio.objects.filter(zona=zona).aggregate(Max("numero"))["numero__max"] or 0
+    estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
+    nuevos = [
+        Espacio(zona=zona, numero=ultimo + i, tipo_estado=estado_libre)
+        for i in range(1, cantidad + 1)
+    ]
+    Espacio.objects.bulk_create(nuevos)
+
+
 @admin_requerido
 def crear_zona_view(request):
-    """Alta manual de una zona. Sólo Administrador."""
+    """Alta manual de una zona, con la opción de crear espacios de una. Sólo Administrador."""
     if request.method == "POST":
         form = ZonaForm(request.POST)
         if form.is_valid():
-            form.save()
+            zona = form.save()
+            _crear_espacios(zona, form.cleaned_data.get("cantidad_espacios"))
             return redirect("estacionamiento:zonas_lista")
     else:
         form = ZonaForm()
     return render(request, "estacionamiento/zona_form.html", {"form": form})
- 
- 
+
+
 @admin_requerido
 def crear_espacios_view(request):
     """
@@ -213,16 +493,34 @@ def crear_espacios_view(request):
             zona = form.cleaned_data["zona"]
             cantidad = form.cleaned_data["cantidad"]
             numero_inicial = form.cleaned_data["numero_inicial"]
- 
+
             estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
             nuevos = [
                 Espacio(zona=zona, numero=numero_inicial + i, tipo_estado=estado_libre)
                 for i in range(cantidad)
             ]
             Espacio.objects.bulk_create(nuevos)
- 
+
             return redirect("estacionamiento:zonas_lista")
     else:
         form = EspaciosForm()
     return render(request, "estacionamiento/espacios_form.html", {"form": form})
- 
+
+
+@admin_requerido
+def editar_zona_view(request, pk):
+    """
+    Modificar una zona existente, incluyendo su facultad. También
+    permite crear espacios nuevos de una (ver ZonaForm/_crear_espacios).
+    Sólo Administrador.
+    """
+    zona = get_object_or_404(Zona, pk=pk)
+    if request.method == "POST":
+        form = ZonaForm(request.POST, instance=zona)
+        if form.is_valid():
+            zona = form.save()
+            _crear_espacios(zona, form.cleaned_data.get("cantidad_espacios"))
+            return redirect("estacionamiento:zonas_lista")
+    else:
+        form = ZonaForm(instance=zona)
+    return render(request, "estacionamiento/zona_form.html", {"form": form, "zona": zona})

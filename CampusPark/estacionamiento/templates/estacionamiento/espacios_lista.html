@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  th a, th a:visited, th a:hover, th a:active {
+    color: inherit;
+    text-decoration: none;
+  }
+</style>
+
+<h2>Espacios</h2>
+
+<form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:500px;">
+  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por zona, estado o patente..." style="width:100%;">
+  <input type="hidden" name="orden" value="{{ orden }}">
+  <input type="hidden" name="dir" value="{{ dir }}">
+  <button type="submit">Buscar</button>
+  {% if q %}<a href="?orden={{ orden }}&dir={{ dir }}">Limpiar</a>{% endif %}
+</form>
+
+<table>
+  <tr>
+    <th>
+      <a href="?orden=zona&dir={% if orden == 'zona' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Zona{% if orden == 'zona' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=numero&dir={% if orden == 'numero' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Número{% if orden == 'numero' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=facultad&dir={% if orden == 'facultad' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Facultad{% if orden == 'facultad' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=estado&dir={% if orden == 'estado' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Estado{% if orden == 'estado' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>Vehículo</th>
+  </tr>
+  {% for e in espacios %}
+  <tr>
+    <td>{{ e.zona }}</td>
+    <td>N°{{ e.numero }}</td>
+    <td>{{ e.zona.facultad|default:"Ninguna" }}</td>
+    <td>{{ e.tipo_estado }}</td>
+    <td>{{ e.movimiento_actual.patente|default:"—" }}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="5">No hay espacios que coincidan con la búsqueda.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

@@ -10,9 +10,9 @@
   <p><strong>Salida:</strong> {{ movimiento.fecha_hora_salida }}</p>
 
   {% if cobro.monto is not None %}
-    <h3>Monto a cobrar: ${{ cobro.monto }}</h3>
+    <h3>Monto a cobrar: Gs. {{ cobro.monto }}</h3>
     <p>
-      {{ cobro.horas }} hora{{ cobro.horas|pluralize }} × ${{ cobro.tarifa.valor_por_hora }}/h —
+      {{ cobro.horas }} hora{{ cobro.horas|pluralize }} × Gs. {{ cobro.tarifa.valor_por_hora }}/h —
       tarifa "{{ cobro.tarifa.descripcion }}" ({{ cobro.tipo }})
     </p>
   {% else %}

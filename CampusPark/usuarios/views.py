@@ -1,11 +1,11 @@
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.shortcuts import redirect, render
 
 from .decorators import personal_requerido
 from .forms import RegistroUsuarioForm, UsuarioEditForm
 from .models import Usuario
- 
 
 
 def registro_view(request):
@@ -44,16 +44,50 @@ def editar_perfil_view(request):
     else:
         form = UsuarioEditForm(instance=perfil)
     return render(request, "usuarios/perfil_editar.html", {"form": form})
- 
+
 
 @personal_requerido
 def lista_usuarios_view(request):
     """
     Consultar todos los usuarios registrados: sólo Personal de
-    Estacionamiento o Administrador.
+    Estacionamiento o Administrador. Admite búsqueda por ?q=... sobre
+    nombre, apellido, documento, correo y tipo de usuario.
     """
-    usuarios = Usuario.objects.select_related("user", "tipo").order_by(
-        "apellido", "nombre"
-    )
-    return render(request, "usuarios/usuarios_lista.html", {"usuarios": usuarios})
- 
+    campos_orden = {
+        "nombre": ["nombre"],
+        "apellido": ["apellido"],
+        "documento": ["documento"],
+        "correo": ["correo"],
+        "telefono": ["telefono"],
+        "tipo": ["tipo_id"],
+        "facultad": ["facultad_id"],
+        "fecha_registro": ["fecha_registro"],
+    }
+
+    orden = request.GET.get("orden", "fecha_registro")
+    if orden not in campos_orden:
+        orden = "fecha_registro"
+
+    direccion = request.GET.get("dir", "asc")
+    if direccion not in ("asc", "desc"):
+        direccion = "asc"
+
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+    
+    q = request.GET.get("q", "").strip()
+    usuarios = Usuario.objects.select_related("user", "tipo", "facultad").order_by("apellido", "nombre")
+    if q:
+        usuarios = usuarios.filter(
+            Q(nombre__icontains=q)
+            | Q(apellido__icontains=q)
+            | Q(documento__icontains=q)
+            | Q(correo__icontains=q)
+            | Q(tipo__nombre__icontains=q)
+            | Q(facultad__nombre__icontains=q)
+        )
+        
+    usuarios = usuarios.order_by(*campos)
+    
+    return render(request, "usuarios/usuarios_lista.html", {"usuarios": usuarios, "orden": orden, "dir": direccion, "q": q})

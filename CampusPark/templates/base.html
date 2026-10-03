@@ -283,7 +283,7 @@
 
     <header>
 
-        <a href="{% url 'usuarios:login' %}" class="logo">
+        <a href="{% if user.is_authenticated %}{% url 'usuarios:perfil' %}{% else %}{% url 'usuarios:login' %}{% endif %}" class="logo">
 
             <div class="logo-icon">
                 P
@@ -307,35 +307,40 @@
                 <a href="{% url 'vehiculos:lista' %}">
                     Mis vehículos
                 </a>
-				
+
 				<a href="{% url 'estacionamiento:reservas_lista' %}">
 					Mis reservas
 				</a>
- 
+
 				{% if user.perfil.es_personal %}
-					<a href="{% url 'estacionamiento:movimientos_lista' %}">
-						Ingresos y salidas
-					</a>
-					<a href="{% url 'estacionamiento:reservas_lista_todas' %}">
-						Reservas
-					</a>				
-					<a href="{% url 'usuarios:lista' %}">
-						Usuarios
-					</a>
-					<a href="{% url 'vehiculos:lista_todos' %}">
-						Vehículos
-					</a>
-					<a href="{% url 'reglas:tarifas_lista' %}">
-						Tarifas
-					</a>
+				<a href="{% url 'estacionamiento:movimientos_lista' %}">
+					Ingresos y salidas
+				</a>
+				<a href="{% url 'estacionamiento:reservas_lista_todas' %}">
+					Reservas
+				</a>
+				<a href="{% url 'usuarios:lista' %}">
+					Usuarios
+				</a>
+				<a href="{% url 'vehiculos:lista_todos' %}">
+					Vehículos
+				</a>
+				<a href="{% url 'reglas:tarifas_lista' %}">
+					Tarifas
+				</a>
+				<a href="{% url 'estacionamiento:espacios_lista' %}">
+					Espacios
+				</a>
 				{% endif %}
- 
 				{% if user.perfil.es_administrador %}
 				<a href="{% url 'estacionamiento:zonas_lista' %}">
 					Zonas
 				</a>
+				<a href="{% url 'universidad:facultades_lista' %}">
+					Facultades
+				</a>
 				{% endif %}
-				
+
                <form method="post" action="{% url 'usuarios:logout' %}" style="display:inline">
 	                {% csrf_token %}
 	                 <button type="submit">Cerrar sesión</button>
@@ -361,6 +366,14 @@
     <!-- CONTENIDO DE CADA PÁGINA -->
 
     <main>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="card" style="border-left: 4px solid {% if message.tags == 'error' %}#b91c1c{% else %}#1d5fa7{% endif %};">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
 
         {% block content %}
 

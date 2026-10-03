@@ -1,9 +1,54 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  th a, th a:visited, th a:hover, th a:active {
+    color: inherit;
+    text-decoration: none;
+  }
+</style>
+
 <h2>Todas las reservas</h2>
+
+<form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:500px;">
+  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre, documento, zona o estado..." style="width:100%;">
+  <input type="hidden" name="orden" value="{{ orden }}">
+  <input type="hidden" name="dir" value="{{ dir }}">
+  <button type="submit">Buscar</button>
+  {% if q %}<a href="?orden={{ orden }}&dir={{ dir }}">Limpiar</a>{% endif %}
+</form>
+
 <table>
   <tr>
-    <th>Usuario</th><th>Zona</th><th>Espacio</th><th>Desde</th><th>Hasta</th><th>Estado</th>
+    <th>
+      <a href="?orden=usuario&dir={% if orden == 'usuario' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Usuario{% if orden == 'usuario' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=zona&dir={% if orden == 'zona' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Zona{% if orden == 'zona' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=espacio&dir={% if orden == 'espacio' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Espacio{% if orden == 'espacio' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=desde&dir={% if orden == 'desde' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Desde{% if orden == 'desde' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=hasta&dir={% if orden == 'hasta' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Hasta{% if orden == 'hasta' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=estado&dir={% if orden == 'estado' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Estado{% if orden == 'estado' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
   </tr>
   {% for r in reservas %}
   <tr>
@@ -15,7 +60,7 @@
     <td>{{ r.tipo_estado_reserva }}</td>
   </tr>
   {% empty %}
-  <tr><td colspan="6">No hay reservas registradas.</td></tr>
+  <tr><td colspan="6">No hay reservas que coincidan con la búsqueda.</td></tr>
   {% endfor %}
 </table>
 {% endblock %}
