@@ -16,8 +16,9 @@ def lista_reservas_view(request):
     """
     Consulta de las reservas del usuario autenticado. Se puede ordenar
     por cualquier columna, ascendente o descendente, con los parámetros
-    GET ?orden=<campo>&dir=<asc|desc>, y buscar con ?q=... sobre zona
-    y estado.
+    GET ?orden=<campo>&dir=<asc|desc>, buscar con ?q=... sobre zona y
+    estado, y filtrar por rango de fechas (sobre el día de la reserva)
+    con ?desde=AAAA-MM-DD y/o ?hasta=AAAA-MM-DD.
     """
     campos_orden = {
         "zona": ["espacio__zona__nombre"],
@@ -40,6 +41,8 @@ def lista_reservas_view(request):
         campos = [f"-{c}" for c in campos]
 
     q = request.GET.get("q", "").strip()
+    desde = request.GET.get("desde", "").strip()
+    hasta = request.GET.get("hasta", "").strip()
 
     reservas = Reserva.objects.filter(usuario=request.user.perfil).select_related(
         "espacio", "espacio__zona", "tipo_estado_reserva"
@@ -49,12 +52,23 @@ def lista_reservas_view(request):
             Q(espacio__zona__nombre__icontains=q)
             | Q(tipo_estado_reserva__nombre_estado_reserva__icontains=q)
         )
+    if desde:
+        reservas = reservas.filter(fecha_inicio__date__gte=desde)
+    if hasta:
+        reservas = reservas.filter(fecha_inicio__date__lte=hasta)
     reservas = reservas.order_by(*campos)
 
     return render(
         request,
         "estacionamiento/reservas_lista.html",
-        {"reservas": reservas, "orden": orden, "dir": direccion, "q": q},
+        {
+            "reservas": reservas,
+            "orden": orden,
+            "dir": direccion,
+            "q": q,
+            "desde": desde,
+            "hasta": hasta,
+        },
     )
 
 
@@ -126,8 +140,9 @@ def lista_todas_reservas_view(request):
     Consultar todas las reservas, de cualquier usuario: sólo Personal
     de Estacionamiento o Administrador. Se puede ordenar por cualquier
     columna, ascendente o descendente, con ?orden=<campo>&dir=<asc|desc>,
-    y buscar con ?q=... sobre nombre, apellido y documento del usuario,
-    zona y estado.
+    buscar con ?q=... sobre nombre, apellido y documento del usuario,
+    zona y estado, y filtrar por rango de fechas (sobre el día de la
+    reserva) con ?desde=AAAA-MM-DD y/o ?hasta=AAAA-MM-DD.
     """
     campos_orden = {
         "usuario": ["usuario__apellido", "usuario__nombre"],
@@ -151,6 +166,8 @@ def lista_todas_reservas_view(request):
         campos = [f"-{c}" for c in campos]
 
     q = request.GET.get("q", "").strip()
+    desde = request.GET.get("desde", "").strip()
+    hasta = request.GET.get("hasta", "").strip()
 
     reservas = Reserva.objects.select_related(
         "usuario", "espacio", "espacio__zona", "tipo_estado_reserva"
@@ -163,12 +180,23 @@ def lista_todas_reservas_view(request):
             | Q(espacio__zona__nombre__icontains=q)
             | Q(tipo_estado_reserva__nombre_estado_reserva__icontains=q)
         )
+    if desde:
+        reservas = reservas.filter(fecha_inicio__date__gte=desde)
+    if hasta:
+        reservas = reservas.filter(fecha_inicio__date__lte=hasta)
     reservas = reservas.order_by(*campos)
 
     return render(
         request,
         "estacionamiento/reservas_lista_todas.html",
-        {"reservas": reservas, "orden": orden, "dir": direccion, "q": q},
+        {
+            "reservas": reservas,
+            "orden": orden,
+            "dir": direccion,
+            "q": q,
+            "desde": desde,
+            "hasta": hasta,
+        },
     )
 
 
@@ -241,9 +269,9 @@ def lista_movimientos_view(request):
         "salida": ["fecha_hora_salida"],
     }
 
-    orden = request.GET.get("orden", "salida")
+    orden = request.GET.get("orden", "ingreso")
     if orden not in campos_orden:
-        orden = "salida"
+        orden = "ingreso"
 
     direccion = request.GET.get("dir", "desc")
     if direccion not in ("asc", "desc"):
@@ -410,28 +438,6 @@ def lista_zonas_view(request):
     Ver todas las zonas y cuántos espacios tiene cada una. Sólo
     Administrador. Admite búsqueda por ?q=... sobre nombre y descripción.
     """
-    
-    campos_orden = {
-        "nombre": ["nombre"],
-        "facultad": ["facultad"],
-        "tipos": ["tipos_usuario_permitidos"],
-        "descripcion": ["descripcion"],
-        "espacios": ["cantidad_espacios"],
-    }
-
-    orden = request.GET.get("orden", "nombre")
-    if orden not in campos_orden:
-        orden = "nombre"
-
-    direccion = request.GET.get("dir", "asc")
-    if direccion not in ("asc", "desc"):
-        direccion = "asc"
-
-    campos = campos_orden[orden]
-    if direccion == "desc":
-        campos = [f"-{c}" for c in campos]
-
-    
     q = request.GET.get("q", "").strip()
     zonas = (
         Zona.objects.select_related("facultad")
@@ -439,14 +445,11 @@ def lista_zonas_view(request):
         .annotate(cantidad_espacios=Count("espacios"))
         .order_by("nombre")
     )
-    
-    zonas = zonas.order_by(*campos)
-    
     if q:
         zonas = zonas.filter(
             Q(nombre__icontains=q) | Q(descripcion__icontains=q) | Q(facultad__nombre__icontains=q)
         )
-    return render(request, "estacionamiento/zonas_lista.html", {"zonas": zonas, "orden": orden, "dir": direccion, "q": q})
+    return render(request, "estacionamiento/zonas_lista.html", {"zonas": zonas, "q": q})
 
 
 def _crear_espacios(zona, cantidad):
