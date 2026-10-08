@@ -1,10 +1,11 @@
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
-from usuarios.decorators import personal_requerido
+from usuarios.decorators import admin_requerido, personal_requerido
 from usuarios.models import TipoUsuario
 
-from .forms import TarifaForm
-from .models import Tarifa
+from .forms import ReglamentoForm, TarifaForm
+from .models import Reglamento, Tarifa
 
 
 @personal_requerido
@@ -75,4 +76,42 @@ def editar_tarifa_view(request, pk):
         form = TarifaForm(instance=tarifa)
     return render(
         request, "reglas/tarifa_form.html", {"form": form, "modo": "editar", "tarifa": tarifa}
+    )
+
+
+@login_required
+def lista_reglamento_view(request):
+    """Ver el/los reglamento(s): cualquier usuario logueado puede verlo."""
+    reglamentos = Reglamento.objects.order_by("-id")
+    return render(request, "reglas/reglamento_lista.html", {"reglamentos": reglamentos})
+
+
+@admin_requerido
+def crear_reglamento_view(request):
+    """Alta de un reglamento: sólo Administrador."""
+    if request.method == "POST":
+        form = ReglamentoForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("reglas:reglamento_lista")
+    else:
+        form = ReglamentoForm()
+    return render(request, "reglas/reglamento_form.html", {"form": form, "modo": "crear"})
+
+
+@admin_requerido
+def editar_reglamento_view(request, pk):
+    """Modificar un reglamento existente: sólo Administrador."""
+    reglamento = get_object_or_404(Reglamento, pk=pk)
+    if request.method == "POST":
+        form = ReglamentoForm(request.POST, instance=reglamento)
+        if form.is_valid():
+            form.save()
+            return redirect("reglas:reglamento_lista")
+    else:
+        form = ReglamentoForm(instance=reglamento)
+    return render(
+        request,
+        "reglas/reglamento_form.html",
+        {"form": form, "modo": "editar", "reglamento": reglamento},
     )

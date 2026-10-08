@@ -61,3 +61,24 @@ class Tarifa(models.Model):
 
     def __str__(self):
         return f"{self.descripcion} (Gs. {self.valor_por_hora}/h)"
+
+
+class Reglamento(models.Model):
+    """
+    Reglamento general del estacionamiento: el texto del reglamento y
+    el horario de apertura/cierre del campus. Visible para cualquier
+    usuario logueado; sólo un Administrador puede crearlo o editarlo
+    (ver usuarios.decorators.admin_requerido).
+    """
+    reglamento = models.TextField(
+        help_text="Texto del reglamento (normas de uso, sanciones, etc.)."
+    )
+    hora_apertura = models.TimeField()
+    hora_cierre = models.TimeField()
+
+    class Meta:
+        verbose_name = "Reglamento"
+        verbose_name_plural = "Reglamentos"
+
+    def __str__(self):
+        return f"Reglamento ({self.hora_apertura} a {self.hora_cierre})"

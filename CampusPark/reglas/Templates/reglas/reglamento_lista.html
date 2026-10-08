@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Reglamento</h2>
+
+{% if user.perfil.es_administrador %}
+<a href="{% url 'reglas:reglamento_crear' %}" style="display:inline">
+	<button>Nuevo reglamento</button>
+</a>
+{% endif %}
+
+{% for r in reglamentos %}
+<div class="card">
+  <p><strong>Horario de apertura:</strong> {{ r.hora_apertura }}</p>
+  <p><strong>Horario de cierre:</strong> {{ r.hora_cierre }}</p>
+  <p style="white-space: pre-line; margin-top: 10px;">{{ r.reglamento }}</p>
+  {% if user.perfil.es_administrador %}
+    <p><a href="{% url 'reglas:reglamento_editar' r.pk %}">Editar</a></p>
+  {% endif %}
+</div>
+{% empty %}
+<p>Todavía no se cargó ningún reglamento.</p>
+{% endfor %}
+{% endblock %}

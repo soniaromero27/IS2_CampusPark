@@ -304,6 +304,10 @@
                     Mi perfil
                 </a>
 
+                <a href="{% url 'reglas:reglamento_lista' %}">
+                    Reglas
+                </a>
+
                 <a href="{% url 'vehiculos:lista' %}">
                     Mis vehículos
                 </a>
@@ -313,6 +317,9 @@
 				</a>
 
 				{% if user.perfil.es_personal %}
+				<a href="{% url 'estacionamiento:espacios_lista' %}">
+					Espacios
+				</a>
 				<a href="{% url 'estacionamiento:movimientos_lista' %}">
 					Ingresos y salidas
 				</a>
@@ -327,9 +334,6 @@
 				</a>
 				<a href="{% url 'reglas:tarifas_lista' %}">
 					Tarifas
-				</a>
-				<a href="{% url 'estacionamiento:espacios_lista' %}">
-					Espacios
 				</a>
 				{% endif %}
 				{% if user.perfil.es_administrador %}

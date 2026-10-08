@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import ReglaAcceso, Tarifa, TipoUsuarioRegla
+from .models import ReglaAcceso, Reglamento, Tarifa, TipoUsuarioRegla
 
 
 class TipoUsuarioReglaInline(admin.TabularInline):
@@ -18,3 +18,8 @@ class ReglaAccesoAdmin(admin.ModelAdmin):
 class TarifaAdmin(admin.ModelAdmin):
     list_display = ("id", "descripcion", "valor_por_hora", "vigencia", "tipo")
     list_filter = ("tipo",)
+
+
+@admin.register(Reglamento)
+class ReglamentoAdmin(admin.ModelAdmin):
+    list_display = ("id", "hora_apertura", "hora_cierre")
