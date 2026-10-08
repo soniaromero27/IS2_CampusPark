@@ -80,38 +80,25 @@ def editar_tarifa_view(request, pk):
 
 
 @login_required
-def lista_reglamento_view(request):
-    """Ver el/los reglamento(s): cualquier usuario logueado puede verlo."""
-    reglamentos = Reglamento.objects.order_by("-id")
-    return render(request, "reglas/reglamento_lista.html", {"reglamentos": reglamentos})
+def ver_reglamento_view(request):
+    """Ver el reglamento (único): cualquier usuario logueado puede verlo."""
+    reglamento = Reglamento.objects.first()
+    return render(request, "reglas/reglamento_lista.html", {"reglamento": reglamento})
 
 
 @admin_requerido
-def crear_reglamento_view(request):
-    """Alta de un reglamento: sólo Administrador."""
-    if request.method == "POST":
-        form = ReglamentoForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect("reglas:reglamento_lista")
-    else:
-        form = ReglamentoForm()
-    return render(request, "reglas/reglamento_form.html", {"form": form, "modo": "crear"})
-
-
-@admin_requerido
-def editar_reglamento_view(request, pk):
-    """Modificar un reglamento existente: sólo Administrador."""
-    reglamento = get_object_or_404(Reglamento, pk=pk)
+def editar_reglamento_view(request):
+    """
+    Editar el reglamento (único): sólo Administrador. Si todavía no
+    existe, el primer guardado lo crea; de ahí en adelante sólo se
+    modifica ese mismo registro, nunca se crea un segundo.
+    """
+    reglamento = Reglamento.objects.first()  # None si todavía no se cargó
     if request.method == "POST":
         form = ReglamentoForm(request.POST, instance=reglamento)
         if form.is_valid():
             form.save()
-            return redirect("reglas:reglamento_lista")
+            return redirect("reglas:reglamento")
     else:
         form = ReglamentoForm(instance=reglamento)
-    return render(
-        request,
-        "reglas/reglamento_form.html",
-        {"form": form, "modo": "editar", "reglamento": reglamento},
-    )
+    return render(request, "reglas/reglamento_form.html", {"form": form})

@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from usuarios.models import TipoUsuario
@@ -67,8 +68,13 @@ class Reglamento(models.Model):
     """
     Reglamento general del estacionamiento: el texto del reglamento y
     el horario de apertura/cierre del campus. Visible para cualquier
-    usuario logueado; sólo un Administrador puede crearlo o editarlo
-    (ver usuarios.decorators.admin_requerido).
+    usuario logueado; sólo un Administrador puede editarlo (ver
+    usuarios.decorators.admin_requerido).
+
+    Es un registro ÚNICO: no puede haber dos reglamentos a la vez. Se
+    crea la primera vez que el Administrador lo edita (ver
+    reglas.views.editar_reglamento_view) y de ahí en adelante sólo se
+    modifica ese mismo registro.
     """
     reglamento = models.TextField(
         help_text="Texto del reglamento (normas de uso, sanciones, etc.)."
@@ -82,3 +88,10 @@ class Reglamento(models.Model):
 
     def __str__(self):
         return f"Reglamento ({self.hora_apertura} a {self.hora_cierre})"
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and Reglamento.objects.exists():
+            raise ValidationError(
+                "Ya existe un reglamento. Sólo puede haber uno: editá el existente."
+            )
+        super().save(*args, **kwargs)
