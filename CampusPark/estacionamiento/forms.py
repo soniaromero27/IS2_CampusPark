@@ -68,12 +68,22 @@ class ReservaForm(forms.ModelForm):
             )
             return cleaned_data
 
+        if fecha < timezone.localdate():
+            self.add_error("fecha", "No podés reservar una fecha anterior a hoy.")
+            return cleaned_data
+
         fecha_inicio = datetime.combine(fecha, hora_inicio)
         fecha_fin = datetime.combine(fecha, hora_fin)
         if timezone.is_naive(fecha_inicio):
             fecha_inicio = timezone.make_aware(fecha_inicio)
         if timezone.is_naive(fecha_fin):
             fecha_fin = timezone.make_aware(fecha_fin)
+
+        if fecha_inicio < timezone.now():
+            self.add_error(
+                "hora_inicio", "No podés reservar un horario que ya pasó."
+            )
+            return cleaned_data
 
         # fecha_inicio/fecha_fin no son campos de este form (se calculan
         # acá), así que se asignan directo a la instancia para que
