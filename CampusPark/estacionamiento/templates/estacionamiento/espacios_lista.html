@@ -59,7 +59,7 @@
 <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
   <div class="toggle-vista">
     <a href="?vista=lista&q={{ q|urlencode }}&orden={{ orden }}&dir={{ dir }}" class="{% if vista == 'lista' %}activo{% endif %}">Lista</a>
-    <a href="?vista=cuadros&q={{ q|urlencode }}&orden={{ orden }}&dir={{ dir }}" class="{% if vista == 'cuadros' %}activo{% endif %}">Cuadros</a>
+    <a href="?vista=cuadros&q={{ q|urlencode }}&orden={{ orden }}&dir={{ dir }}" class="{% if vista == 'cuadros' %}activo{% endif %}">Cuadrícula</a>
   </div>
   {% if user.perfil.es_administrador %}
   <a href="{% url 'estacionamiento:espacios_crear' %}?desde=espacios" class="btn">Crear espacios</a>

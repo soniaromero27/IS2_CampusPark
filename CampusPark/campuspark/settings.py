@@ -131,7 +131,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Asuncion'
+
+FORMAT_MODULE_PATH = "campuspark.formats"
+
+USE_L10N = False
 
 USE_I18N = True
 

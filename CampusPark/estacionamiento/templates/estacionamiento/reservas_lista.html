@@ -60,7 +60,7 @@
     <td>{{ r.fecha_fin }}</td>
     <td>{{ r.tipo_estado_reserva }}</td>
     <td>
-      {% if r.tipo_estado_reserva.nombre_estado_reserva != "Cancelada" %}
+      {% if r.tipo_estado_reserva.nombre_estado_reserva == "Pendiente" %}
         <a href="{% url 'estacionamiento:reserva_cancelar' r.pk %}">Cancelar</a>
       {% endif %}
     </td>
