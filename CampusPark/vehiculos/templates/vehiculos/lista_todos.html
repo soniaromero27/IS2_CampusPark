@@ -12,7 +12,9 @@
 
 <form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:500px;">
   <input type="text" name="q" value="{{ q }}" placeholder="Buscar por matrícula, marca, modelo, dueño..." style="width:100%;">
-  <button type="submit">Buscar</button>
+  <button type="submit"><span class="material-symbols-outlined">
+search
+</span></button>
   {% if q %}<a href="{% url 'vehiculos:lista_todos' %}">Limpiar</a>{% endif %}
 </form>
 

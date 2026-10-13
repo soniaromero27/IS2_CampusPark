@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-  th a, th a:visited, th a:hover, th a:active {
+  th a, th a:visited, th a:hover, th a:active, td a{
     color: inherit;
     text-decoration: none;
   }
@@ -71,7 +71,9 @@
   <input type="hidden" name="vista" value="{{ vista }}">
   <input type="hidden" name="orden" value="{{ orden }}">
   <input type="hidden" name="dir" value="{{ dir }}">
-  <button type="submit">Buscar</button>
+  <button type="submit"><span class="material-symbols-outlined">
+search
+</span></button>
   {% if q %}<a href="?vista={{ vista }}&orden={{ orden }}&dir={{ dir }}">Limpiar</a>{% endif %}
 </form>
 
@@ -149,7 +151,7 @@
     <td>{{ e.tipo_estado }}</td>
     <td>{{ e.movimiento_actual.patente|default:"—" }}</td>
     {% if user.perfil.es_administrador %}
-    <td><a href="{% url 'estacionamiento:espacio_editar' e.pk %}{% if querystring %}?{{ querystring }}{% endif %}">Editar</a></td>
+    <td><a href="{% url 'estacionamiento:espacio_editar' e.pk %}{% if querystring %}?{{ querystring }}{% endif %}"><span class="material-symbols-outlined">edit_square</span></a></td>
     {% endif %}
   </tr>
   {% empty %}

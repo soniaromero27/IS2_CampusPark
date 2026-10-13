@@ -1,5 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
+
+<style>
+  th a, th a:visited, th a:hover, th a:active, td a{
+    color: inherit;
+    text-decoration: none;
+  }
+  
+</style>
+  
 <h2>Facultades</h2>
 
 <a href="{% url 'universidad:facultad_crear' %}" style="display:inline">
@@ -8,7 +17,9 @@
 
 <form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:500px; margin-top:1em;">
   <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre o descripción..." style="width:100%;">
-  <button type="submit">Buscar</button>
+  <button type="submit"><span class="material-symbols-outlined">
+search
+</span></button>
   {% if q %}<a href="{% url 'universidad:facultades_lista' %}">Limpiar</a>{% endif %}
 </form>
 
@@ -22,7 +33,7 @@
     <td>{{ f.descripcion }}</td>
     <td>{{ f.cantidad_zonas }}</td>
     <td>{{ f.cantidad_usuarios }}</td>
-    <td><a href="{% url 'universidad:facultad_editar' f.pk %}">Editar</a></td>
+    <td><a href="{% url 'universidad:facultad_editar' f.pk %}"><span class="material-symbols-outlined">edit_square</span</a></td>
   </tr>
   {% empty %}
   <tr><td colspan="5">No hay facultades que coincidan con la búsqueda.</td></tr>

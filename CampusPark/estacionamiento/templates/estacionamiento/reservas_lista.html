@@ -5,6 +5,11 @@
     color: inherit;
     text-decoration: none;
   }
+  
+   td button{
+            background: red;
+            color: white;
+        }
 </style>
 
 <h2>Mis reservas</h2>
@@ -61,7 +66,7 @@
     <td>{{ r.tipo_estado_reserva }}</td>
     <td>
       {% if r.tipo_estado_reserva.nombre_estado_reserva == "Pendiente" %}
-        <a href="{% url 'estacionamiento:reserva_cancelar' r.pk %}">Cancelar</a>
+        <a href="{% url 'estacionamiento:reserva_cancelar' r.pk %}"><button>Cancelar</button></a>
       {% endif %}
     </td>
   </tr>

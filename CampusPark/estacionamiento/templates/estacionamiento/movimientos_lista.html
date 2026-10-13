@@ -19,7 +19,9 @@
   <input type="text" name="q" value="{{ q }}" placeholder="Buscar por vehículo, usuario o zona..." style="width:100%;">
   <input type="hidden" name="orden" value="{{ orden }}">
   <input type="hidden" name="dir" value="{{ dir }}">
-  <button type="submit">Buscar</button>
+  <button type="submit"><span class="material-symbols-outlined">
+search
+</span></button>
   {% if q %}<a href="?orden={{ orden }}&dir={{ dir }}">Limpiar</a>{% endif %}
 </form>
 
