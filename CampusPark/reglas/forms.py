@@ -12,16 +12,26 @@ class TarifaForm(forms.ModelForm):
         }
 
 
-class ReglamentoForm(forms.ModelForm):
-    """Crear o editar el reglamento. Sólo Administrador."""
+class ReglamentoTextoForm(forms.ModelForm):
+    """Editar sólo el texto del reglamento. Sólo Administrador."""
 
     class Meta:
         model = Reglamento
-        fields = ["reglamento", "hora_apertura", "hora_cierre"]
+        fields = ["reglamento"]
         widgets = {
-            "reglamento": forms.Textarea(attrs={"rows": 10}),
-            "hora_apertura": forms.TimeInput(attrs={"type": "time"}),
-            "hora_cierre": forms.TimeInput(attrs={"type": "time"}),
+            "reglamento": forms.Textarea(attrs={"rows": 18, "style": "width:100%;"}),
+        }
+
+
+class HorariosForm(forms.ModelForm):
+    """Editar sólo la hora de apertura y de cierre. Sólo Administrador."""
+
+    class Meta:
+        model = Reglamento
+        fields = ["hora_apertura", "hora_cierre"]
+        widgets = {
+            "hora_apertura": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
+            "hora_cierre": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
         }
 
     def clean(self):

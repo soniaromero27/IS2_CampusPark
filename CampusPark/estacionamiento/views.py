@@ -1,12 +1,15 @@
+from collections import defaultdict
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Max, Q
+from django.db.models import Count, Max, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
 from usuarios.decorators import admin_requerido, personal_requerido
 
-from .forms import EspaciosForm, IngresoForm, ReservaForm, ZonaForm
+from .forms import EspacioForm, EspaciosForm, IngresoForm, ReservaForm, ZonaForm
 from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona
 from vehiculos.models import Vehiculo
 
@@ -209,6 +212,14 @@ def lista_espacios_view(request):
     Estacionamiento o Administrador. Se puede ordenar con
     ?orden=<campo>&dir=<asc|desc> y buscar con ?q=... sobre zona,
     facultad, estado y la patente del vehículo estacionado.
+
+    Se muestra en dos vistas, a elección con ?vista=lista|cuadros: una
+    tabla, o una lista de zonas desplegables que, al abrirse, muestran
+    sus espacios como cuadros coloreados según el estado (como el mapa
+    de butacas de una sala de cine). En la vista de cuadros el orden es
+    siempre por zona y número. Las zonas se abren con ?abrir=<id de
+    zona> (se repite el parámetro para abrir varias) y todas se abren
+    si hay una búsqueda activa.
     """
     campos_orden = {
         "numero": ["numero"],
@@ -229,9 +240,23 @@ def lista_espacios_view(request):
     if direccion == "desc":
         campos = [f"-{c}" for c in campos]
 
+    vista = request.GET.get("vista", "lista")
+    if vista not in ("lista", "cuadros"):
+        vista = "lista"
+    if vista == "cuadros":
+        campos = ["zona__nombre", "numero"]
+
     q = request.GET.get("q", "").strip()
 
-    espacios = Espacio.objects.select_related("zona", "zona__facultad", "tipo_estado")
+    espacios = Espacio.objects.select_related(
+        "zona", "zona__facultad", "tipo_estado"
+    ).prefetch_related(
+        Prefetch(
+            "movimientos",
+            queryset=Movimiento.objects.filter(fecha_hora_salida__isnull=True),
+            to_attr="movimientos_abiertos",
+        )
+    )
     if q:
         espacios = espacios.filter(
             Q(zona__nombre__icontains=q)
@@ -244,10 +269,76 @@ def lista_espacios_view(request):
         ).distinct()
     espacios = espacios.order_by(*campos)
 
+    grupos = []
+    if vista == "cuadros":
+        espacios_por_zona = defaultdict(list)
+        for e in espacios:
+            espacios_por_zona[e.zona_id].append(e)
+
+        zonas = Zona.objects.select_related("facultad").order_by("nombre")
+        if q:
+            # Con una búsqueda activa, sólo las zonas que tienen resultados.
+            zonas = zonas.filter(id__in=espacios_por_zona.keys())
+        for zona in zonas:
+            items = espacios_por_zona.get(zona.id, [])
+            grupos.append(
+                {
+                    "zona": zona,
+                    "espacios": items,
+                    "total": len(items),
+                    "libres": sum(
+                        1 for e in items if e.tipo_estado.nombre_estado == "Libre"
+                    ),
+                }
+            )
+
+    abiertas = [int(v) for v in request.GET.getlist("abrir") if v.isdigit()]
+    params = request.GET.copy()
+    params.pop("abrir", None)
+
     return render(
         request,
         "estacionamiento/espacios_lista.html",
-        {"espacios": espacios, "orden": orden, "dir": direccion, "q": q},
+        {
+            "espacios": espacios,
+            "grupos": grupos,
+            "vista": vista,
+            "orden": orden,
+            "dir": direccion,
+            "q": q,
+            "abiertas": abiertas,
+            "querystring": params.urlencode(),
+        },
+    )
+
+
+@admin_requerido
+def editar_espacio_view(request, pk):
+    """
+    Editar un espacio a mano (zona, número y estado). Sólo
+    Administrador. Al guardar vuelve a la lista de espacios con los
+    mismos parámetros (vista, búsqueda y orden) con los que se entró.
+    """
+    espacio = get_object_or_404(
+        Espacio.objects.select_related("zona", "tipo_estado"), pk=pk
+    )
+    titulo_espacio = str(espacio)  # antes de que el form pise el objeto con valores inválidos
+    volver = reverse("estacionamiento:espacios_lista")
+    querystring = request.GET.urlencode()
+    if querystring:
+        volver += "?" + querystring
+
+    if request.method == "POST":
+        form = EspacioForm(request.POST, instance=espacio)
+        if form.is_valid():
+            form.save()
+            return redirect(volver)
+    else:
+        form = EspacioForm(instance=espacio)
+    return render(
+        request,
+        "estacionamiento/espacio_editar.html",
+        {"form": form, "titulo_espacio": titulo_espacio, "volver": volver},
     )
 
 
@@ -488,8 +579,14 @@ def crear_zona_view(request):
 def crear_espacios_view(request):
     """
     Alta masiva de espacios dentro de una zona, indicando la cantidad
-    a crear. Sólo Administrador.
+    a crear. Sólo Administrador. Vuelve a la lista de espacios si se
+    entró desde ahí (?desde=espacios), y a la de zonas en otro caso.
     """
+    destino = (
+        "estacionamiento:espacios_lista"
+        if request.GET.get("desde") == "espacios"
+        else "estacionamiento:zonas_lista"
+    )
     if request.method == "POST":
         form = EspaciosForm(request.POST)
         if form.is_valid():
@@ -504,10 +601,14 @@ def crear_espacios_view(request):
             ]
             Espacio.objects.bulk_create(nuevos)
 
-            return redirect("estacionamiento:zonas_lista")
+            return redirect(destino)
     else:
         form = EspaciosForm()
-    return render(request, "estacionamiento/espacios_form.html", {"form": form})
+    return render(
+        request,
+        "estacionamiento/espacios_form.html",
+        {"form": form, "volver_url": reverse(destino)},
+    )
 
 
 @admin_requerido

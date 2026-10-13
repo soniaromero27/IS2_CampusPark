@@ -11,4 +11,5 @@ urlpatterns = [
 
     path("reglamento/", views.ver_reglamento_view, name="reglamento"),
     path("reglamento/editar/", views.editar_reglamento_view, name="reglamento_editar"),
+    path("reglamento/horarios/", views.editar_horarios_view, name="reglamento_horarios"),
 ]

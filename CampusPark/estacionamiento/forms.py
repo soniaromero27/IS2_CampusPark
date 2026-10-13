@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import NON_FIELD_ERRORS
 from django.db.models import Max
 from django.utils import timezone
 
@@ -373,6 +374,47 @@ class EspaciosForm(forms.Form):
                 numeros = ", ".join(str(n) for n in sorted(existentes))
                 raise forms.ValidationError(
                     f"Ya existen espacios con esos números en la zona '{zona}': {numeros}."
+                )
+
+        return cleaned_data
+
+
+class EspacioForm(forms.ModelForm):
+    """
+    Editar un espacio a mano (zona, número y estado). Sólo Administrador.
+
+    No deja cambiarle el estado a un espacio que tiene un vehículo
+    estacionado (un Movimiento sin salida): primero hay que registrar la
+    salida en "Ingresos y salidas", que además libera el espacio y
+    calcula el cobro. Cambiar el estado a mano sin hacer eso dejaría el
+    movimiento abierto y el espacio con un estado que no corresponde.
+    """
+
+    class Meta:
+        model = Espacio
+        fields = ["zona", "numero", "tipo_estado"]
+        error_messages = {
+            NON_FIELD_ERRORS: {
+                "unique_together": "Ya existe un espacio con ese número en esa zona.",
+            }
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["zona"].queryset = Zona.objects.order_by("nombre")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        estado = cleaned_data.get("tipo_estado")
+
+        if self.instance.pk and estado and estado.nombre_estado != "Ocupado":
+            movimiento = self.instance.movimiento_actual
+            if movimiento:
+                self.add_error(
+                    "tipo_estado",
+                    f"Hay un vehículo (patente {movimiento.patente}) estacionado en este "
+                    f"espacio: registrá su salida en 'Ingresos y salidas' antes de "
+                    f"cambiarle el estado.",
                 )
 
         return cleaned_data

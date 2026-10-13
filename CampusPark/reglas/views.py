@@ -1,10 +1,12 @@
+from datetime import time
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
 from usuarios.decorators import admin_requerido, personal_requerido
 from usuarios.models import TipoUsuario
 
-from .forms import ReglamentoForm, TarifaForm
+from .forms import HorariosForm, ReglamentoTextoForm, TarifaForm
 from .models import Reglamento, Tarifa
 
 
@@ -86,19 +88,45 @@ def ver_reglamento_view(request):
     return render(request, "reglas/reglamento_lista.html", {"reglamento": reglamento})
 
 
+def _reglamento_unico():
+    """
+    El reglamento (único). Si todavía no existe, devuelve una instancia
+    SIN guardar, con el horario inicial 07:00-22:00: el primer guardado
+    (sea del texto o de los horarios) la crea; de ahí en adelante sólo
+    se modifica ese mismo registro, nunca se crea un segundo.
+    """
+    return Reglamento.objects.first() or Reglamento(
+        hora_apertura=time(7, 0), hora_cierre=time(22, 0)
+    )
+
+
 @admin_requerido
 def editar_reglamento_view(request):
-    """
-    Editar el reglamento (único): sólo Administrador. Si todavía no
-    existe, el primer guardado lo crea; de ahí en adelante sólo se
-    modifica ese mismo registro, nunca se crea un segundo.
-    """
-    reglamento = Reglamento.objects.first()  # None si todavía no se cargó
+    """Editar el texto del reglamento: sólo Administrador."""
+    reglamento = _reglamento_unico()
     if request.method == "POST":
-        form = ReglamentoForm(request.POST, instance=reglamento)
+        form = ReglamentoTextoForm(request.POST, instance=reglamento)
         if form.is_valid():
             form.save()
             return redirect("reglas:reglamento")
     else:
-        form = ReglamentoForm(instance=reglamento)
-    return render(request, "reglas/reglamento_form.html", {"form": form})
+        form = ReglamentoTextoForm(instance=reglamento)
+    return render(
+        request, "reglas/reglamento_form.html", {"form": form, "titulo": "Editar reglamento"}
+    )
+
+
+@admin_requerido
+def editar_horarios_view(request):
+    """Editar la hora de apertura y de cierre: sólo Administrador."""
+    reglamento = _reglamento_unico()
+    if request.method == "POST":
+        form = HorariosForm(request.POST, instance=reglamento)
+        if form.is_valid():
+            form.save()
+            return redirect("reglas:reglamento")
+    else:
+        form = HorariosForm(instance=reglamento)
+    return render(
+        request, "reglas/reglamento_form.html", {"form": form, "titulo": "Editar horarios"}
+    )
