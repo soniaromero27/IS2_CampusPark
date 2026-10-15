@@ -33,7 +33,7 @@ search
     <td>{{ f.descripcion }}</td>
     <td>{{ f.cantidad_zonas }}</td>
     <td>{{ f.cantidad_usuarios }}</td>
-    <td><a href="{% url 'universidad:facultad_editar' f.pk %}"><span class="material-symbols-outlined">edit_square</span</a></td>
+    <td><a href="{% url 'universidad:facultad_editar' f.pk %}"><span class="material-symbols-outlined">edit_square</span></a></td>
   </tr>
   {% empty %}
   <tr><td colspan="5">No hay facultades que coincidan con la búsqueda.</td></tr>

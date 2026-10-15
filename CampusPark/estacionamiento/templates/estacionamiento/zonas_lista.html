@@ -77,7 +77,7 @@ search
     </td>
     <td>{{ z.descripcion }}</td>
     <td>{{ z.cantidad_espacios }}</td>
-    <td><a href="{% url 'estacionamiento:zona_editar' z.pk %}"><span class="material-symbols-outlined">edit_square</span</a></td>
+    <td><a href="{% url 'estacionamiento:zona_editar' z.pk %}"><span class="material-symbols-outlined">edit_square</span></a></td>
   </tr>
   {% empty %}
   <tr><td colspan="5">No hay zonas que coincidan con la búsqueda.</td></tr>
