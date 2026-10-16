@@ -6,8 +6,7 @@
 
     <title>CampusPark</title>
 
-
-	<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 
     <style>
         * {
@@ -21,14 +20,16 @@
             background: #f4f7fb;
             color: #1e293b;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* ===== BARRA SUPERIOR ===== */
+        /* ===== BARRA SUPERIOR (HEADER) ===== */
 
         header {
             background: linear-gradient(135deg, #0f2d52, #1d4f91);
             color: white;
-            padding: 0 40px;
+            padding: 0 30px;
             height: 72px;
 
             display: flex;
@@ -36,6 +37,9 @@
             justify-content: space-between;
 
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
         .logo {
@@ -66,39 +70,101 @@
             font-weight: 700;
         }
 
-        /* ===== NAVEGACIÓN ===== */
-
-        nav {
+        .header-nav {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
         }
 
-        nav a {
+        .header-nav a {
             color: white;
             text-decoration: none;
-            padding: 10px 16px;
+            padding: 8px 14px;
             border-radius: 8px;
             font-size: 14px;
             transition: all 0.2s ease;
         }
 
-        nav a:hover {
+        .header-nav a:hover {
             background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-logout {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255, 255, 255, 0.25);
             transform: translateY(-1px);
+            box-shadow: none;
         }
 
-        .logout {
-            border: 1px solid rgba(255,255,255,0.35);
+        /* ===== CONTENEDOR PRINCIPAL CON SIDEBAR ===== */
+
+        .app-container {
+            display: flex;
+            flex: 1;
         }
 
-        /* ===== CONTENEDOR ===== */
+        /* ===== MENÚ LATERAL (SIDEBAR) ===== */
+
+        aside.sidebar {
+            width: 260px;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.02);
+        }
+
+        .sidebar-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            margin: 16px 12px 6px 12px;
+        }
+
+        .sidebar-section-title:first-child {
+            margin-top: 0;
+        }
+
+        aside.sidebar a {
+            color: #334155;
+            text-decoration: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+        }
+
+        aside.sidebar a:hover {
+            background: #edf4fb;
+            color: #163b68;
+        }
+
+        /* ===== CONTENIDO CENTRAL ===== */
 
         main {
-            width: 70%;
+            flex: 1;
+            padding: 40px;
             max-width: 1200px;
-            margin: 0 auto;
-            padding: 40px 25px;
         }
 
         /* ===== TÍTULOS ===== */
@@ -121,9 +187,7 @@
             background: white;
             border-radius: 14px;
             padding: 25px;
-
             box-shadow: 0 5px 20px rgba(15, 45, 82, 0.08);
-
             border: 1px solid #e7edf5;
             margin-bottom: 25px;
         }
@@ -146,15 +210,11 @@
         textarea {
             width: 50%;
             padding: 12px 14px;
-
             border: 1px solid #cbd5e1;
             border-radius: 8px;
-
             font-size: 15px;
             font-family: inherit;
-
             background: white;
-
             transition: border-color 0.2s, box-shadow 0.2s;
         }
 
@@ -163,30 +223,23 @@
         textarea:focus {
             outline: none;
             border-color: #2874c6;
-
             box-shadow: 0 0 0 3px rgba(40, 116, 198, 0.12);
         }
 
-        /* ===== BOTONES ===== */
+        /* ===== BOTONES GENERALES ===== */
 
         button,
         .btn {
             display: inline-block;
-
             padding: 11px 20px;
-
             background: #1d5fa7;
             color: white;
-
             border: none;
             border-radius: 8px;
-
             font-size: 14px;
             font-weight: 600;
-
             cursor: pointer;
             text-decoration: none;
-
             transition: all 0.2s ease;
         }
 
@@ -203,20 +256,16 @@
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
-
             margin-top: 20px;
-
             background: white;
             border-radius: 12px;
             overflow: hidden;
-
             box-shadow: 0 4px 15px rgba(15, 45, 82, 0.07);
         }
 
         th {
             background: #edf4fb;
             color: #163b68;
-
             font-weight: 700;
             text-align: left;
         }
@@ -247,30 +296,36 @@
 
         footer {
             text-align: center;
-            padding: 25px;
+            padding: 20px;
             color: #64748b;
             font-size: 13px;
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
         }
 
         /* ===== RESPONSIVE ===== */
 
         @media (max-width: 800px) {
-
-            header {
-                height: auto;
-                padding: 18px 20px;
-
+            .app-container {
                 flex-direction: column;
-                gap: 15px;
             }
 
-            nav {
-                flex-wrap: wrap;
-                justify-content: center;
+            aside.sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #e2e8f0;
+            }
+
+            header {
+                padding: 0 20px;
             }
 
             main {
-                padding: 25px 15px;
+                padding: 20px 15px;
+            }
+
+            input, select, textarea {
+                width: 100%;
             }
 
             .logo-text {
@@ -283,110 +338,85 @@
 <body>
 
     <!-- BARRA SUPERIOR -->
-
     <header>
 
         <a href="{% if user.is_authenticated %}{% url 'usuarios:perfil' %}{% else %}{% url 'usuarios:login' %}{% endif %}" class="logo">
-
-            <div class="logo-icon">
-                P
-            </div>
-
-            <span class="logo-text">
-                CampusPark
-            </span>
-
+            <div class="logo-icon">P</div>
+            <span class="logo-text">CampusPark</span>
         </a>
 
-
-        <nav>
-
+        <div class="header-nav">
             {% if user.is_authenticated %}
-
-                <a href="{% url 'usuarios:perfil' %}">
-                    Mi perfil
-                </a>
-                <a href="{% url 'vehiculos:lista' %}">
-                    Mis vehículos
-                </a>
-				<a href="{% url 'estacionamiento:reservas_lista' %}">
-					Mis reservas
-				</a>
-				<a href="{% url 'reglas:reglamento' %}">
-                    Reglas
-                </a>
-				{% if user.perfil.es_personal %}
-				<a href="{% url 'estacionamiento:movimientos_lista' %}">
-					Ingresos y salidas
-				</a>
-				<a href="{% url 'estacionamiento:reservas_lista_todas' %}">
-					Reservas
-				</a>
-				<a href="{% url 'usuarios:lista' %}">
-					Usuarios
-				</a>
-				<a href="{% url 'vehiculos:lista_todos' %}">
-					Vehículos
-				</a>
-				<a href="{% url 'reglas:tarifas_lista' %}">
-					Tarifas
-				</a>
-				<a href="{% url 'estacionamiento:espacios_lista' %}">
-					Espacios
-				</a>
-				{% endif %}
-				{% if user.perfil.es_administrador %}
-				<a href="{% url 'estacionamiento:zonas_lista' %}">
-					Zonas
-				</a>
-				<a href="{% url 'universidad:facultades_lista' %}">
-					Facultades
-				</a>
-				{% endif %}
-
-               <form method="post" action="{% url 'usuarios:logout' %}" style="display:inline">
-	                {% csrf_token %}
-	                 <button type="submit"><span class="material-symbols-outlined">logout</span></button>
-	             </form>
-
+                <form method="post" action="{% url 'usuarios:logout' %}" style="display:inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-logout" title="Cerrar sesión">
+                        <span class="material-symbols-outlined">logout</span>
+                    </button>
+                </form>
             {% else %}
-
-                <a href="{% url 'usuarios:login' %}">
-                    Ingresar
-                </a>
-
-                <a href="{% url 'usuarios:registro' %}">
-                    Registrarme
-                </a>
-
+                <a href="{% url 'usuarios:login' %}">Ingresar</a>
+                <a href="{% url 'usuarios:registro' %}">Registrarme</a>
             {% endif %}
-
-        </nav>
+        </div>
 
     </header>
 
 
-    <!-- CONTENIDO DE CADA PÁGINA -->
+    <!-- CONTENEDOR DE APP CON MENU LATERAL Y CONTENIDO -->
+    <div class="app-container">
 
-    <main>
+        {% if user.is_authenticated %}
+        <!-- MENÚ LATERAL -->
+        <aside class="sidebar">
 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="card" style="border-left: 4px solid {% if message.tags == 'error' %}#b91c1c{% else %}#1d5fa7{% endif %};">
-                    {{ message }}
-                </div>
-            {% endfor %}
+            <div class="sidebar-section-title">Principal</div>
+            <a href="{% url 'usuarios:perfil' %}">Mi perfil</a>
+            <a href="{% url 'vehiculos:lista' %}">Mis vehículos</a>
+            <a href="{% url 'estacionamiento:reservas_lista' %}">Mis reservas</a>
+            <a href="{% url 'reglas:reglamento' %}">Reglas</a>
+
+            {% if user.perfil.es_personal %}
+                <div class="sidebar-section-title">Movimientos</div>
+                <a href="{% url 'estacionamiento:movimientos_lista' %}">Ingresos y salidas</a>
+                <a href="{% url 'estacionamiento:reservas_lista_todas' %}">Reservas</a>
+				<div class="sidebar-section-title">Listas</div>
+                <a href="{% url 'usuarios:lista' %}">Lista de Usuarios</a>
+                <a href="{% url 'vehiculos:lista_todos' %}">Lista de Vehículos</a>
+				<div class="sidebar-section-title">Administración</div>
+                <a href="{% url 'reglas:tarifas_lista' %}">Tarifas</a>
+                <a href="{% url 'estacionamiento:espacios_lista' %}">Espacios</a>
+            {% endif %}
+
+            {% if user.perfil.es_administrador %}
+                <a href="{% url 'estacionamiento:zonas_lista' %}">Zonas</a>
+                <a href="{% url 'universidad:facultades_lista' %}">Facultades</a>
+            {% endif %}
+
+        </aside>
         {% endif %}
 
-        {% block content %}
 
-        {% endblock %}
+        <!-- CONTENIDO DE CADA PÁGINA -->
+        <main>
 
-    </main>
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="card" style="border-left: 4px solid {% if message.tags == 'error' %}#b91c1c{% else %}#1d5fa7{% endif %};">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}
+
+            {% endblock %}
+
+        </main>
+
+    </div>
 
 
     <!-- PIE DE PÁGINA -->
-
     <footer>
         CampusPark© 2026 · Sistema de Gestión de Estacionamiento
     </footer>
