@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  button a{
+    color: inherit;
+    text-decoration: none;
+  }
+</style>
 <h2>{% if facultad %}Editar facultad{% else %}Nueva facultad{% endif %}</h2>
 <form method="post">
   {% csrf_token %}
@@ -12,6 +18,6 @@
     </div>
   {% endfor %}
   <button type="submit">{% if facultad %}Guardar cambios{% else %}Crear facultad{% endif %}</button>
+  <button><a href="{% url 'universidad:facultades_lista' %}">Atrás</a></button>
 </form>
-<p><a href="{% url 'universidad:facultades_lista' %}">Volver</a></p>
 {% endblock %}

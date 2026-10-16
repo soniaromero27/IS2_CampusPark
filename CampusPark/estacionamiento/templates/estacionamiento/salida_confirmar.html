@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  button a{
+    color: inherit;
+    text-decoration: none;
+  }
+</style>
 <h2>Registrar salida</h2>
 <p>
   ¿Confirmás la salida del vehículo {{ movimiento.vehiculo.matricula }} del espacio
@@ -25,7 +31,7 @@
 
 <form method="post">
   {% csrf_token %}
-  <button type="submit">Sí, registrar salida</button>
+  <button type=" ">Sí, registrar salida</button>
 </form>
-<p><a href="{% url 'estacionamiento:movimientos_lista' %}">Volver</a></p>
+<button><a href="{% url 'estacionamiento:movimientos_lista' %}">Atrás</a></button>
 {% endblock %}

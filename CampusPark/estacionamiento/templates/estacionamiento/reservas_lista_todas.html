@@ -19,8 +19,8 @@
 
 <form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; flex-wrap:wrap;">
   <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre, documento, zona o estado..." style="width:260px;">
-  <label style="white-space:nowrap;">Desde: <input type="date" name="desde" value="{{ desde }}"></label>
-  <label style="white-space:nowrap;">Hasta: <input type="date" name="hasta" value="{{ hasta }}"></label>
+  <label style="white-space:nowrap;">Desde: <input style="width:140px;" type="date" name="desde" value="{{ desde }}"></label>
+  <label style="white-space:nowrap;">Hasta: <input style="width:140px;" type="date" name="hasta" value="{{ hasta }}"></label>
   <input type="hidden" name="orden" value="{{ orden }}">
   <input type="hidden" name="dir" value="{{ dir }}">
   <button type="submit"><span class="material-symbols-outlined">

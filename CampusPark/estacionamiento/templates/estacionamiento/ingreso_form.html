@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  form button a{
+    color: inherit;
+    text-decoration: none;
+  }
+</style>
+
 <h2>Registrar ingreso</h2>
 <form method="post">
   {% csrf_token %}
@@ -12,6 +19,7 @@
     </div>
   {% endfor %}
   <button type="submit">Ingresar vehículo</button>
+  <button><a href="{% url 'estacionamiento:movimientos_lista' %}">Atrás</a></button>
 </form>
 
 <datalist id="patentes-datalist">
@@ -19,5 +27,5 @@
     <option value="{{ p }}"></option>
   {% endfor %}
 </datalist>
-<p><a href="{% url 'estacionamiento:movimientos_lista' %}">Volver</a></p>
+
 {% endblock %}
