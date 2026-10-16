@@ -1,0 +1,30 @@
+{% if page_obj.paginator.count %}
+<style>
+  .paginacion { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+  .paginacion-resumen { color: #64748b; font-size: 14px; }
+  .paginacion-links { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .paginacion-links a, .paginacion-links .actual, .paginacion-links .puntos {
+    padding: 8px 13px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;
+  }
+  .paginacion-links a { color: #1d5fa7; background: white; border: 1px solid #cbd5e1; }
+  .paginacion-links a:hover { background: #edf4fb; }
+  .paginacion-links .actual { color: white; background: #1d5fa7; border: 1px solid #1d5fa7; }
+  .paginacion-links .puntos { color: #64748b; }
+</style>
+<div class="paginacion">
+  <span class="paginacion-resumen">Mostrando {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }}</span>
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="paginacion-links">
+    {% if page_obj.has_previous %}<a href="?{% if qs_pagina %}{{ qs_pagina }}&{% endif %}pagina={{ page_obj.previous_page_number }}">‹ Anterior</a>{% endif %}
+    {% for p in rango_paginas %}
+      {% if p %}
+        {% if p == page_obj.number %}<span class="actual">{{ p }}</span>{% else %}<a href="?{% if qs_pagina %}{{ qs_pagina }}&{% endif %}pagina={{ p }}">{{ p }}</a>{% endif %}
+      {% else %}
+        <span class="puntos">…</span>
+      {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}<a href="?{% if qs_pagina %}{{ qs_pagina }}&{% endif %}pagina={{ page_obj.next_page_number }}">Siguiente ›</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}

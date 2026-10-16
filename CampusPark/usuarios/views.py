@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import redirect, render
 
+from campuspark.paginacion import paginar
+
 from .decorators import personal_requerido
 from .forms import RegistroUsuarioForm, UsuarioEditForm
 from .models import Usuario
@@ -90,4 +92,4 @@ def lista_usuarios_view(request):
         
     usuarios = usuarios.order_by(*campos)
     
-    return render(request, "usuarios/usuarios_lista.html", {"usuarios": usuarios, "orden": orden, "dir": direccion, "q": q})
+    return render(request, "usuarios/usuarios_lista.html", {**paginar(request, usuarios, "usuarios"), "orden": orden, "dir": direccion, "q": q})

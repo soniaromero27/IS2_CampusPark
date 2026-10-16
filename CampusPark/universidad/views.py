@@ -1,6 +1,8 @@
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 
+from campuspark.paginacion import paginar
+
 from usuarios.decorators import admin_requerido
 
 from .forms import FacultadForm
@@ -21,7 +23,7 @@ def lista_facultades_view(request):
     ).order_by("nombre")
     if q:
         facultades = facultades.filter(Q(nombre__icontains=q) | Q(descripcion__icontains=q))
-    return render(request, "universidad/facultades_lista.html", {"facultades": facultades, "q": q})
+    return render(request, "universidad/facultades_lista.html", {**paginar(request, facultades, "facultades"), "q": q})
 
 
 @admin_requerido

@@ -3,6 +3,8 @@ from datetime import time
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
+from campuspark.paginacion import paginar
+
 from usuarios.decorators import admin_requerido, personal_requerido
 from usuarios.models import TipoUsuario
 
@@ -48,7 +50,7 @@ def lista_tarifas_view(request):
     return render(
         request,
         "reglas/tarifas_lista.html",
-        {"tarifas": tarifas, "tipos": tipos, "tipo_id": tipo_id, "orden": orden, "dir": direccion},
+        {**paginar(request, tarifas, "tarifas"), "tipos": tipos, "tipo_id": tipo_id, "orden": orden, "dir": direccion},
     )
 
 

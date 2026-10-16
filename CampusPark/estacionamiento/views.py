@@ -7,6 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+from campuspark.paginacion import paginar
+
 from usuarios.decorators import admin_requerido, personal_requerido
 
 from .forms import EspacioForm, EspaciosForm, IngresoForm, ReservaForm, ZonaForm
@@ -65,7 +67,7 @@ def lista_reservas_view(request):
         request,
         "estacionamiento/reservas_lista.html",
         {
-            "reservas": reservas,
+            **paginar(request, reservas, "reservas"),
             "orden": orden,
             "dir": direccion,
             "q": q,
@@ -193,7 +195,7 @@ def lista_todas_reservas_view(request):
         request,
         "estacionamiento/reservas_lista_todas.html",
         {
-            "reservas": reservas,
+            **paginar(request, reservas, "reservas"),
             "orden": orden,
             "dir": direccion,
             "q": q,
@@ -388,8 +390,12 @@ def lista_movimientos_view(request):
 
     return render(
         request,
-        "estacionamiento/movimientos_lista.html",
-        {"movimientos": movimientos, "orden": orden, "dir": direccion, "q": q},
+        "estacionamiento/movimientos_lista.html",{
+        **paginar(request, movimientos, "movimientos"),
+        "orden": orden,
+        "dir": direccion,
+        "q": q
+        },
     )
 
 
@@ -540,7 +546,7 @@ def lista_zonas_view(request):
         zonas = zonas.filter(
             Q(nombre__icontains=q) | Q(descripcion__icontains=q) | Q(facultad__nombre__icontains=q)
         )
-    return render(request, "estacionamiento/zonas_lista.html", {"zonas": zonas, "q": q})
+    return render(request, "estacionamiento/zonas_lista.html", {**paginar(request, zonas, "zonas"), "q": q})
 
 
 def _crear_espacios(zona, cantidad):
