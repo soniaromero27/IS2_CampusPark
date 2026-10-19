@@ -2,23 +2,124 @@
 {% block content %}
 
 <style>
-  form button a{
+	form button a{
     color: inherit;
     text-decoration: none;
+	}
+  /* Cuadrícula de espacios: una fila desplegable por zona, un cuadro por espacio */
+  .leyenda { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0 6px; }
+  .leyenda .caja { min-height: 0; padding: 4px 12px; font-size: 13px; flex-direction: row; }
+  .aviso-cuadricula { margin: 6px 0; color: #64748b; font-size: 14px; min-height: 1.2em; }
+  .espacio-elegido { margin: 6px 0 4px; font-weight: 600; color: #163b68; }
+
+  .sala { margin-top: 12px; }
+  .sala > summary {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+    padding: 12px 16px; cursor: pointer; list-style: none;
+    background: white; border: 1px solid #e7edf5; border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 45, 82, 0.06);
   }
+  .sala > summary::-webkit-details-marker { display: none; }
+  .sala > summary::before { content: "▶"; font-size: 12px; color: #1d5fa7; transition: transform 0.15s ease; }
+  .sala[open] > summary::before { transform: rotate(90deg); }
+  .sala > summary:hover { background: #f8fbff; }
+  .sala-nombre { font-weight: 700; font-size: 16px; color: #163b68; margin-right: auto; }
+  .sala-info { color: #64748b; font-size: 14px; }
+
+  .asientos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+    padding: 16px;
+    background: white;
+    border: 1px solid #e7edf5;
+    border-radius: 14px;
+    box-shadow: 0 4px 15px rgba(15, 45, 82, 0.07);
+  }
+
+  /* Cada cuadro es una <label> con un radio escondido adentro */
+  .cuadro-espacio { display: block; position: relative; cursor: pointer; margin: 0; font-weight: normal; }
+  .cuadro-espacio input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+  .caja {
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    min-height: 64px; padding: 10px 6px; border-radius: 10px; border: 2px solid #16a34a;
+    background: #dcfce7; color: #14532d; text-align: center; line-height: 1.25;
+    transition: all 0.15s ease;
+  }
+  .caja .num { font-weight: 700; font-size: 17px; }
+  .caja .sub { font-size: 12px; }
+  .cuadro-espacio:hover .caja { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(15, 45, 82, 0.2); }
+  .cuadro-espacio input:checked + .caja { background: #1d5fa7; border-color: #154b86; color: white; }
+  .cuadro-espacio input:focus-visible + .caja { outline: 3px solid #93c5fd; outline-offset: 2px; }
+  .cuadro-espacio input:disabled + .caja,
+  .caja.no-disponible { background: #fee2e2; border-color: #dc2626; color: #7f1d1d; }
+  .caja.fuera, .cuadro-espacio input:disabled + .caja.fuera { background: #e2e8f0; border-color: #64748b; color: #334155; }
+  .cuadro-espacio:has(input:disabled) { cursor: not-allowed; }
+  .cuadro-espacio:has(input:disabled):hover .caja { transform: none; box-shadow: none; }
 </style>
+
 <h2>Nueva reserva</h2>
 <form method="post">
   {% csrf_token %}
   {{ form.non_field_errors }}
+
+  {# Primero el día y el horario: de eso depende qué espacios se ven disponibles #}
   {% for field in form %}
+    {% if field.name != 'espacio' %}
     <div class="form-row">
       <label for="{{ field.id_for_label }}">{{ field.label }}</label>
       {{ field }}
       {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
       {{ field.errors }}
     </div>
+    {% endif %}
   {% endfor %}
+
+  <div class="form-row" id="cuadricula-espacios">
+    <label>Espacio</label>
+    <p id="aviso-cuadricula" class="aviso-cuadricula"></p>
+
+    <div class="leyenda">
+      <span class="caja">Disponible</span>
+      <span class="caja" style="background:#1d5fa7; border-color:#154b86; color:white;">Elegido</span>
+      <span class="caja no-disponible">No disponible (reservado en ese horario)</span>
+      <span class="caja fuera">Fuera de servicio</span>
+    </div>
+    <p id="espacio-elegido" class="espacio-elegido"></p>
+
+    {% for g in grupos %}
+    <details class="sala"{% if grupos|length <= 4 %} open{% endif %}>
+      <summary>
+        <span class="sala-nombre">{{ g.zona }}</span>
+        <span class="sala-info">
+          {% if g.zona.facultad %}Facultad: {{ g.zona.facultad }}{% else %}Zona pública{% endif %}
+          · <span class="contador">{{ g.espacios|length }} espacios</span>
+        </span>
+      </summary>
+      <div class="asientos">
+        {% for e in g.espacios %}
+        <label class="cuadro-espacio" title="{{ g.zona }} - N°{{ e.numero }}">
+          <input type="radio" name="espacio" value="{{ e.id }}" required
+                 data-fuera="{% if e.fuera %}1{% else %}0{% endif %}"
+                 data-nombre="{{ g.zona }} - N°{{ e.numero }}"
+                 {% if form.espacio.value|stringformat:"s" == e.id|stringformat:"s" %}checked{% endif %}
+                 {% if e.fuera %}disabled{% endif %}>
+          <span class="caja{% if e.fuera %} fuera{% endif %}">
+            <span class="num">{{ e.numero }}</span>
+            <span class="sub">{% if e.fuera %}Fuera de servicio{% else %}Disponible{% endif %}</span>
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+    </details>
+    {% empty %}
+    <p>No hay espacios que puedas reservar con tu tipo de usuario.</p>
+    {% endfor %}
+
+    {{ form.espacio.errors }}
+  </div>
+
   <button type="submit">Reservar</button>
   <button><a href="{% url 'estacionamiento:reservas_lista' %}">Atrás</a></button>
 </form>
@@ -28,4 +129,74 @@
     <option value="{{ h }}"></option>
   {% endfor %}
 </datalist>
+
+{{ ocupaciones|json_script:"datos-ocupaciones" }}
+<script>
+(function () {
+  var contenedor = document.getElementById("cuadricula-espacios");
+  var fecha = document.getElementById("id_fecha");
+  var ini = document.getElementById("id_hora_inicio");
+  var fin = document.getElementById("id_hora_fin");
+  var aviso = document.getElementById("aviso-cuadricula");
+  var elegido = document.getElementById("espacio-elegido");
+  var radios = contenedor.querySelectorAll('input[name="espacio"]');
+  var datos = JSON.parse(document.getElementById("datos-ocupaciones").textContent);
+
+  // Ventana pedida como texto "AAAA-MM-DDTHH:MM" (comparable sin zonas horarias).
+  function ventana() {
+    if (!fecha.value || !ini.value || !fin.value) { return null; }
+    var a = fecha.value + "T" + ini.value.slice(0, 5);
+    var b = fecha.value + "T" + fin.value.slice(0, 5);
+    return b > a ? [a, b] : null;
+  }
+
+  // Mismo criterio que el servidor (ReservaForm.clean): se pisan si
+  // existente.inicio <= nueva.fin  y  existente.fin >= nueva.inicio.
+  function ocupado(id, v) {
+    var lista = datos[id] || [];
+    for (var i = 0; i < lista.length; i++) {
+      if (lista[i][0] <= v[1] && lista[i][1] >= v[0]) { return true; }
+    }
+    return false;
+  }
+
+  function refrescar() {
+    var v = ventana();
+    aviso.textContent = v ? "" : "Elegí el día y el horario para ver qué espacios están disponibles.";
+    var nombreElegido = "";
+
+    radios.forEach(function (r) {
+      var fuera = r.dataset.fuera === "1";
+      var no = fuera || (v !== null && ocupado(r.value, v));
+      r.disabled = no;
+      if (no && r.checked) { r.checked = false; }   // un espacio deshabilitado no se envía
+      var caja = r.nextElementSibling;
+      caja.classList.toggle("no-disponible", no && !fuera);
+      caja.querySelector(".sub").textContent =
+        fuera ? "Fuera de servicio" : (no ? "No disponible" : (r.checked ? "Elegido" : "Disponible"));
+      if (r.checked) { nombreElegido = r.dataset.nombre; }
+    });
+
+    elegido.textContent = nombreElegido
+      ? "Espacio elegido: " + nombreElegido
+      : "Todavía no elegiste ningún espacio.";
+
+    contenedor.querySelectorAll("details.sala").forEach(function (d) {
+      var total = d.querySelectorAll('input[name="espacio"]').length;
+      var libres = d.querySelectorAll('input[name="espacio"]:not(:disabled)').length;
+      d.querySelector(".contador").textContent = libres + " disponibles de " + total;
+    });
+  }
+
+  [fecha, ini, fin].forEach(function (el) {
+    el.addEventListener("input", refrescar);
+    el.addEventListener("change", refrescar);
+  });
+  radios.forEach(function (r) { r.addEventListener("change", refrescar); });
+
+  // Si volvió con un espacio elegido (por un error de validación), abrir su zona.
+  radios.forEach(function (r) { if (r.checked) { r.closest("details").open = true; } });
+  refrescar();
+})();
+</script>
 {% endblock %}

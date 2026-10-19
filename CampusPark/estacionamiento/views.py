@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+from reglas.models import Reglamento
 from campuspark.paginacion import paginar
 
 from usuarios.decorators import admin_requerido, personal_requerido
@@ -15,6 +16,7 @@ from .forms import EspacioForm, EspaciosForm, IngresoForm, ReservaForm, ZonaForm
 from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona
 from vehiculos.models import Vehiculo
 
+from .cuadricula import contexto_cuadricula
 
 @login_required
 def lista_reservas_view(request):
@@ -111,10 +113,15 @@ def crear_reserva_view(request):
     else:
         form = ReservaForm(usuario=usuario)
     horas_sugeridas = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 30)]
+    reglamento = Reglamento.objects.first()
+    if reglamento:
+        apertura = reglamento.hora_apertura.strftime("%H:%M")
+        cierre = reglamento.hora_cierre.strftime("%H:%M")
+        horas_sugeridas = [h for h in horas_sugeridas if apertura <= h <= cierre]
     return render(
         request,
         "estacionamiento/reserva_form.html",
-        {"form": form, "horas_sugeridas": horas_sugeridas},
+        {"form": form, "horas_sugeridas": horas_sugeridas, **contexto_cuadricula(form.fields["espacio"].queryset)}
     )
 
 
