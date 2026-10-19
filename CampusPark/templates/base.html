@@ -6,7 +6,9 @@
 
     <title>CampusPark</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
 
     <style>
         * {
@@ -20,16 +22,22 @@
             background: #f4f7fb;
             color: #1e293b;
             min-height: 100vh;
+
             display: flex;
             flex-direction: column;
         }
 
-        /* ===== BARRA SUPERIOR (HEADER) ===== */
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+
+        /* ===== BARRA SUPERIOR ===== */
 
         header {
             background: linear-gradient(135deg, #0f2d52, #1d4f91);
             color: white;
-            padding: 0 30px;
+            padding: 0 40px;
             height: 72px;
 
             display: flex;
@@ -37,9 +45,6 @@
             justify-content: space-between;
 
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
-            position: sticky;
-            top: 0;
-            z-index: 100;
         }
 
         .logo {
@@ -70,101 +75,151 @@
             font-weight: 700;
         }
 
-        .header-nav {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        /* ===== BARRA SUPERIOR: acciones ===== */
 
-        .header-nav a {
-            color: white;
-            text-decoration: none;
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: all 0.2s ease;
-        }
-
-        .header-nav a:hover {
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        .btn-logout {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.35);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .btn-logout:hover {
-            background: rgba(255, 255, 255, 0.25);
-            transform: translateY(-1px);
-            box-shadow: none;
-        }
-
-        /* ===== CONTENEDOR PRINCIPAL CON SIDEBAR ===== */
-
-        .app-container {
-            display: flex;
-            flex: 1;
-        }
-
-        /* ===== MENÚ LATERAL (SIDEBAR) ===== */
-
-        aside.sidebar {
-            width: 260px;
-            background: #ffffff;
-            border-right: 1px solid #e2e8f0;
-            padding: 24px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.02);
-        }
-
-        .sidebar-section-title {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #94a3b8;
-            margin: 16px 12px 6px 12px;
-        }
-
-        .sidebar-section-title:first-child {
-            margin-top: 0;
-        }
-
-        aside.sidebar a {
-            color: #334155;
-            text-decoration: none;
-            padding: 10px 14px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
+        .top-acciones {
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+
+        .top-acciones a.top-link,
+        .top-acciones button,
+        .menu-cuenta summary {
+            display: inline-block;
+            padding: 10px 18px;
+
+            color: white;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            border-radius: 8px;
+
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+
             transition: all 0.2s ease;
         }
 
-        aside.sidebar a:hover {
+        .top-acciones a.top-link:hover,
+        .top-acciones button:hover,
+        .menu-cuenta summary:hover,
+        .menu-cuenta[open] summary {
+            background: rgba(255, 255, 255, 0.25);
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Submenú "Mi cuenta" (desplegable nativo del navegador, no necesita JavaScript para abrirse) */
+
+        .menu-cuenta {
+            position: relative;
+        }
+
+        .menu-cuenta summary {
+            list-style: none;
+        }
+
+        .menu-cuenta summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .menu-cuenta summary::after {
+            content: "▾";
+            margin-left: 8px;
+            font-size: 12px;
+        }
+
+        .submenu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 8px);
+            z-index: 50;
+
+            min-width: 200px;
+            padding: 6px;
+
+            background: white;
+            border: 1px solid #e7edf5;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(15, 45, 82, 0.18);
+        }
+
+        .submenu a {
+            display: block;
+            padding: 10px 14px;
+            border-radius: 8px;
+
+            color: #1e293b;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .submenu a:hover {
             background: #edf4fb;
             color: #163b68;
         }
 
-        /* ===== CONTENIDO CENTRAL ===== */
+        /* ===== DISPOSICIÓN: menú lateral + contenido ===== */
+
+        .layout {
+            flex: 1;
+            display: flex;
+            align-items: stretch;
+        }
+
+        .sidebar {
+            flex: none;
+            width: 240px;
+            padding: 20px 12px;
+
+            background: white;
+            border-right: 1px solid #e7edf5;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 11px 14px;
+            margin-bottom: 2px;
+            border-radius: 8px;
+
+            color: #334155;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+
+            transition: background 0.15s ease;
+        }
+
+        .sidebar a:hover {
+            background: #edf4fb;
+            color: #163b68;
+        }
+
+        .sidebar a.activo {
+            background: #1d5fa7;
+            color: white;
+        }
+
+        .sidebar-titulo {
+            margin: 18px 14px 6px;
+
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #94a3b8;
+        }
+
+        /* ===== CONTENEDOR ===== */
 
         main {
             flex: 1;
-            padding: 40px;
+            min-width: 0;
             max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 25px;
         }
 
         /* ===== TÍTULOS ===== */
@@ -187,7 +242,9 @@
             background: white;
             border-radius: 14px;
             padding: 25px;
+
             box-shadow: 0 5px 20px rgba(15, 45, 82, 0.08);
+
             border: 1px solid #e7edf5;
             margin-bottom: 25px;
         }
@@ -210,11 +267,15 @@
         textarea {
             width: 50%;
             padding: 12px 14px;
+
             border: 1px solid #cbd5e1;
             border-radius: 8px;
+
             font-size: 15px;
             font-family: inherit;
+
             background: white;
+
             transition: border-color 0.2s, box-shadow 0.2s;
         }
 
@@ -223,23 +284,30 @@
         textarea:focus {
             outline: none;
             border-color: #2874c6;
+
             box-shadow: 0 0 0 3px rgba(40, 116, 198, 0.12);
         }
 
-        /* ===== BOTONES GENERALES ===== */
+        /* ===== BOTONES ===== */
 
         button,
         .btn {
             display: inline-block;
+
             padding: 11px 20px;
+
             background: #1d5fa7;
             color: white;
+
             border: none;
             border-radius: 8px;
+
             font-size: 14px;
             font-weight: 600;
+
             cursor: pointer;
             text-decoration: none;
+
             transition: all 0.2s ease;
         }
 
@@ -256,16 +324,20 @@
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
+
             margin-top: 20px;
+
             background: white;
             border-radius: 12px;
             overflow: hidden;
+
             box-shadow: 0 4px 15px rgba(15, 45, 82, 0.07);
         }
 
         th {
             background: #edf4fb;
             color: #163b68;
+
             font-weight: 700;
             text-align: left;
         }
@@ -296,36 +368,55 @@
 
         footer {
             text-align: center;
-            padding: 20px;
+            padding: 25px;
             color: #64748b;
             font-size: 13px;
-            background: #ffffff;
-            border-top: 1px solid #e2e8f0;
         }
 
         /* ===== RESPONSIVE ===== */
 
         @media (max-width: 800px) {
-            .app-container {
+
+            header {
+                height: auto;
+                padding: 18px 20px;
+
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .top-acciones {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            /* En pantallas angostas el menú lateral pasa arriba del contenido */
+            .layout {
                 flex-direction: column;
             }
 
-            aside.sidebar {
-                width: 100%;
+            .sidebar {
+                width: auto;
+                padding: 10px 12px;
+
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+
                 border-right: none;
-                border-bottom: 1px solid #e2e8f0;
+                border-bottom: 1px solid #e7edf5;
             }
 
-            header {
-                padding: 0 20px;
+            .sidebar a {
+                margin-bottom: 0;
+            }
+
+            .sidebar-titulo {
+                display: none;
             }
 
             main {
-                padding: 20px 15px;
-            }
-
-            input, select, textarea {
-                width: 100%;
+                padding: 25px 15px;
             }
 
             .logo-text {
@@ -338,65 +429,84 @@
 <body>
 
     <!-- BARRA SUPERIOR -->
+
     <header>
 
         <a href="{% if user.is_authenticated %}{% url 'usuarios:perfil' %}{% else %}{% url 'usuarios:login' %}{% endif %}" class="logo">
-            <div class="logo-icon">P</div>
-            <span class="logo-text">CampusPark</span>
+
+            <div class="logo-icon">
+                P
+            </div>
+
+            <span class="logo-text">
+                CampusPark
+            </span>
+
         </a>
 
-        <div class="header-nav">
+        <div class="top-acciones">
+
             {% if user.is_authenticated %}
-                <form method="post" action="{% url 'usuarios:logout' %}" style="display:inline">
+
+                <details class="menu-cuenta">
+                    <summary>Mi cuenta</summary>
+                    <div class="submenu">
+                        <a href="{% url 'usuarios:perfil' %}">Mi perfil</a>
+                        <a href="{% url 'vehiculos:lista' %}">Mis vehículos</a>
+                        <a href="{% url 'estacionamiento:reservas_lista' %}">Mis reservas</a>
+                    </div>
+                </details>
+
+                <form method="post" action="{% url 'usuarios:logout' %}">
                     {% csrf_token %}
-                    <button type="submit" class="btn-logout" title="Cerrar sesión">
-                        <span class="material-symbols-outlined">logout</span>
-                    </button>
+                    <button type="submit">Cerrar sesión</button>
                 </form>
+
             {% else %}
-                <a href="{% url 'usuarios:login' %}">Ingresar</a>
-                <a href="{% url 'usuarios:registro' %}">Registrarme</a>
+
+                <a href="{% url 'usuarios:login' %}" class="top-link">Ingresar</a>
+                <a href="{% url 'usuarios:registro' %}" class="top-link">Registrarme</a>
+
             {% endif %}
+
         </div>
 
     </header>
 
 
-    <!-- CONTENEDOR DE APP CON MENU LATERAL Y CONTENIDO -->
-    <div class="app-container">
+    <div class="layout">
+
+        <!-- MENÚ LATERAL (sólo con la sesión iniciada) -->
 
         {% if user.is_authenticated %}
-        <!-- MENÚ LATERAL -->
-        <aside class="sidebar">
+        <nav class="sidebar" aria-label="Menú principal">
+            {% with vn=request.resolver_match.view_name %}
 
-            <div class="sidebar-section-title">Principal</div>
-            <a href="{% url 'usuarios:perfil' %}">Mi perfil</a>
-            <a href="{% url 'vehiculos:lista' %}">Mis vehículos</a>
-            <a href="{% url 'estacionamiento:reservas_lista' %}">Mis reservas</a>
-            <a href="{% url 'reglas:reglamento' %}">Reglas</a>
+            <a href="{% url 'reglas:reglamento' %}"{% if vn == 'reglas:reglamento' or vn == 'reglas:reglamento_editar' or vn == 'reglas:reglamento_horarios' %} class="activo"{% endif %}>Reglas</a>
 
             {% if user.perfil.es_personal %}
-                <div class="sidebar-section-title">Movimientos</div>
-                <a href="{% url 'estacionamiento:movimientos_lista' %}">Ingresos y salidas</a>
-                <a href="{% url 'estacionamiento:reservas_lista_todas' %}">Reservas</a>
-				<div class="sidebar-section-title">Listas</div>
-                <a href="{% url 'usuarios:lista' %}">Lista de Usuarios</a>
-                <a href="{% url 'vehiculos:lista_todos' %}">Lista de Vehículos</a>
-				<div class="sidebar-section-title">Administración</div>
-                <a href="{% url 'reglas:tarifas_lista' %}">Tarifas</a>
-                <a href="{% url 'estacionamiento:espacios_lista' %}">Espacios</a>
+            <p class="sidebar-titulo">Gestión</p>
+            <a href="{% url 'estacionamiento:espacios_lista' %}"{% if vn == 'estacionamiento:espacios_lista' or vn == 'estacionamiento:espacio_editar' or vn == 'estacionamiento:espacios_crear' %} class="activo"{% endif %}>Espacios</a>
+            <a href="{% url 'estacionamiento:movimientos_lista' %}"{% if vn == 'estacionamiento:movimientos_lista' or vn == 'estacionamiento:movimiento_ingreso' or vn == 'estacionamiento:movimiento_salida' %} class="activo"{% endif %}>Ingresos y salidas</a>
+            <a href="{% url 'estacionamiento:reservas_lista_todas' %}"{% if vn == 'estacionamiento:reservas_lista_todas' %} class="activo"{% endif %}>Reservas</a>
+            <a href="{% url 'usuarios:lista' %}"{% if vn == 'usuarios:lista' %} class="activo"{% endif %}>Usuarios</a>
+            <a href="{% url 'vehiculos:lista_todos' %}"{% if vn == 'vehiculos:lista_todos' %} class="activo"{% endif %}>Vehículos</a>
+            <a href="{% url 'reglas:tarifas_lista' %}"{% if vn == 'reglas:tarifas_lista' or vn == 'reglas:tarifa_crear' or vn == 'reglas:tarifa_editar' %} class="activo"{% endif %}>Tarifas</a>
             {% endif %}
 
             {% if user.perfil.es_administrador %}
-                <a href="{% url 'estacionamiento:zonas_lista' %}">Zonas</a>
-                <a href="{% url 'universidad:facultades_lista' %}">Facultades</a>
+            <p class="sidebar-titulo">Administración</p>
+            <a href="{% url 'estacionamiento:zonas_lista' %}"{% if vn == 'estacionamiento:zonas_lista' or vn == 'estacionamiento:zona_crear' or vn == 'estacionamiento:zona_editar' %} class="activo"{% endif %}>Zonas</a>
+            <a href="{% url 'universidad:facultades_lista' %}"{% if vn == 'universidad:facultades_lista' or vn == 'universidad:facultad_crear' or vn == 'universidad:facultad_editar' %} class="activo"{% endif %}>Facultades</a>
             {% endif %}
 
-        </aside>
+            {% endwith %}
+        </nav>
         {% endif %}
 
 
         <!-- CONTENIDO DE CADA PÁGINA -->
+
         <main>
 
             {% if messages %}
@@ -417,9 +527,19 @@
 
 
     <!-- PIE DE PÁGINA -->
+
     <footer>
         CampusPark© 2026 · Sistema de Gestión de Estacionamiento
     </footer>
+
+    <script>
+        // Cierra el submenú "Mi cuenta" al hacer click en cualquier otro lado.
+        document.addEventListener("click", function (e) {
+            document.querySelectorAll("details.menu-cuenta[open]").forEach(function (d) {
+                if (!d.contains(e.target)) { d.removeAttribute("open"); }
+            });
+        });
+    </script>
 
 </body>
 </html>
