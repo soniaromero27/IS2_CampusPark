@@ -3,7 +3,7 @@
 
 
 <style>
-  th a, th a:visited, th a:hover, th a:active {
+  th a, th a:visited, th a:hover, th a:active,  button a{
     color: inherit;
     text-decoration: none;
   }
@@ -17,7 +17,7 @@
   <button type="submit"><span class="material-symbols-outlined">
 search
 </span></button>
-  {% if q %}<a href="{% url 'usuarios:lista' %}">Limpiar</a>{% endif %}
+  {% if q %}<button><a href="{% url 'usuarios:lista' %}">Limpiar</a></button>{% endif %}
 </form>
 
 <table>

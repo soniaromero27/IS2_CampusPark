@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-  form button a{
+  form button a, button a{
     color: inherit;
     text-decoration: none;
   }
@@ -14,7 +14,7 @@
 <form method="post">
   {% csrf_token %}
   <button type="submit">Sí, cancelar</button>
-  <button><a href="{% url 'estacionamiento:reservas_lista' %}">Atrás</a></button>
 </form>
+  <button><a href="{% url 'estacionamiento:reservas_lista' %}">Atrás</a></button>
 
 {% endblock %}
