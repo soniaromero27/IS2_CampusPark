@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-  th a, th a:visited, th a:hover, th a:active, td a{
+  th a, th a:visited, th a:hover, th a:active, td a, button a{
     color: inherit;
     text-decoration: none;
   }
@@ -74,12 +74,13 @@
   <button type="submit"><span class="material-symbols-outlined">
 search
 </span></button>
-  {% if q %}<a href="?vista={{ vista }}&orden={{ orden }}&dir={{ dir }}">Limpiar</a>{% endif %}
+  {% if q %}<button><a href="?vista={{ vista }}&orden={{ orden }}&dir={{ dir }}">Limpiar</a></button>{% endif %}
 </form>
 
 {% if vista == 'cuadros' %}
 
   <div class="leyenda">
+	Referencias:
     <span class="cuadro estado-libre">Libre</span>
     <span class="cuadro estado-ocupado">Ocupado (con patente)</span>
     <span class="cuadro estado-reservado">Reservado</span>
