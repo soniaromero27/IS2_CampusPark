@@ -304,13 +304,17 @@ def lista_espacios_view(request):
     abiertas = [int(v) for v in request.GET.getlist("abrir") if v.isdigit()]
     params = request.GET.copy()
     params.pop("abrir", None)
-
+    
+    if vista == "cuadros":
+        paginacion = paginar(request, grupos, "grupos")
+    else:
+        paginacion = paginar(request, espacios, "espacios")
+        
     return render(
         request,
         "estacionamiento/espacios_lista.html",
         {
-            "espacios": espacios,
-            "grupos": grupos,
+            **paginacion,
             "vista": vista,
             "orden": orden,
             "dir": direccion,
