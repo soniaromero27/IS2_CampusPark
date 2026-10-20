@@ -13,6 +13,20 @@
   'GRAD' 0,
   'opsz' 24
 }
+
+.Pendiente {
+	background-color: #d1ffd1;
+	color: green;
+}
+
+.Cancelada {
+	background-color: #f5e6e6;
+	color: red;
+}
+.Finalizada {
+	color: blue;
+}
+	
 </style>
 
 <h2>Todas las reservas</h2>
@@ -69,7 +83,7 @@ filter_alt
     <td>N°{{ r.espacio.numero }}</td>
     <td>{{ r.fecha_inicio }}</td>
     <td>{{ r.fecha_fin }}</td>
-    <td>{{ r.tipo_estado_reserva }}</td>
+    <td class="{{ r.tipo_estado_reserva }}">{{ r.tipo_estado_reserva }}</td>
   </tr>
   {% empty %}
   <tr><td colspan="6">No hay reservas que coincidan con la búsqueda.</td></tr>
