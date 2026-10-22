@@ -278,11 +278,11 @@
 
             transition: border-color 0.2s, box-shadow 0.2s;
         }
-
+		
 		input[type="checkbox"] {
 			width: 5%;
 		}
-		
+	
         input:focus,
         select:focus,
         textarea:focus {
@@ -436,7 +436,7 @@
 
     <header>
 
-        <a href="{% if user.is_authenticated %}{% url 'usuarios:perfil' %}{% else %}{% url 'usuarios:login' %}{% endif %}" class="logo">
+        <a href="{% url 'inicio' %}" class="logo">
 
             <div class="logo-icon">
                 P
@@ -487,10 +487,10 @@
             {% with vn=request.resolver_match.view_name %}
 
             <a href="{% url 'reglas:reglamento' %}"{% if vn == 'reglas:reglamento' or vn == 'reglas:reglamento_editar' or vn == 'reglas:reglamento_horarios' %} class="activo"{% endif %}>Reglas</a>
+            <a href="{% url 'estacionamiento:espacios_lista' %}"{% if vn == 'estacionamiento:espacios_lista' or vn == 'estacionamiento:espacio_editar' or vn == 'estacionamiento:espacios_crear' %} class="activo"{% endif %}>Espacios</a>
 
             {% if user.perfil.es_personal %}
             <p class="sidebar-titulo">Gestión</p>
-            <a href="{% url 'estacionamiento:espacios_lista' %}"{% if vn == 'estacionamiento:espacios_lista' or vn == 'estacionamiento:espacio_editar' or vn == 'estacionamiento:espacios_crear' %} class="activo"{% endif %}>Espacios</a>
             <a href="{% url 'estacionamiento:movimientos_lista' %}"{% if vn == 'estacionamiento:movimientos_lista' or vn == 'estacionamiento:movimiento_ingreso' or vn == 'estacionamiento:movimiento_salida' %} class="activo"{% endif %}>Ingresos y salidas</a>
             <a href="{% url 'estacionamiento:reservas_lista_todas' %}"{% if vn == 'estacionamiento:reservas_lista_todas' %} class="activo"{% endif %}>Reservas</a>
             <a href="{% url 'usuarios:lista' %}"{% if vn == 'usuarios:lista' %} class="activo"{% endif %}>Usuarios</a>

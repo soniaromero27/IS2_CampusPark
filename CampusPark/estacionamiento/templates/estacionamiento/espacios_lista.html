@@ -67,7 +67,7 @@
 </div>
 
 <form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:500px; margin-top:1em;">
-  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por zona, facultad, estado o patente..." style="width:100%;">
+  <input type="text" name="q" value="{{ q }}" placeholder="{% if user.perfil.es_personal %}Buscar por zona, facultad, estado o patente...{% else %}Buscar por zona, facultad o estado...{% endif %}" style="width:100%;">
   <input type="hidden" name="vista" value="{{ vista }}">
   <input type="hidden" name="orden" value="{{ orden }}">
   <input type="hidden" name="dir" value="{{ dir }}">
@@ -80,9 +80,9 @@ search
 {% if vista == 'cuadros' %}
 
   <div class="leyenda">
-	Referencias:
+  	Referencias:
     <span class="cuadro estado-libre">Libre</span>
-    <span class="cuadro estado-ocupado">Ocupado (con patente)</span>
+    <span class="cuadro estado-ocupado">Ocupado{% if user.perfil.es_personal %} (con patente){% endif %}</span>
     <span class="cuadro estado-reservado">Reservado</span>
     <span class="cuadro estado-fuera-de-servicio">Fuera de servicio</span>
   </div>
@@ -101,9 +101,9 @@ search
       {% for e in g.espacios %}
         {% with m=e.movimiento_actual %}
         {% if user.perfil.es_administrador %}<a class="cuadro-link" href="{% url 'estacionamiento:espacio_editar' e.pk %}?{% if querystring %}{{ querystring }}&{% endif %}abrir={{ g.zona.id }}">{% endif %}
-          <div class="cuadro estado-{{ e.tipo_estado.nombre_estado|slugify }}" title="{{ e.zona }} - N°{{ e.numero }} - {{ e.tipo_estado }}{% if m %} - {{ m.patente }}{% endif %}">
+          <div class="cuadro estado-{{ e.tipo_estado.nombre_estado|slugify }}" title="{{ e.zona }} - N°{{ e.numero }} - {{ e.tipo_estado }}{% if m and user.perfil.es_personal %} - {{ m.patente }}{% endif %}">
             <span class="num">{{ e.numero }}</span>
-            <span class="sub">{% if m %}{{ m.patente }}{% else %}{{ e.tipo_estado }}{% endif %}</span>
+            <span class="sub">{% if m and user.perfil.es_personal %}{{ m.patente }}{% else %}{{ e.tipo_estado }}{% endif %}</span>
           </div>
         {% if user.perfil.es_administrador %}</a>{% endif %}
         {% endwith %}
@@ -141,7 +141,7 @@ search
         Estado{% if orden == 'estado' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
       </a>
     </th>
-    <th>Vehículo (si está ocupado)</th>
+    {% if user.perfil.es_personal %}<th>Vehículo (si está ocupado)</th>{% endif %}
     {% if user.perfil.es_administrador %}<th></th>{% endif %}
   </tr>
   {% for e in espacios %}
@@ -150,7 +150,7 @@ search
     <td>N°{{ e.numero }}</td>
     <td>{{ e.zona.facultad|default:"Ninguna" }}</td>
     <td>{{ e.tipo_estado }}</td>
-    <td>{{ e.movimiento_actual.patente|default:"—" }}</td>
+    {% if user.perfil.es_personal %}<td>{{ e.movimiento_actual.patente|default:"—" }}</td>{% endif %}
     {% if user.perfil.es_administrador %}
     <td><a href="{% url 'estacionamiento:espacio_editar' e.pk %}{% if querystring %}?{{ querystring }}{% endif %}"><span class="material-symbols-outlined">edit_square</span></a></td>
     {% endif %}
@@ -159,6 +159,7 @@ search
   <tr><td colspan="6">No hay espacios que coincidan con la búsqueda.</td></tr>
   {% endfor %}
 </table>
+
 {% endif %}
 {% include "_paginacion.html" %}
 {% endblock %}

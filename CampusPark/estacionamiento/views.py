@@ -212,7 +212,7 @@ def lista_todas_reservas_view(request):
     )
 
 
-@personal_requerido
+@login_required
 def lista_espacios_view(request):
     """
     Ver todos los espacios, con su número, zona, facultad de esa zona
@@ -254,7 +254,16 @@ def lista_espacios_view(request):
         vista = "lista"
     if vista == "cuadros":
         campos = ["zona__nombre", "numero"]
+    
+    perfil = getattr(request.user, "perfil", None)
+    
+    ver_patentes = bool(perfil and perfil.es_personal)
 
+    movimientos_abiertos = (
+        Movimiento.objects.filter(fecha_hora_salida__isnull=True)
+        if ver_patentes else Movimiento.objects.none()
+    )
+    
     q = request.GET.get("q", "").strip()
 
     espacios = Espacio.objects.select_related(
@@ -267,15 +276,14 @@ def lista_espacios_view(request):
         )
     )
     if q:
-        espacios = espacios.filter(
-            Q(zona__nombre__icontains=q)
-            | Q(zona__facultad__nombre__icontains=q)
-            | Q(tipo_estado__nombre_estado__icontains=q)
-            | Q(
-                movimientos__patente__icontains=q,
-                movimientos__fecha_hora_salida__isnull=True,
-            )
-        ).distinct()
+        filtro = (Q(zona__nombre__icontains=q)
+                  | Q(zona__facultad__nombre__icontains=q)
+                  | Q(tipo_estado__nombre_estado__icontains=q))
+        if ver_patentes:
+            filtro |= Q(movimientos__patente__icontains=q,
+                        movimientos__fecha_hora_salida__isnull=True)
+        espacios = espacios.filter(filtro).distinct()
+        
     espacios = espacios.order_by(*campos)
 
     grupos = []

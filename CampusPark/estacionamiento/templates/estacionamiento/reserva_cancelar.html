@@ -1,20 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
-<style>
-  form button a, button a{
-    color: inherit;
-    text-decoration: none;
-  }
-</style>
 <h2>Cancelar reserva</h2>
 <p>
   ¿Confirmás que querés cancelar la reserva del espacio N°{{ reserva.espacio.numero }}
   ({{ reserva.espacio.zona }}) del {{ reserva.fecha_inicio }} al {{ reserva.fecha_fin }}?
 </p>
-<form method="post">
-  {% csrf_token %}
-  <button type="submit">Sí, cancelar</button>
-</form>
-  <button><a href="{% url 'estacionamiento:reservas_lista' %}">Atrás</a></button>
 
+<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px;">
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit">Sí, cancelar</button>
+  </form>
+  <a href="{% url 'estacionamiento:reservas_lista' %}" class="btn">Atrás</a>
+</div>
 {% endblock %}
