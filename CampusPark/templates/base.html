@@ -455,8 +455,8 @@
 
                 <details class="menu-cuenta">
                     <summary>
-					<span class="material-symbols-outlined">account_circle</span>
-					Mi cuenta</summary>
+					<span class="material-symbols-outlined">account_circle</span>Mi cuenta</summary>
+					
                     <div class="submenu">
                         <a href="{% url 'usuarios:perfil' %}">Mi perfil</a>
                         <a href="{% url 'vehiculos:lista' %}">Mis vehículos</a>
@@ -466,7 +466,7 @@
 
                 <form method="post" action="{% url 'usuarios:logout' %}">
                     {% csrf_token %}
-                    <button type="submit">Cerrar sesión</button>
+                    <button type="submit">Cerrar sesión <span class="material-symbols-outlined">logout</span></button>
                 </form>
 
             {% else %}
