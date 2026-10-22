@@ -427,6 +427,7 @@
                 font-size: 21px;
             }
         }
+
     </style>
 </head>
 
@@ -453,7 +454,9 @@
             {% if user.is_authenticated %}
 
                 <details class="menu-cuenta">
-                    <summary>Mi cuenta</summary>
+                    <summary>
+					<span class="material-symbols-outlined">account_circle</span>
+					Mi cuenta</summary>
                     <div class="submenu">
                         <a href="{% url 'usuarios:perfil' %}">Mi perfil</a>
                         <a href="{% url 'vehiculos:lista' %}">Mis vehículos</a>
@@ -486,22 +489,39 @@
         <nav class="sidebar" aria-label="Menú principal">
             {% with vn=request.resolver_match.view_name %}
 
-            <a href="{% url 'reglas:reglamento' %}"{% if vn == 'reglas:reglamento' or vn == 'reglas:reglamento_editar' or vn == 'reglas:reglamento_horarios' %} class="activo"{% endif %}>Reglas</a>
-            <a href="{% url 'estacionamiento:espacios_lista' %}"{% if vn == 'estacionamiento:espacios_lista' or vn == 'estacionamiento:espacio_editar' or vn == 'estacionamiento:espacios_crear' %} class="activo"{% endif %}>Espacios</a>
+            <a href="{% url 'reglas:reglamento' %}"{% if vn == 'reglas:reglamento' or vn == 'reglas:reglamento_editar' or vn == 'reglas:reglamento_horarios' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">menu_book</span> Reglas</a>
+			
+            <a href="{% url 'estacionamiento:espacios_lista' %}"{% if vn == 'estacionamiento:espacios_lista' or vn == 'estacionamiento:espacio_editar' or vn == 'estacionamiento:espacios_crear' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">grid_view</span> Espacios</a>
 
+            <a href="{% url 'reglas:tarifas_lista' %}"{% if vn == 'reglas:tarifas_lista' or vn == 'reglas:tarifa_crear' or vn == 'reglas:tarifa_editar' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">payments</span> Tarifas</a>
+			
             {% if user.perfil.es_personal %}
             <p class="sidebar-titulo">Gestión</p>
-            <a href="{% url 'estacionamiento:movimientos_lista' %}"{% if vn == 'estacionamiento:movimientos_lista' or vn == 'estacionamiento:movimiento_ingreso' or vn == 'estacionamiento:movimiento_salida' %} class="activo"{% endif %}>Ingresos y salidas</a>
-            <a href="{% url 'estacionamiento:reservas_lista_todas' %}"{% if vn == 'estacionamiento:reservas_lista_todas' %} class="activo"{% endif %}>Reservas</a>
-            <a href="{% url 'usuarios:lista' %}"{% if vn == 'usuarios:lista' %} class="activo"{% endif %}>Usuarios</a>
-            <a href="{% url 'vehiculos:lista_todos' %}"{% if vn == 'vehiculos:lista_todos' %} class="activo"{% endif %}>Vehículos</a>
-            <a href="{% url 'reglas:tarifas_lista' %}"{% if vn == 'reglas:tarifas_lista' or vn == 'reglas:tarifa_crear' or vn == 'reglas:tarifa_editar' %} class="activo"{% endif %}>Tarifas</a>
+			
+            <a href="{% url 'estacionamiento:movimientos_lista' %}"{% if vn == 'estacionamiento:movimientos_lista' or vn == 'estacionamiento:movimiento_ingreso' or vn == 'estacionamiento:movimiento_salida' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">swap_horiz</span> Ingresos y salidas</a>
+			
+            <a href="{% url 'estacionamiento:reservas_lista_todas' %}"{% if vn == 'estacionamiento:reservas_lista_todas' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">event_available</span> Reservas</a>
+			
+            <a href="{% url 'usuarios:lista' %}"{% if vn == 'usuarios:lista' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">person</span> Usuarios</a>
+			
+            <a href="{% url 'vehiculos:lista_todos' %}"{% if vn == 'vehiculos:lista_todos' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">directions_car</span> Vehículos</a>
+			
             {% endif %}
 
             {% if user.perfil.es_administrador %}
             <p class="sidebar-titulo">Administración</p>
-            <a href="{% url 'estacionamiento:zonas_lista' %}"{% if vn == 'estacionamiento:zonas_lista' or vn == 'estacionamiento:zona_crear' or vn == 'estacionamiento:zona_editar' %} class="activo"{% endif %}>Zonas</a>
-            <a href="{% url 'universidad:facultades_lista' %}"{% if vn == 'universidad:facultades_lista' or vn == 'universidad:facultad_crear' or vn == 'universidad:facultad_editar' %} class="activo"{% endif %}>Facultades</a>
+            <a href="{% url 'estacionamiento:zonas_lista' %}"{% if vn == 'estacionamiento:zonas_lista' or vn == 'estacionamiento:zona_crear' or vn == 'estacionamiento:zona_editar' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">map</span> Zonas</a>
+			
+            <a href="{% url 'universidad:facultades_lista' %}"{% if vn == 'universidad:facultades_lista' or vn == 'universidad:facultad_crear' or vn == 'universidad:facultad_editar' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">school</span> Facultades</a>
             {% endif %}
 
             {% endwith %}

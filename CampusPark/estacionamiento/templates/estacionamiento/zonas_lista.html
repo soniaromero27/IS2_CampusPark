@@ -22,7 +22,7 @@
   <button type="submit"><span class="material-symbols-outlined">
 search
 </span></button>
-  {% if q %}<button><a href="{% url 'estacionamiento:zonas_lista' %}">Limpiar</a></button>{% endif %}
+  {% if q %}<a href="{% url 'estacionamiento:zonas_lista' %}" class="btn">Limpiar</a>{% endif %}
 </form>
 
 <table>

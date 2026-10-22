@@ -3,7 +3,7 @@
 
 
 <style>
-  th a, th a:visited, th a:hover, th a:active, button a {
+  th a, th a:visited, th a:hover, th a:active {
     color: inherit;
     text-decoration: none;
   }
@@ -24,7 +24,7 @@
 search
 </span>
 </button>
-  {% if q %}<button><a href="?orden={{ orden }}&dir={{ dir }}">Limpiar</a></button>{% endif %}
+  {% if q %}<a href="?orden={{ orden }}&dir={{ dir }}" class="btn">Limpiar</a>{% endif %}
 </form>
 
 <table>
@@ -79,7 +79,7 @@ search
     </td>
     <td>
       {% if not m.fecha_hora_salida %}
-        <button><a href="{% url 'estacionamiento:movimiento_salida' m.pk %}">Registrar salida</a></button>
+        <a href="{% url 'estacionamiento:movimiento_salida' m.pk %}" class="btn">Registrar salida</a>
       {% endif %}
     </td>
   </tr>

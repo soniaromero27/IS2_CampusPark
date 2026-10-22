@@ -133,7 +133,11 @@ LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'America/Asuncion'
 
+#USE_THOUSAND_SEPARATOR = True
+
 FORMAT_MODULE_PATH = "campuspark.formats"
+
+USE_FORMATTING = True
 
 USE_L10N = False
 

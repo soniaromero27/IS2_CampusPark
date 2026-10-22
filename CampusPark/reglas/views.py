@@ -12,7 +12,7 @@ from .forms import HorariosForm, ReglamentoTextoForm, TarifaForm
 from .models import Reglamento, Tarifa
 
 
-@personal_requerido
+@login_required
 def lista_tarifas_view(request):
     """
     Ver todas las tarifas: sólo Personal de Estacionamiento o

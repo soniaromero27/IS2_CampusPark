@@ -14,8 +14,15 @@ No se tocan los *_INPUT_FORMATS: los campos de fecha/hora de los
 formularios son <input type="date"/"time">, que siempre trabajan en ISO.
 """
 
+# FECHA Y HORA
 DATE_FORMAT = "d/m/Y"
 DATETIME_FORMAT = "d-m-Y, H:i"
 TIME_FORMAT = "H:i"
 SHORT_DATE_FORMAT = "d/m/Y"
 SHORT_DATETIME_FORMAT = "d/m/Y, H:i"
+
+# FORMATO DE NÚMEROS (Punto como separador de miles, sin decimales)
+NUMBER_GROUPING = 3
+THOUSAND_SEPARATOR = "."
+DECIMAL_SEPARATOR = ","
+DECIMAL_PLACES = 0
