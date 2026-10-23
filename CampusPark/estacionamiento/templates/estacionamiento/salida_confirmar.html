@@ -1,14 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-<style>
-  button a{
-    color: inherit;
-    text-decoration: none;
-  }
-</style>
+
 <h2>Registrar salida</h2>
 <p>
-  ¿Confirmás la salida del vehículo {{ movimiento.vehiculo.matricula }} del espacio
+  ¿Confirmás la salida del vehículo {{ movimiento.patente }} del espacio
   N°{{ movimiento.espacio.numero }} ({{ movimiento.espacio.zona }})?
   Ingresó el {{ movimiento.fecha_hora_ingreso }}.
 </p>
@@ -29,9 +24,12 @@
   {% endif %}
 </div>
 
+<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px;">
 <form method="post">
   {% csrf_token %}
   <button type=" ">Sí, registrar salida</button>
 </form>
-<button><a href="{% url 'estacionamiento:movimientos_lista' %}">Atrás</a></button>
+<a href="{% url 'estacionamiento:movimientos_lista' %}" class="btn">Atrás</a>
+</div>
+
 {% endblock %}
