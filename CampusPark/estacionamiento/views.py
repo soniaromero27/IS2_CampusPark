@@ -554,6 +554,27 @@ def lista_zonas_view(request):
     Ver todas las zonas y cuántos espacios tiene cada una. Sólo
     Administrador. Admite búsqueda por ?q=... sobre nombre y descripción.
     """
+    campos_orden = {
+        "nombre": ["nombre"],
+        "facultad": ["facultad"],
+        "tipos": ["tipos_usuario_permitidos"],
+        "descripcion": ["descripcion"],
+        "espacios": ["cantidad_espacios"],
+    }
+    
+    orden = request.GET.get("orden", "nombre")
+    if orden not in campos_orden:
+        orden = "nombre"
+
+    direccion = request.GET.get("dir", "desc")
+    if direccion not in ("asc", "desc"):
+        direccion = "desc"
+
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+        
+        
     q = request.GET.get("q", "").strip()
     zonas = (
         Zona.objects.select_related("facultad")
@@ -565,7 +586,19 @@ def lista_zonas_view(request):
         zonas = zonas.filter(
             Q(nombre__icontains=q) | Q(descripcion__icontains=q) | Q(facultad__nombre__icontains=q)
         )
-    return render(request, "estacionamiento/zonas_lista.html", {**paginar(request, zonas, "zonas"), "q": q})
+        
+    zonas = zonas.order_by(*campos)
+     
+    return render(
+        request, 
+        "estacionamiento/zonas_lista.html", 
+        {
+            **paginar(request, zonas, "zonas"), 
+            "orden": orden,
+            "dir": direccion,
+            "q": q
+        },
+    )
 
 
 def _crear_espacios(zona, cantidad):
