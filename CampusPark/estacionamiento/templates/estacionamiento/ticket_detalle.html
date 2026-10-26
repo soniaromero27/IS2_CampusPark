@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Ticket {{ ticket.numero }}</h2>
+
+<div class="card">
+  <p><strong>Patente:</strong> {{ ticket.patente }}</p>
+  <p><strong>Usuario:</strong>
+    {% if ticket.usuario %}{{ ticket.usuario.nombre }} {{ ticket.usuario.apellido }} ({{ ticket.tipo_usuario }}){% else %}No registrado ({{ ticket.tipo_usuario|default:"Externo" }}){% endif %}
+  </p>
+  <p><strong>Espacio:</strong> {{ ticket.movimiento.espacio.zona }} - N°{{ ticket.movimiento.espacio.numero }}</p>
+  <p><strong>Ingreso:</strong> {{ ticket.fecha_ingreso }}</p>
+  <p><strong>Salida:</strong> {{ ticket.fecha_salida }}</p>
+  <p><strong>Emitido:</strong> {{ ticket.fecha_emision }}</p>
+
+  {% if ticket.monto is not None %}
+    <h3>Monto: Gs. {{ ticket.monto|floatformat:0 }}</h3>
+    <p>{{ ticket.horas }} hora{{ ticket.horas|pluralize }} × Gs. {{ ticket.valor_por_hora|floatformat:0 }}/h — tarifa "{{ ticket.tarifa_descripcion }}"</p>
+  {% else %}
+    <p>No había tarifa configurada al momento de la salida: no se calculó el monto.</p>
+  {% endif %}
+
+  <p><strong>Estado:</strong> {{ ticket.get_estado_display }}</p>
+  {% if ticket.estado == "pagado" %}
+    <p>Pagado el {{ ticket.fecha_pago }} ({{ ticket.get_metodo_pago_display }})
+      {% if ticket.cobrado_por %}— cobró {{ ticket.cobrado_por.nombre }} {{ ticket.cobrado_por.apellido }}{% endif %}</p>
+  {% endif %}
+</div>
+
+{% if ticket.estado == "pendiente" and user.perfil.es_personal %}
+<form method="post" action="{% url 'estacionamiento:ticket_pagar' ticket.pk %}">
+  {% csrf_token %}
+  {% for field in form %}
+    <div class="form-row">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+    </div>
+  {% endfor %}
+  <button type="submit">Registrar pago</button>
+</form>
+{% endif %}
+
+<p>
+  {% if user.perfil.es_personal %}
+    <a href="{% url 'estacionamiento:tickets_lista' %}">Volver a tickets</a>
+  {% else %}
+    <a href="{% url 'estacionamiento:mis_movimientos' %}">Volver a mis movimientos</a>
+  {% endif %}
+</p>
+{% endblock %}

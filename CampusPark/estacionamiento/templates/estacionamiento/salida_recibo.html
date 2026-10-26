@@ -22,6 +22,8 @@
     </p>
   {% endif %}
 </div>
-
+{% if ticket %}
+  <p><strong>Ticket:</strong> <a href="{% url 'estacionamiento:ticket_detalle' ticket.pk %}">{{ ticket.numero }}</a> ({{ ticket.get_estado_display }})</p>
+{% endif %}
 <p><a href="{% url 'estacionamiento:movimientos_lista' %}">Volver a la lista</a></p>
 {% endblock %}

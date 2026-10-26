@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  th a, th a:visited, th a:hover, th a:active {
+    color: inherit;
+    text-decoration: none;
+  }
+</style>
+
+<h2>Mis movimientos</h2>
+
+<form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:500px;">
+  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por vehículo o zona..." style="width:100%;">
+  <input type="hidden" name="orden" value="{{ orden }}">
+  <input type="hidden" name="dir" value="{{ dir }}">
+  <button type="submit">Buscar</button>
+  {% if q %}<a href="?orden={{ orden }}&dir={{ dir }}">Limpiar</a>{% endif %}
+</form>
+
+<table>
+  <tr>
+    <th>
+      <a href="?orden=vehiculo&dir={% if orden == 'vehiculo' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Vehículo{% if orden == 'vehiculo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=zona&dir={% if orden == 'zona' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Zona{% if orden == 'zona' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=espacio&dir={% if orden == 'espacio' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Espacio{% if orden == 'espacio' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=ingreso&dir={% if orden == 'ingreso' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Ingreso{% if orden == 'ingreso' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=salida&dir={% if orden == 'salida' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Salida{% if orden == 'salida' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=ticket&dir={% if orden == 'ticket' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+        Ticket{% if orden == 'ticket' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+  </tr>
+  {% for m in movimientos %}
+  <tr>
+    <td>{{ m.patente }}</td>
+    <td>{{ m.espacio.zona }}</td>
+    <td>N°{{ m.espacio.numero }}</td>
+    <td>{{ m.fecha_hora_ingreso }}</td>
+    <td>{% if m.fecha_hora_salida %}{{ m.fecha_hora_salida }}{% else %}En curso{% endif %}</td>
+    <td>
+      {% if m.ticket %}
+        <a href="{% url 'estacionamiento:ticket_detalle' m.ticket.pk %}">{{ m.ticket.numero }} · {{ m.ticket.get_estado_display }}</a>
+      {% else %}—{% endif %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="6">No hay movimientos que coincidan con la búsqueda.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

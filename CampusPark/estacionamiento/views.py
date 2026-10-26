@@ -6,14 +6,16 @@ from django.db.models import Count, Max, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.core.exceptions import PermissionDenied
+from django.db import transaction
 
 from reglas.models import Reglamento
 from campuspark.paginacion import paginar
 
 from usuarios.decorators import admin_requerido, personal_requerido
 
-from .forms import EspacioForm, EspaciosForm, IngresoForm, ReservaForm, ZonaForm
-from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona
+from .forms import EspacioForm, EspaciosForm, IngresoForm, ReservaForm, ZonaForm, TicketPagoForm
+from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona, Ticket
 from vehiculos.models import Vehiculo
 
 from .cuadricula import contexto_cuadricula
@@ -514,13 +516,14 @@ def registrar_salida_view(request, pk):
         fecha_hora_salida__isnull=True,
     )
     if request.method == "POST":
-        movimiento.fecha_hora_salida = timezone.now()
-        movimiento.save()
+        with transaction.atomic():
+            movimiento.fecha_hora_salida = timezone.now()
+            movimiento.save()
 
-        estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
-        espacio = movimiento.espacio
-        espacio.tipo_estado = estado_libre
-        espacio.save()
+            estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
+            espacio = movimiento.espacio
+            espacio.tipo_estado = estado_libre
+            espacio.save()
 
         if movimiento.vehiculo_id and movimiento.vehiculo.usuario_id:
             reserva_en_curso = Reserva.objects.filter(
@@ -536,8 +539,12 @@ def registrar_salida_view(request, pk):
                 reserva_en_curso.save()
 
         cobro = movimiento.calcular_cobro()
+        ticket = Ticket.emitir(movimiento, cobro)
+        
         return render(
-            request, "estacionamiento/salida_recibo.html", {"movimiento": movimiento, "cobro": cobro}
+            request,
+            "estacionamiento/salida_recibo.html",
+            {"movimiento": movimiento, "cobro": cobro, "ticket": ticket},
         )
 
     cobro_estimado = movimiento.calcular_cobro()
@@ -686,3 +693,105 @@ def editar_zona_view(request, pk):
     else:
         form = ZonaForm(instance=zona)
     return render(request, "estacionamiento/zona_form.html", {"form": form, "zona": zona})
+    
+@login_required
+def mis_movimientos_view(request):
+    """
+    Ingresos y salidas de los vehículos del usuario autenticado. Se puede
+    ordenar con ?orden=<campo>&dir=<asc|desc> y buscar con ?q=... sobre
+    patente y zona.
+    """
+    campos_orden = {
+        "vehiculo": ["patente"],
+        "zona": ["espacio__zona__nombre"],
+        "espacio": ["espacio__numero"],
+        "ingreso": ["fecha_hora_ingreso"],
+        "salida": ["fecha_hora_salida"],
+        "ticket": ["ticket__estado"],
+    }
+ 
+    orden = request.GET.get("orden", "ingreso")
+    if orden not in campos_orden:
+        orden = "ingreso"
+ 
+    direccion = request.GET.get("dir", "desc")
+    if direccion not in ("asc", "desc"):
+        direccion = "desc"
+ 
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+ 
+    q = request.GET.get("q", "").strip()
+ 
+    movimientos = Movimiento.objects.filter(
+        vehiculo__usuario=request.user.perfil
+    ).select_related("vehiculo", "espacio", "espacio__zona", "ticket")
+    if q:
+        movimientos = movimientos.filter(
+            Q(patente__icontains=q) | Q(espacio__zona__nombre__icontains=q)
+        )
+    movimientos = movimientos.order_by(*campos)
+ 
+    return render(
+        request,
+        "estacionamiento/mis_movimientos.html",
+        {"movimientos": movimientos, "orden": orden, "dir": direccion, "q": q},
+    )
+ 
+@personal_requerido
+def lista_tickets_view(request):
+    """Todos los tickets. Filtros: ?estado=pendiente|pagado|sin_tarifa y ?q=..."""
+    q = request.GET.get("q", "").strip()
+    estado = request.GET.get("estado", "")
+ 
+    tickets = Ticket.objects.select_related("usuario")
+    if estado in Ticket.Estado.values:
+        tickets = tickets.filter(estado=estado)
+    if q:
+        tickets = tickets.filter(
+            Q(patente__icontains=q)
+            | Q(usuario__nombre__icontains=q)
+            | Q(usuario__apellido__icontains=q)
+            | Q(usuario__documento__icontains=q)
+        )
+    return render(
+        request,
+        "estacionamiento/tickets_lista.html",
+        {"tickets": tickets, "q": q, "estado": estado, "estados": Ticket.Estado.choices},
+    )
+ 
+ 
+@login_required
+def detalle_ticket_view(request, pk):
+    """Ticket: lo ve su dueño o el personal/administrador."""
+    ticket = get_object_or_404(
+        Ticket.objects.select_related(
+            "usuario", "movimiento__espacio__zona", "cobrado_por"
+        ),
+        pk=pk,
+    )
+    perfil = request.user.perfil
+    if not (perfil.es_personal or ticket.usuario_id == perfil.pk):
+        raise PermissionDenied("Este ticket no te pertenece.")
+    return render(
+        request,
+        "estacionamiento/ticket_detalle.html",
+        {"ticket": ticket, "form": TicketPagoForm()},
+    )
+ 
+ 
+@personal_requerido
+def pagar_ticket_view(request, pk):
+    """Registrar el pago de un ticket pendiente. Sólo POST."""
+    ticket = get_object_or_404(Ticket, pk=pk)
+    if request.method == "POST":
+        form = TicketPagoForm(request.POST)
+        if form.is_valid():
+            if ticket.estado == Ticket.Estado.PENDIENTE:
+                ticket.registrar_pago(form.cleaned_data["metodo"], request.user.perfil)
+                messages.success(request, f"Pago del ticket {ticket.numero} registrado.")
+            else:
+                messages.warning(request, "Este ticket no está pendiente de pago.")
+    return redirect("estacionamiento:ticket_detalle", pk=pk)
+ 

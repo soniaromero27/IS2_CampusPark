@@ -226,3 +226,98 @@ class Movimiento(models.Model):
         monto = tarifa.valor_por_hora * horas if tarifa else None
 
         return {"tipo": tipo, "horas": horas, "tarifa": tarifa, "monto": monto}
+        
+
+class Ticket(models.Model):
+    """
+    Ticket de salida: se emite al registrar la salida de un vehículo y
+    guarda una "foto" del cobro (tarifa, horas, monto) por si después
+    cambian las tarifas o se borra el vehículo. Incluye el estado de pago.
+    """
+
+    class Estado(models.TextChoices):
+        PENDIENTE = "pendiente", "Pendiente de pago"
+        PAGADO = "pagado", "Pagado"
+        SIN_TARIFA = "sin_tarifa", "Sin tarifa configurada"
+
+    class Metodo(models.TextChoices):
+        EFECTIVO = "efectivo", "Efectivo"
+        TARJETA = "tarjeta", "Tarjeta"
+        TRANSFERENCIA = "transferencia", "Transferencia"
+
+    movimiento = models.OneToOneField(
+        Movimiento, on_delete=models.PROTECT, related_name="ticket"
+    )
+    usuario = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name="tickets",
+        help_text="Dueño del vehículo al momento de la salida (vacío = no registrado).",
+    )
+    patente = models.CharField(max_length=15)
+    tipo_usuario = models.CharField(max_length=50, blank=True)
+
+    tarifa = models.ForeignKey(
+        "reglas.Tarifa", on_delete=models.SET_NULL, null=True, blank=True, related_name="tickets"
+    )
+    tarifa_descripcion = models.CharField(max_length=255, blank=True)
+    valor_por_hora = models.FloatField(null=True, blank=True)
+    horas = models.PositiveIntegerField()
+    monto = models.FloatField(null=True, blank=True)
+
+    fecha_ingreso = models.DateTimeField()
+    fecha_salida = models.DateTimeField()
+    fecha_emision = models.DateTimeField(auto_now_add=True)
+
+    estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.PENDIENTE)
+    metodo_pago = models.CharField(max_length=20, choices=Metodo.choices, blank=True)
+    fecha_pago = models.DateTimeField(null=True, blank=True)
+    cobrado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name="tickets_cobrados"
+    )
+
+    class Meta:
+        verbose_name = "Ticket"
+        verbose_name_plural = "Tickets"
+        ordering = ["-fecha_emision"]
+
+    def __str__(self):
+        return f"{self.numero} - {self.patente}"
+
+    @property
+    def numero(self):
+        return f"T-{self.pk:06d}" if self.pk else "T-?"
+
+    @classmethod
+    def emitir(cls, movimiento, cobro):
+        """
+        Crea (una sola vez por movimiento) el ticket a partir del dict
+        que devuelve Movimiento.calcular_cobro(). Requiere que el
+        movimiento ya tenga fecha_hora_salida.
+        """
+        usuario = None
+        if movimiento.vehiculo_id and movimiento.vehiculo.usuario_id:
+            usuario = movimiento.vehiculo.usuario
+        tarifa = cobro["tarifa"]
+        ticket, _ = cls.objects.get_or_create(
+            movimiento=movimiento,
+            defaults={
+                "usuario": usuario,
+                "patente": movimiento.patente,
+                "tipo_usuario": str(cobro["tipo"]) if cobro["tipo"] else "",
+                "tarifa": tarifa,
+                "tarifa_descripcion": tarifa.descripcion if tarifa else "",
+                "valor_por_hora": tarifa.valor_por_hora if tarifa else None,
+                "horas": cobro["horas"],
+                "monto": cobro["monto"],
+                "fecha_ingreso": movimiento.fecha_hora_ingreso,
+                "fecha_salida": movimiento.fecha_hora_salida,
+                "estado": cls.Estado.PENDIENTE if tarifa else cls.Estado.SIN_TARIFA,
+            },
+        )
+        return ticket
+
+    def registrar_pago(self, metodo, cobrado_por):
+        self.estado = self.Estado.PAGADO
+        self.metodo_pago = metodo
+        self.fecha_pago = timezone.now()
+        self.cobrado_por = cobrado_por
+        self.save()

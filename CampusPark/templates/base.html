@@ -479,6 +479,7 @@
                         <a href="{% url 'usuarios:perfil' %}">Mi perfil</a>
                         <a href="{% url 'vehiculos:lista' %}">Mis vehículos</a>
                         <a href="{% url 'estacionamiento:reservas_lista' %}">Mis reservas</a>
+						<a href="{% url 'estacionamiento:mis_movimientos' %}">Mis movimientos</a>
                     </div>
                 </details>
 
@@ -531,6 +532,8 @@
             <a href="{% url 'vehiculos:lista_todos' %}"{% if vn == 'vehiculos:lista_todos' %} class="activo"{% endif %}>
 			<span class="material-symbols-outlined">directions_car</span> Vehículos</a>
 			
+			<a href="{% url 'estacionamiento:tickets_lista' %}">
+			<span class="material-symbols-outlined">parking_meter</span>Tickets</a>
             {% endif %}
 
             {% if user.perfil.es_administrador %}
@@ -553,9 +556,7 @@
 
             {% if messages %}
                 {% for message in messages %}
-                    <div class="card" style="border-left: 4px solid {% if message.tags == 'error' %}#b91c1c{% else %}#1d5fa7{% endif %};">
-                        {{ message }}
-                    </div>
+					<div class="card">{{ message }}</div>
                 {% endfor %}
             {% endif %}
 

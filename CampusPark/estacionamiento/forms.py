@@ -6,7 +6,7 @@ from django.utils import timezone
 from reglas.models import Reglamento
 from vehiculos.models import Vehiculo
 
-from .models import Espacio, Movimiento, Reserva, Zona
+from .models import Espacio, Movimiento, Reserva, Zona, Ticket
 from datetime import datetime
 
 
@@ -458,3 +458,10 @@ class EspacioForm(forms.ModelForm):
                 )
 
         return cleaned_data
+
+# AGREGAR a estacionamiento/forms.py (y importar Ticket en el from .models import ...)
+
+class TicketPagoForm(forms.Form):
+    metodo = forms.ChoiceField(choices=Ticket.Metodo.choices, label="Método de pago")
+    
+    
