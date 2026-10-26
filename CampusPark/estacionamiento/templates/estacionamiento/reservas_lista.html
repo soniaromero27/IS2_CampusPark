@@ -5,6 +5,31 @@
     color: inherit;
     text-decoration: none;
   }
+	.material-symbols-outlined {
+	  font-variation-settings:
+	  'FILL' 0,
+	  'wght' 400,
+	  'GRAD' 0,
+	  'opsz' 24
+	}
+   
+   td button{
+            background: red;
+            color: white;
+        }
+		
+	.Pendiente {
+		background-color: #d1ffd1;
+		color: green;
+	}
+
+	.Cancelada {
+		background-color: #f5e6e6;
+		color: red;
+	}
+	.Finalizada {
+		color: blue;
+}
 </style>
 
 <h2>Mis reservas</h2>
@@ -13,38 +38,40 @@
 	<button>Nueva Reserva</button>
 </a>
 
-<form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:500px; margin-top:1em;">
-  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por zona o estado..." style="width:100%;">
+<form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; flex-wrap:wrap; margin-top:1em;">
+  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por zona o estado..." style="width:220px;">
+  <label style="white-space:nowrap;">Desde: <input style="width:140px;" type="date" name="desde" value="{{ desde }}"></label>
+  <label style="white-space:nowrap;">Hasta: <input style="width:140px;" type="date" name="hasta" value="{{ hasta }}"></label>
   <input type="hidden" name="orden" value="{{ orden }}">
   <input type="hidden" name="dir" value="{{ dir }}">
   <button type="submit">Buscar</button>
-  {% if q %}<a href="?orden={{ orden }}&dir={{ dir }}">Limpiar</a>{% endif %}
+  {% if q or desde or hasta %}<a class = "btn" href="?orden={{ orden }}&dir={{ dir }}">Limpiar</a>{% endif %}
 </form>
 
 <table>
   <tr>
     <th>
-      <a href="?orden=zona&dir={% if orden == 'zona' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+      <a href="?orden=zona&dir={% if orden == 'zona' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
         Zona{% if orden == 'zona' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
       </a>
     </th>
     <th>
-      <a href="?orden=espacio&dir={% if orden == 'espacio' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+      <a href="?orden=espacio&dir={% if orden == 'espacio' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
         Espacio{% if orden == 'espacio' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
       </a>
     </th>
     <th>
-      <a href="?orden=desde&dir={% if orden == 'desde' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+      <a href="?orden=desde&dir={% if orden == 'desde' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
         Desde{% if orden == 'desde' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
       </a>
     </th>
     <th>
-      <a href="?orden=hasta&dir={% if orden == 'hasta' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+      <a href="?orden=hasta&dir={% if orden == 'hasta' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
         Hasta{% if orden == 'hasta' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
       </a>
     </th>
     <th>
-      <a href="?orden=estado&dir={% if orden == 'estado' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+      <a href="?orden=estado&dir={% if orden == 'estado' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
         Estado{% if orden == 'estado' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
       </a>
     </th>
@@ -56,10 +83,10 @@
     <td>N°{{ r.espacio.numero }}</td>
     <td>{{ r.fecha_inicio }}</td>
     <td>{{ r.fecha_fin }}</td>
-    <td>{{ r.tipo_estado_reserva }}</td>
+    <td class="{{ r.tipo_estado_reserva }}">{{ r.tipo_estado_reserva }}</td>
     <td>
-      {% if r.tipo_estado_reserva.nombre_estado_reserva != "Cancelada" %}
-        <a href="{% url 'estacionamiento:reserva_cancelar' r.pk %}">Cancelar</a>
+      {% if r.tipo_estado_reserva.nombre_estado_reserva == "Pendiente" %}
+        <a href="{% url 'estacionamiento:reserva_cancelar' r.pk %}"><button>Cancelar</button></a>
       {% endif %}
     </td>
   </tr>
@@ -67,4 +94,5 @@
   <tr><td colspan="6">No hay reservas que coincidan con la búsqueda.</td></tr>
   {% endfor %}
 </table>
+{% include "_paginacion.html" %}
 {% endblock %}

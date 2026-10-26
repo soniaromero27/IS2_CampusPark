@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Reglamento</h2>
+
+{% if user.perfil.es_administrador %}
+<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+  <a href="{% url 'reglas:reglamento_editar' %}" class="btn">
+    Editar Reglamento
+  </a>
+  <a href="{% url 'reglas:reglamento_horarios' %}" class="btn">
+    Editar Horarios
+  </a>
+</div>
+{% endif %}
+
+{% if reglamento %}
+<div class="card">
+  <p><strong>Horario de apertura:</strong> {{ reglamento.hora_apertura|time:"H:i" }} hs</p>
+  <p><strong>Horario de cierre:</strong> {{ reglamento.hora_cierre|time:"H:i" }} hs</p>
+</div>
+<div class="card">
+  {% if reglamento.reglamento %}
+    <p style="white-space: pre-line;">{{ reglamento.reglamento }}</p>
+  {% else %}
+    <p>Todavía no se cargó el texto del reglamento.</p>
+  {% endif %}
+</div>
+{% else %}
+<div class="card">
+  <p>Todavía no se cargó el reglamento ni los horarios.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  /* ===== Portada ===== */
+  .hero {
+    background: linear-gradient(135deg, #0f2d52, #1d4f91);
+    color: white;
+    border-radius: 18px;
+    padding: 56px 40px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(15, 45, 82, 0.25);
+  }
+  .hero .marca {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 64px; height: 64px; margin-bottom: 18px;
+    background: white; color: #174a86; border-radius: 16px;
+    font-size: 34px; font-weight: 800;
+  }
+  .hero h1 { color: white; font-size: 38px; line-height: 1.15; margin-bottom: 14px; }
+  .hero .bajada { font-size: 18px; line-height: 1.5; max-width: 680px; margin: 0 auto 28px; color: #dbe7f5; }
+  .hero-acciones { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .hero-btn {
+    display: inline-block; padding: 14px 28px; border-radius: 10px;
+    font-size: 16px; font-weight: 700; text-decoration: none; transition: all 0.2s ease;
+  }
+  .hero-btn.principal { background: white; color: #174a86; }
+  .hero-btn.principal:hover { background: #edf4fb; transform: translateY(-1px); }
+  .hero-btn.secundario { color: white; border: 2px solid rgba(255, 255, 255, 0.6); }
+  .hero-btn.secundario:hover { background: rgba(255, 255, 255, 0.15); }
+  .horario-pill {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 26px;
+    padding: 10px 18px; border-radius: 999px; font-size: 15px;
+    background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  /* ===== Secciones ===== */
+  .seccion { margin-top: 52px; }
+  .seccion > h2 { text-align: center; margin-bottom: 8px; }
+  .seccion > .lead { text-align: center; color: #64748b; margin: 0 auto 28px; max-width: 640px; }
+
+  .funciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+  .funcion {
+    background: white; border: 1px solid #e7edf5; border-radius: 14px; padding: 24px;
+    box-shadow: 0 5px 20px rgba(15, 45, 82, 0.06);
+  }
+  .funcion .icono {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; margin-bottom: 14px;
+    background: #edf4fb; color: #1d5fa7; border-radius: 12px;
+  }
+  .funcion h3 { margin-bottom: 8px; font-size: 18px; }
+  .funcion p { color: #475569; font-size: 15px; line-height: 1.55; }
+
+  .pasos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+  .paso { background: white; border: 1px solid #e7edf5; border-radius: 14px; padding: 24px; }
+  .paso .numero {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; margin-bottom: 12px;
+    background: #1d5fa7; color: white; border-radius: 50%; font-weight: 700;
+  }
+  .paso h3 { margin-bottom: 6px; font-size: 18px; }
+  .paso p { color: #475569; font-size: 15px; line-height: 1.55; }
+
+  .publico { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .publico span { background: #edf4fb; color: #163b68; font-weight: 600; padding: 10px 20px; border-radius: 999px; }
+
+  .cta-final {
+    margin-top: 52px; padding: 38px 24px; text-align: center;
+    background: white; border: 1px solid #e7edf5; border-radius: 18px;
+    box-shadow: 0 5px 20px rgba(15, 45, 82, 0.08);
+  }
+  .cta-final h2 { margin-bottom: 8px; }
+  .cta-final p { color: #64748b; margin-bottom: 22px; }
+  .cta-final .acciones { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+  @media (max-width: 800px) {
+    .hero { padding: 36px 20px; }
+    .hero h1 { font-size: 28px; }
+    .hero .bajada { font-size: 16px; }
+  }
+</style>
+
+<!-- PORTADA -->
+<section class="hero">
+  <div class="marca">P</div>
+  <h1>Tu estacionamiento universitario, sin vueltas</h1>
+  <p class="bajada">
+    CampusPark es el sistema de gestión del estacionamiento del campus: reservá tu espacio,
+    consultá cuáles están libres y conocé las tarifas, todo en un solo lugar.
+  </p>
+
+  <div class="hero-acciones">
+    {% if user.is_authenticated %}
+      <a href="{% url 'estacionamiento:reserva_crear' %}" class="hero-btn principal">Reservar un espacio</a>
+      <a href="{% url 'estacionamiento:espacios_lista' %}" class="hero-btn secundario">Ver espacios disponibles</a>
+    {% else %}
+      <a href="{% url 'usuarios:registro' %}" class="hero-btn principal">Crear mi cuenta</a>
+      <a href="{% url 'usuarios:login' %}" class="hero-btn secundario">Ingresar</a>
+    {% endif %}
+  </div>
+
+  {% if reglamento %}
+  <div class="horario-pill">
+    <span class="material-symbols-outlined">schedule</span>
+    Horario del estacionamiento: de {{ reglamento.hora_apertura|time:"H:i" }} a {{ reglamento.hora_cierre|time:"H:i" }} hs
+  </div>
+  {% endif %}
+</section>
+
+<!-- FUNCIONALIDADES -->
+<section class="seccion">
+  <h2>Todo lo que podés hacer con CampusPark</h2>
+  <p class="lead">Pensado para quienes estacionan en el campus y para quienes lo administran.</p>
+
+  <div class="funciones">
+    <div class="funcion">
+      <div class="icono"><span class="material-symbols-outlined">event_available</span></div>
+      <h3>Reservá tu espacio</h3>
+      <p>Elegí el día y el horario, y marcá tu lugar en un mapa de cuadros por zona. Ves al instante qué espacios están libres en ese horario.</p>
+    </div>
+
+    <div class="funcion">
+      <div class="icono"><span class="material-symbols-outlined">grid_view</span></div>
+      <h3>Mapa de espacios</h3>
+      <p>Consultá todas las zonas y el estado de cada espacio —libre, ocupado, reservado o fuera de servicio—, en lista o en cuadrícula.</p>
+    </div>
+
+    <div class="funcion">
+      <div class="icono"><span class="material-symbols-outlined">school</span></div>
+      <h3>Zonas por facultad</h3>
+      <p>Cada zona puede pertenecer a una facultad y a ciertos tipos de usuario. Las zonas públicas están abiertas para todos.</p>
+    </div>
+
+    <div class="funcion">
+      <div class="icono"><span class="material-symbols-outlined">swap_horiz</span></div>
+      <h3>Ingreso y salida ágiles</h3>
+      <p>El personal registra tu ingreso con la patente. Si tenés una reserva vigente, el sistema te asigna tu espacio automáticamente.</p>
+    </div>
+
+    <div class="funcion">
+      <div class="icono"><span class="material-symbols-outlined">payments</span></div>
+      <h3>Tarifas claras</h3>
+      <p>El monto se calcula por hora de permanencia según tu tipo de usuario, y se informa al registrar la salida.</p>
+    </div>
+
+    <div class="funcion">
+      <div class="icono"><span class="material-symbols-outlined">directions_car</span></div>
+      <h3>Tus vehículos y tu perfil</h3>
+      <p>Registrá tus vehículos con todos sus datos y mantené tu información personal siempre al día.</p>
+    </div>
+
+    <div class="funcion">
+      <div class="icono"><span class="material-symbols-outlined">menu_book</span></div>
+      <h3>Reglamento y horarios</h3>
+      <p>Consultá el reglamento del estacionamiento y su horario de apertura y cierre. Las reservas se hacen dentro de ese horario.</p>
+    </div>
+
+    <div class="funcion">
+      <div class="icono"><span class="material-symbols-outlined">admin_panel_settings</span></div>
+      <h3>Gestión para el personal</h3>
+      <p>Herramientas para el personal y los administradores: ingresos y salidas, reservas, usuarios, vehículos, tarifas, zonas y facultades.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CÓMO FUNCIONA -->
+<section class="seccion">
+  <h2>Cómo funciona</h2>
+  <p class="lead">Tres pasos para tener tu lugar asegurado.</p>
+
+  <div class="pasos">
+    <div class="paso">
+      <div class="numero">1</div>
+      <h3>Registrate</h3>
+      <p>Creá tu cuenta indicando tu tipo de usuario y cargá los datos de tus vehículos.</p>
+    </div>
+    <div class="paso">
+      <div class="numero">2</div>
+      <h3>Reservá</h3>
+      <p>Elegí el día, el horario y tu espacio en la cuadrícula de la zona que te corresponde.</p>
+    </div>
+    <div class="paso">
+      <div class="numero">3</div>
+      <h3>Estacioná</h3>
+      <p>Al llegar se registra tu patente y se te asigna tu espacio reservado. Al salir, ves el monto a abonar.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PARA QUIÉN -->
+<section class="seccion">
+  <h2>Para toda la comunidad universitaria</h2>
+  <p class="lead">Cada tipo de usuario accede a las zonas y tarifas que le corresponden.</p>
+
+  <div class="publico">
+    <span>Docentes</span>
+    <span>Estudiantes</span>
+    <span>Funcionarios</span>
+    <span>Visitantes externos</span>
+  </div>
+</section>
+
+<!-- LLAMADO FINAL -->
+<section class="cta-final">
+  {% if user.is_authenticated %}
+    <h2>¿Listo para estacionar?</h2>
+    <p>Reservá tu espacio o consultá tus reservas cuando quieras.</p>
+    <div class="acciones">
+      <a href="{% url 'estacionamiento:reserva_crear' %}" class="btn">Reservar un espacio</a>
+      <a href="{% url 'estacionamiento:reservas_lista' %}" class="btn">Mis reservas</a>
+    </div>
+  {% else %}
+    <h2>Empezá a usar CampusPark</h2>
+    <p>Registrate en un minuto y reservá tu espacio.</p>
+    <div class="acciones">
+      <a href="{% url 'usuarios:registro' %}" class="btn">Crear mi cuenta</a>
+      <a href="{% url 'usuarios:login' %}" class="btn">Ya tengo cuenta</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

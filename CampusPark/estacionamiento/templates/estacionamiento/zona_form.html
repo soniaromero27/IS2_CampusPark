@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  button a{
+    color: inherit;
+    text-decoration: none;
+  }
+</style>
 <h2>{% if zona %}Editar zona{% else %}Nueva zona{% endif %}</h2>
 <form method="post">
   {% csrf_token %}
@@ -13,6 +19,7 @@
     </div>
   {% endfor %}
   <button type="submit">{% if zona %}Guardar cambios{% else %}Crear zona{% endif %}</button>
+  <button><a href="{% url 'estacionamiento:zonas_lista' %}">Atrás</a></button>
 </form>
-<p><a href="{% url 'estacionamiento:zonas_lista' %}">Volver</a></p>
+
 {% endblock %}

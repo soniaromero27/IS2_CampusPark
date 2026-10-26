@@ -1,45 +1,148 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-  th a, th a:visited, th a:hover, th a:active {
+  th a, th a:visited, th a:hover, th a:active, td a{
     color: inherit;
     text-decoration: none;
   }
+
+  /* Selector Lista / Cuadros */
+  .toggle-vista { display: inline-flex; border: 1px solid #1d5fa7; border-radius: 8px; overflow: hidden; }
+  .toggle-vista a { padding: 10px 20px; text-decoration: none; font-size: 14px; font-weight: 600; color: #1d5fa7; background: white; }
+  .toggle-vista a.activo { background: #1d5fa7; color: white; }
+
+  /* Vista de cuadros: una fila desplegable por zona, un cuadro por espacio */
+  .leyenda { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0 6px; }
+  .leyenda .cuadro { min-height: 0; padding: 4px 12px; font-size: 13px; flex-direction: row; }
+  .sala { margin-top: 12px; }
+  .sala > summary {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+    padding: 14px 18px; cursor: pointer; list-style: none;
+    background: white; border: 1px solid #e7edf5; border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 45, 82, 0.06);
+  }
+  .sala > summary::-webkit-details-marker { display: none; }
+  .sala > summary::before { content: "▶"; font-size: 12px; color: #1d5fa7; transition: transform 0.15s ease; }
+  .sala[open] > summary::before { transform: rotate(90deg); }
+  .sala > summary:hover { background: #f8fbff; }
+  .sala-nombre { font-weight: 700; font-size: 17px; color: #163b68; margin-right: auto; }
+  .sala-info { color: #64748b; font-size: 14px; }
+  .sala .asientos { margin-top: 10px; }
+  .asientos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: 10px;
+    padding: 16px;
+    background: white;
+    border: 1px solid #e7edf5;
+    border-radius: 14px;
+    box-shadow: 0 4px 15px rgba(15, 45, 82, 0.07);
+  }
+  a.cuadro-link { display: block; text-decoration: none; color: inherit; }
+  a.cuadro-link:hover .cuadro { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(15, 45, 82, 0.2); }
+  .cuadro {
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    min-height: 64px; padding: 10px 6px; border-radius: 10px; border: 2px solid #94a3b8;
+    background: #f1f5f9; color: #334155; text-align: center; line-height: 1.25;
+    transition: all 0.15s ease;
+  }
+  .cuadro .num { font-weight: 700; font-size: 17px; }
+  .cuadro .sub { font-size: 12px; word-break: break-word; }
+  .estado-libre { background: #dcfce7; border-color: #16a34a; color: #14532d; }
+  .estado-ocupado { background: #fee2e2; border-color: #dc2626; color: #7f1d1d; }
+  .estado-reservado { background: #fef3c7; border-color: #d97706; color: #78350f; }
+  .estado-fuera-de-servicio { background: #e2e8f0; border-color: #64748b; color: #334155; }
 </style>
 
 <h2>Espacios</h2>
 
-<form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:500px;">
-  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por zona, estado o patente..." style="width:100%;">
+<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
+  <div class="toggle-vista">
+    <a href="?vista=lista&q={{ q|urlencode }}&orden={{ orden }}&dir={{ dir }}" class="{% if vista == 'lista' %}activo{% endif %}">Lista</a>
+    <a href="?vista=cuadros&q={{ q|urlencode }}&orden={{ orden }}&dir={{ dir }}" class="{% if vista == 'cuadros' %}activo{% endif %}">Cuadrícula</a>
+  </div>
+  {% if user.perfil.es_administrador %}
+  <a href="{% url 'estacionamiento:espacios_crear' %}?desde=espacios" class="btn">Crear espacios</a>
+  {% endif %}
+</div>
+
+<form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:500px; margin-top:1em;">
+  <input type="text" name="q" value="{{ q }}" placeholder="{% if user.perfil.es_personal %}Buscar por zona, facultad, estado o patente...{% else %}Buscar por zona, facultad o estado...{% endif %}" style="width:100%;">
+  <input type="hidden" name="vista" value="{{ vista }}">
   <input type="hidden" name="orden" value="{{ orden }}">
   <input type="hidden" name="dir" value="{{ dir }}">
-  <button type="submit">Buscar</button>
-  {% if q %}<a href="?orden={{ orden }}&dir={{ dir }}">Limpiar</a>{% endif %}
+  <button type="submit"><span class="material-symbols-outlined">
+search
+</span></button>
+  {% if q %}<a href="?vista={{ vista }}&orden={{ orden }}&dir={{ dir }}" class="btn">Limpiar</a>{% endif %}
 </form>
+
+{% if vista == 'cuadros' %}
+
+  <div class="leyenda">
+  	Referencias:
+    <span class="cuadro estado-libre">Libre</span>
+    <span class="cuadro estado-ocupado">Ocupado{% if user.perfil.es_personal %} (con patente){% endif %}</span>
+    <span class="cuadro estado-reservado">Reservado</span>
+    <span class="cuadro estado-fuera-de-servicio">Fuera de servicio</span>
+  </div>
+
+  {% for g in grupos %}
+  <details class="sala"{% if q or g.zona.id in abiertas %} open{% endif %}>
+    <summary>
+      <span class="sala-nombre">{{ g.zona }}</span>
+      <span class="sala-info">
+        {% if g.zona.facultad %}Facultad: {{ g.zona.facultad }}{% else %}Zona pública{% endif %}
+        · {{ g.libres }} libres de {{ g.total }}
+      </span>
+    </summary>
+    {% if g.espacios %}
+    <div class="asientos">
+      {% for e in g.espacios %}
+        {% with m=e.movimiento_actual %}
+        {% if user.perfil.es_administrador %}<a class="cuadro-link" href="{% url 'estacionamiento:espacio_editar' e.pk %}?{% if querystring %}{{ querystring }}&{% endif %}abrir={{ g.zona.id }}">{% endif %}
+          <div class="cuadro estado-{{ e.tipo_estado.nombre_estado|slugify }}" title="{{ e.zona }} - N°{{ e.numero }} - {{ e.tipo_estado }}{% if m and user.perfil.es_personal %} - {{ m.patente }}{% endif %}">
+            <span class="num">{{ e.numero }}</span>
+            <span class="sub">{% if m and user.perfil.es_personal %}{{ m.patente }}{% else %}{{ e.tipo_estado }}{% endif %}</span>
+          </div>
+        {% if user.perfil.es_administrador %}</a>{% endif %}
+        {% endwith %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <p style="margin: 10px 4px;">Esta zona todavía no tiene espacios.</p>
+    {% endif %}
+  </details>
+  {% empty %}
+  <p style="margin-top:20px;">{% if q %}No hay espacios que coincidan con la búsqueda.{% else %}Todavía no hay zonas cargadas.{% endif %}</p>
+  {% endfor %}
+
+{% else %}
 
 <table>
   <tr>
     <th>
-      <a href="?orden=zona&dir={% if orden == 'zona' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+      <a href="?vista=lista&orden=zona&dir={% if orden == 'zona' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
         Zona{% if orden == 'zona' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
       </a>
     </th>
     <th>
-      <a href="?orden=numero&dir={% if orden == 'numero' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+      <a href="?vista=lista&orden=numero&dir={% if orden == 'numero' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
         Número{% if orden == 'numero' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
       </a>
     </th>
     <th>
-      <a href="?orden=facultad&dir={% if orden == 'facultad' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+      <a href="?vista=lista&orden=facultad&dir={% if orden == 'facultad' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
         Facultad{% if orden == 'facultad' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
       </a>
     </th>
     <th>
-      <a href="?orden=estado&dir={% if orden == 'estado' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+      <a href="?vista=lista&orden=estado&dir={% if orden == 'estado' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
         Estado{% if orden == 'estado' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
       </a>
     </th>
-    <th>Vehículo</th>
+    {% if user.perfil.es_personal %}<th>Vehículo</th>{% endif %}
+    {% if user.perfil.es_administrador %}<th></th>{% endif %}
   </tr>
   {% for e in espacios %}
   <tr>
@@ -47,10 +150,16 @@
     <td>N°{{ e.numero }}</td>
     <td>{{ e.zona.facultad|default:"Ninguna" }}</td>
     <td>{{ e.tipo_estado }}</td>
-    <td>{{ e.movimiento_actual.patente|default:"—" }}</td>
+    {% if user.perfil.es_personal %}<td>{{ e.movimiento_actual.patente|default:"—" }}</td>{% endif %}
+    {% if user.perfil.es_administrador %}
+    <td><a href="{% url 'estacionamiento:espacio_editar' e.pk %}{% if querystring %}?{{ querystring }}{% endif %}"><span class="material-symbols-outlined">edit_square</span></a></td>
+    {% endif %}
   </tr>
   {% empty %}
-  <tr><td colspan="5">No hay espacios que coincidan con la búsqueda.</td></tr>
+  <tr><td colspan="6">No hay espacios que coincidan con la búsqueda.</td></tr>
   {% endfor %}
 </table>
+
+{% endif %}
+{% include "_paginacion.html" %}
 {% endblock %}

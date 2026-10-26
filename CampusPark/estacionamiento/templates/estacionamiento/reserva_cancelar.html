@@ -5,9 +5,12 @@
   ¿Confirmás que querés cancelar la reserva del espacio N°{{ reserva.espacio.numero }}
   ({{ reserva.espacio.zona }}) del {{ reserva.fecha_inicio }} al {{ reserva.fecha_fin }}?
 </p>
-<form method="post">
-  {% csrf_token %}
-  <button type="submit">Sí, cancelar</button>
-</form>
-<p><a href="{% url 'estacionamiento:reservas_lista' %}">Volver</a></p>
+
+<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px;">
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit">Sí, cancelar</button>
+  </form>
+  <a href="{% url 'estacionamiento:reservas_lista' %}" class="btn">Atrás</a>
+</div>
 {% endblock %}

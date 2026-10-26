@@ -1,23 +1,31 @@
+from collections import defaultdict
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Max, Q
+from django.db.models import Count, Max, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
+
+from reglas.models import Reglamento
+from campuspark.paginacion import paginar
 
 from usuarios.decorators import admin_requerido, personal_requerido
 
-from .forms import EspaciosForm, IngresoForm, ReservaForm, ZonaForm
+from .forms import EspacioForm, EspaciosForm, IngresoForm, ReservaForm, ZonaForm
 from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona
 from vehiculos.models import Vehiculo
 
+from .cuadricula import contexto_cuadricula
 
 @login_required
 def lista_reservas_view(request):
     """
     Consulta de las reservas del usuario autenticado. Se puede ordenar
     por cualquier columna, ascendente o descendente, con los parámetros
-    GET ?orden=<campo>&dir=<asc|desc>, y buscar con ?q=... sobre zona
-    y estado.
+    GET ?orden=<campo>&dir=<asc|desc>, buscar con ?q=... sobre zona y
+    estado, y filtrar por rango de fechas (sobre el día de la reserva)
+    con ?desde=AAAA-MM-DD y/o ?hasta=AAAA-MM-DD.
     """
     campos_orden = {
         "zona": ["espacio__zona__nombre"],
@@ -40,6 +48,8 @@ def lista_reservas_view(request):
         campos = [f"-{c}" for c in campos]
 
     q = request.GET.get("q", "").strip()
+    desde = request.GET.get("desde", "").strip()
+    hasta = request.GET.get("hasta", "").strip()
 
     reservas = Reserva.objects.filter(usuario=request.user.perfil).select_related(
         "espacio", "espacio__zona", "tipo_estado_reserva"
@@ -49,12 +59,23 @@ def lista_reservas_view(request):
             Q(espacio__zona__nombre__icontains=q)
             | Q(tipo_estado_reserva__nombre_estado_reserva__icontains=q)
         )
+    if desde:
+        reservas = reservas.filter(fecha_inicio__date__gte=desde)
+    if hasta:
+        reservas = reservas.filter(fecha_inicio__date__lte=hasta)
     reservas = reservas.order_by(*campos)
 
     return render(
         request,
         "estacionamiento/reservas_lista.html",
-        {"reservas": reservas, "orden": orden, "dir": direccion, "q": q},
+        {
+            **paginar(request, reservas, "reservas"),
+            "orden": orden,
+            "dir": direccion,
+            "q": q,
+            "desde": desde,
+            "hasta": hasta,
+        },
     )
 
 
@@ -92,10 +113,15 @@ def crear_reserva_view(request):
     else:
         form = ReservaForm(usuario=usuario)
     horas_sugeridas = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 30)]
+    reglamento = Reglamento.objects.first()
+    if reglamento:
+        apertura = reglamento.hora_apertura.strftime("%H:%M")
+        cierre = reglamento.hora_cierre.strftime("%H:%M")
+        horas_sugeridas = [h for h in horas_sugeridas if apertura <= h <= cierre]
     return render(
         request,
         "estacionamiento/reserva_form.html",
-        {"form": form, "horas_sugeridas": horas_sugeridas},
+        {"form": form, "horas_sugeridas": horas_sugeridas, **contexto_cuadricula(form.fields["espacio"].queryset)}
     )
 
 
@@ -126,8 +152,9 @@ def lista_todas_reservas_view(request):
     Consultar todas las reservas, de cualquier usuario: sólo Personal
     de Estacionamiento o Administrador. Se puede ordenar por cualquier
     columna, ascendente o descendente, con ?orden=<campo>&dir=<asc|desc>,
-    y buscar con ?q=... sobre nombre, apellido y documento del usuario,
-    zona y estado.
+    buscar con ?q=... sobre nombre, apellido y documento del usuario,
+    zona y estado, y filtrar por rango de fechas (sobre el día de la
+    reserva) con ?desde=AAAA-MM-DD y/o ?hasta=AAAA-MM-DD.
     """
     campos_orden = {
         "usuario": ["usuario__apellido", "usuario__nombre"],
@@ -151,6 +178,8 @@ def lista_todas_reservas_view(request):
         campos = [f"-{c}" for c in campos]
 
     q = request.GET.get("q", "").strip()
+    desde = request.GET.get("desde", "").strip()
+    hasta = request.GET.get("hasta", "").strip()
 
     reservas = Reserva.objects.select_related(
         "usuario", "espacio", "espacio__zona", "tipo_estado_reserva"
@@ -163,16 +192,27 @@ def lista_todas_reservas_view(request):
             | Q(espacio__zona__nombre__icontains=q)
             | Q(tipo_estado_reserva__nombre_estado_reserva__icontains=q)
         )
+    if desde:
+        reservas = reservas.filter(fecha_inicio__date__gte=desde)
+    if hasta:
+        reservas = reservas.filter(fecha_inicio__date__lte=hasta)
     reservas = reservas.order_by(*campos)
 
     return render(
         request,
         "estacionamiento/reservas_lista_todas.html",
-        {"reservas": reservas, "orden": orden, "dir": direccion, "q": q},
+        {
+            **paginar(request, reservas, "reservas"),
+            "orden": orden,
+            "dir": direccion,
+            "q": q,
+            "desde": desde,
+            "hasta": hasta,
+        },
     )
 
 
-@personal_requerido
+@login_required
 def lista_espacios_view(request):
     """
     Ver todos los espacios, con su número, zona, facultad de esa zona
@@ -181,6 +221,14 @@ def lista_espacios_view(request):
     Estacionamiento o Administrador. Se puede ordenar con
     ?orden=<campo>&dir=<asc|desc> y buscar con ?q=... sobre zona,
     facultad, estado y la patente del vehículo estacionado.
+
+    Se muestra en dos vistas, a elección con ?vista=lista|cuadros: una
+    tabla, o una lista de zonas desplegables que, al abrirse, muestran
+    sus espacios como cuadros coloreados según el estado (como el mapa
+    de butacas de una sala de cine). En la vista de cuadros el orden es
+    siempre por zona y número. Las zonas se abren con ?abrir=<id de
+    zona> (se repite el parámetro para abrir varias) y todas se abren
+    si hay una búsqueda activa.
     """
     campos_orden = {
         "numero": ["numero"],
@@ -201,25 +249,117 @@ def lista_espacios_view(request):
     if direccion == "desc":
         campos = [f"-{c}" for c in campos]
 
+    vista = request.GET.get("vista", "lista")
+    if vista not in ("lista", "cuadros"):
+        vista = "lista"
+    if vista == "cuadros":
+        campos = ["zona__nombre", "numero"]
+    
+    perfil = getattr(request.user, "perfil", None)
+    
+    ver_patentes = bool(perfil and perfil.es_personal)
+
+    movimientos_abiertos = (
+        Movimiento.objects.filter(fecha_hora_salida__isnull=True)
+        if ver_patentes else Movimiento.objects.none()
+    )
+    
     q = request.GET.get("q", "").strip()
 
-    espacios = Espacio.objects.select_related("zona", "zona__facultad", "tipo_estado")
+    espacios = Espacio.objects.select_related(
+        "zona", "zona__facultad", "tipo_estado"
+    ).prefetch_related(
+        Prefetch(
+            "movimientos",
+            queryset=Movimiento.objects.filter(fecha_hora_salida__isnull=True),
+            to_attr="movimientos_abiertos",
+        )
+    )
     if q:
-        espacios = espacios.filter(
-            Q(zona__nombre__icontains=q)
-            | Q(zona__facultad__nombre__icontains=q)
-            | Q(tipo_estado__nombre_estado__icontains=q)
-            | Q(
-                movimientos__patente__icontains=q,
-                movimientos__fecha_hora_salida__isnull=True,
-            )
-        ).distinct()
+        filtro = (Q(zona__nombre__icontains=q)
+                  | Q(zona__facultad__nombre__icontains=q)
+                  | Q(tipo_estado__nombre_estado__icontains=q))
+        if ver_patentes:
+            filtro |= Q(movimientos__patente__icontains=q,
+                        movimientos__fecha_hora_salida__isnull=True)
+        espacios = espacios.filter(filtro).distinct()
+        
     espacios = espacios.order_by(*campos)
 
+    grupos = []
+    if vista == "cuadros":
+        espacios_por_zona = defaultdict(list)
+        for e in espacios:
+            espacios_por_zona[e.zona_id].append(e)
+
+        zonas = Zona.objects.select_related("facultad").order_by("nombre")
+        if q:
+            # Con una búsqueda activa, sólo las zonas que tienen resultados.
+            zonas = zonas.filter(id__in=espacios_por_zona.keys())
+        for zona in zonas:
+            items = espacios_por_zona.get(zona.id, [])
+            grupos.append(
+                {
+                    "zona": zona,
+                    "espacios": items,
+                    "total": len(items),
+                    "libres": sum(
+                        1 for e in items if e.tipo_estado.nombre_estado == "Libre"
+                    ),
+                }
+            )
+
+    abiertas = [int(v) for v in request.GET.getlist("abrir") if v.isdigit()]
+    params = request.GET.copy()
+    params.pop("abrir", None)
+    
+    if vista == "cuadros":
+        paginacion = paginar(request, grupos, "grupos")
+    else:
+        paginacion = paginar(request, espacios, "espacios")
+        
     return render(
         request,
         "estacionamiento/espacios_lista.html",
-        {"espacios": espacios, "orden": orden, "dir": direccion, "q": q},
+        {
+            **paginacion,
+            "vista": vista,
+            "orden": orden,
+            "dir": direccion,
+            "q": q,
+            "abiertas": abiertas,
+            "querystring": params.urlencode(),
+        },
+    )
+
+
+@admin_requerido
+def editar_espacio_view(request, pk):
+    """
+    Editar un espacio a mano (zona, número y estado). Sólo
+    Administrador. Al guardar vuelve a la lista de espacios con los
+    mismos parámetros (vista, búsqueda y orden) con los que se entró.
+    """
+    espacio = get_object_or_404(
+        Espacio.objects.select_related("zona", "tipo_estado"), pk=pk
+    )
+    titulo_espacio = str(espacio)  # antes de que el form pise el objeto con valores inválidos
+    volver = reverse("estacionamiento:espacios_lista")
+    querystring = request.GET.urlencode()
+    if querystring:
+        volver += "?" + querystring
+
+    if request.method == "POST":
+        form = EspacioForm(request.POST, instance=espacio)
+        if form.is_valid():
+            form.save()
+            return redirect(volver)
+    else:
+        form = EspacioForm(instance=espacio)
+    return render(
+        request,
+        "estacionamiento/espacio_editar.html",
+        {"form": form, "titulo_espacio": titulo_espacio, "volver": volver},
     )
 
 
@@ -241,9 +381,9 @@ def lista_movimientos_view(request):
         "salida": ["fecha_hora_salida"],
     }
 
-    orden = request.GET.get("orden", "salida")
+    orden = request.GET.get("orden", "ingreso")
     if orden not in campos_orden:
-        orden = "salida"
+        orden = "ingreso"
 
     direccion = request.GET.get("dir", "desc")
     if direccion not in ("asc", "desc"):
@@ -269,8 +409,12 @@ def lista_movimientos_view(request):
 
     return render(
         request,
-        "estacionamiento/movimientos_lista.html",
-        {"movimientos": movimientos, "orden": orden, "dir": direccion, "q": q},
+        "estacionamiento/movimientos_lista.html",{
+        **paginar(request, movimientos, "movimientos"),
+        "orden": orden,
+        "dir": direccion,
+        "q": q
+        },
     )
 
 
@@ -410,7 +554,6 @@ def lista_zonas_view(request):
     Ver todas las zonas y cuántos espacios tiene cada una. Sólo
     Administrador. Admite búsqueda por ?q=... sobre nombre y descripción.
     """
-    
     campos_orden = {
         "nombre": ["nombre"],
         "facultad": ["facultad"],
@@ -418,20 +561,20 @@ def lista_zonas_view(request):
         "descripcion": ["descripcion"],
         "espacios": ["cantidad_espacios"],
     }
-
+    
     orden = request.GET.get("orden", "nombre")
     if orden not in campos_orden:
         orden = "nombre"
 
-    direccion = request.GET.get("dir", "asc")
+    direccion = request.GET.get("dir", "desc")
     if direccion not in ("asc", "desc"):
-        direccion = "asc"
+        direccion = "desc"
 
     campos = campos_orden[orden]
     if direccion == "desc":
         campos = [f"-{c}" for c in campos]
-
-    
+        
+        
     q = request.GET.get("q", "").strip()
     zonas = (
         Zona.objects.select_related("facultad")
@@ -439,14 +582,23 @@ def lista_zonas_view(request):
         .annotate(cantidad_espacios=Count("espacios"))
         .order_by("nombre")
     )
-    
-    zonas = zonas.order_by(*campos)
-    
     if q:
         zonas = zonas.filter(
             Q(nombre__icontains=q) | Q(descripcion__icontains=q) | Q(facultad__nombre__icontains=q)
         )
-    return render(request, "estacionamiento/zonas_lista.html", {"zonas": zonas, "orden": orden, "dir": direccion, "q": q})
+        
+    zonas = zonas.order_by(*campos)
+     
+    return render(
+        request, 
+        "estacionamiento/zonas_lista.html", 
+        {
+            **paginar(request, zonas, "zonas"), 
+            "orden": orden,
+            "dir": direccion,
+            "q": q
+        },
+    )
 
 
 def _crear_espacios(zona, cantidad):
@@ -485,8 +637,14 @@ def crear_zona_view(request):
 def crear_espacios_view(request):
     """
     Alta masiva de espacios dentro de una zona, indicando la cantidad
-    a crear. Sólo Administrador.
+    a crear. Sólo Administrador. Vuelve a la lista de espacios si se
+    entró desde ahí (?desde=espacios), y a la de zonas en otro caso.
     """
+    destino = (
+        "estacionamiento:espacios_lista"
+        if request.GET.get("desde") == "espacios"
+        else "estacionamiento:zonas_lista"
+    )
     if request.method == "POST":
         form = EspaciosForm(request.POST)
         if form.is_valid():
@@ -501,10 +659,14 @@ def crear_espacios_view(request):
             ]
             Espacio.objects.bulk_create(nuevos)
 
-            return redirect("estacionamiento:zonas_lista")
+            return redirect(destino)
     else:
         form = EspaciosForm()
-    return render(request, "estacionamiento/espacios_form.html", {"form": form})
+    return render(
+        request,
+        "estacionamiento/espacios_form.html",
+        {"form": form, "volver_url": reverse(destino)},
+    )
 
 
 @admin_requerido

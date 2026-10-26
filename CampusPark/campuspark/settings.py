@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-m1qsk#si9zqr%ejijp#slij%cfv)gs8=ezzdd1qv)o0jr^8p=p
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -40,14 +40,10 @@ INSTALLED_APPS = [
     'django_loaddata',
     'django.contrib.staticfiles',
     'usuarios',
-    #'espacios',
     'estacionamiento',
-    #'movimientos',
     'reglas',
-    #'reservas',
     'vehiculos',
     'universidad',
-    #'zonas'
 ]
 
 MIDDLEWARE = [
@@ -131,7 +127,15 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Asuncion'
+
+#USE_THOUSAND_SEPARATOR = True
+
+FORMAT_MODULE_PATH = "campuspark.formats"
+
+USE_FORMATTING = True
+
+USE_L10N = False
 
 USE_I18N = True
 

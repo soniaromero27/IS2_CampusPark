@@ -3,7 +3,7 @@
 
 
 <style>
-  th a, th a:visited, th a:hover, th a:active {
+  th a, th a:visited, th a:hover, th a:active{
     color: inherit;
     text-decoration: none;
   }
@@ -14,8 +14,10 @@
 
 <form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:500px;">
   <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre, documento, correo, tipo..." style="width:100%;">
-  <button type="submit">Buscar</button>
-  {% if q %}<a href="{% url 'usuarios:lista' %}">Limpiar</a>{% endif %}
+  <button type="submit"><span class="material-symbols-outlined">
+search
+</span></button>
+  {% if q %}<a href="{% url 'usuarios:lista' %}" class="btn">Limpiar</a>{% endif %}
 </form>
 
 <table>
@@ -81,4 +83,5 @@
   <tr><td colspan="10">No hay usuarios que coincidan con la búsqueda.</td></tr>
   {% endfor %}
 </table>
+{% include "_paginacion.html" %}
 {% endblock %}

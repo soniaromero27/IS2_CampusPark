@@ -19,8 +19,12 @@
   <input type="text" name="q" value="{{ q }}" placeholder="Buscar por vehículo, usuario o zona..." style="width:100%;">
   <input type="hidden" name="orden" value="{{ orden }}">
   <input type="hidden" name="dir" value="{{ dir }}">
-  <button type="submit">Buscar</button>
-  {% if q %}<a href="?orden={{ orden }}&dir={{ dir }}">Limpiar</a>{% endif %}
+  <button type="submit">
+  <span class="material-symbols-outlined">
+search
+</span>
+</button>
+  {% if q %}<a href="?orden={{ orden }}&dir={{ dir }}" class="btn">Limpiar</a>{% endif %}
 </form>
 
 <table>
@@ -75,7 +79,7 @@
     </td>
     <td>
       {% if not m.fecha_hora_salida %}
-        <a href="{% url 'estacionamiento:movimiento_salida' m.pk %}">Registrar salida</a>
+        <a href="{% url 'estacionamiento:movimiento_salida' m.pk %}" class="btn">Registrar salida</a>
       {% endif %}
     </td>
   </tr>
@@ -83,4 +87,5 @@
   <tr><td colspan="7">No hay movimientos que coincidan con la búsqueda.</td></tr>
   {% endfor %}
 </table>
+{% include "_paginacion.html" %}
 {% endblock %}

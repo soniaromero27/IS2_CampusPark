@@ -2,6 +2,8 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import redirect, render
 
+from campuspark.paginacion import paginar
+
 from usuarios.decorators import personal_requerido
 
 from .forms import VehiculoForm
@@ -79,4 +81,4 @@ def lista_todos_vehiculos_view(request):
         )
     vehiculos = vehiculos.order_by(*campos)
     
-    return render(request, "vehiculos/lista_todos.html", {"vehiculos": vehiculos, "orden": orden, "dir": direccion, "q": q})
+    return render(request, "vehiculos/lista_todos.html", {**paginar(request, vehiculos, "vehiculos"), "orden": orden, "dir": direccion, "q": q})

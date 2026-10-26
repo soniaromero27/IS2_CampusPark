@@ -2,7 +2,7 @@
 {% block content %}
 
 <style>
-  th a, th a:visited, th a:hover, th a:active {
+  th a, th a:visited, th a:hover, th a:active, td a{
     color: inherit;
     text-decoration: none;
   }
@@ -10,9 +10,11 @@
 
 <h2>Tarifas</h2>
 
+{% if user.perfil.es_personal %}
 <a href="{% url 'reglas:tarifa_crear' %}" style="display:inline">
 	<button>Nueva tarifa</button>
 </a>
+{% endif %}
 
 <form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:400px; margin-top:1em;">
   <label for="id_tipo" style="margin:0; white-space:nowrap;">Tipo de usuario:</label>
@@ -23,7 +25,7 @@
     {% endfor %}
   </select>
   <noscript><button type="submit">Filtrar</button></noscript>
-  {% if tipo_id %}<a href="{% url 'reglas:tarifas_lista' %}">Limpiar</a>{% endif %}
+  {% if tipo_id %}<a href="{% url 'reglas:tarifas_lista' %}" class="btn">Limpiar</a>{% endif %}
 </form>
 
 <table>
@@ -57,12 +59,15 @@
   <tr>
     <td>{{ t.descripcion }}</td>
     <td>{{ t.tipo }}</td>
-    <td>Gs. {{ t.valor_por_hora }}</td>
+    <td>Gs. {{ t.valor_por_hora|floatformat:0 }}</td>
     <td>{{ t.vigencia }}</td>
-    <td><a href="{% url 'reglas:tarifa_editar' t.pk %}">Editar</a></td>
+	{% if user.perfil.es_personal %}
+    <td><a href="{% url 'reglas:tarifa_editar' t.pk %}"><span class="material-symbols-outlined">edit_square</span></a></td>
+	{% endif %}
   </tr>
   {% empty %}
   <tr><td colspan="5">No hay tarifas que coincidan con el filtro.</td></tr>
   {% endfor %}
 </table>
+{% include "_paginacion.html" %}
 {% endblock %}

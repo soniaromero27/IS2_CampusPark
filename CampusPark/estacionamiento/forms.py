@@ -1,7 +1,9 @@
 from django import forms
+from django.core.exceptions import NON_FIELD_ERRORS
 from django.db.models import Max
 from django.utils import timezone
 
+from reglas.models import Reglamento
 from vehiculos.models import Vehiculo
 
 from .models import Espacio, Movimiento, Reserva, Zona
@@ -13,6 +15,11 @@ class ReservaForm(forms.ModelForm):
     Reservar un espacio. Se elige el día, la hora de inicio y la hora
     de fin; se asume que la reserva termina el mismo día que empieza
     (fecha_inicio y fecha_fin del modelo quedan en ese único día).
+
+    La reserva tiene que quedar dentro del horario de apertura y cierre
+    del Reglamento (ver reglas.models.Reglamento). Si todavía no se
+    cargó el reglamento, no hay horario definido y no se restringe nada.
+    Los ingresos y salidas NO están sujetos a este horario.
 
     Si se pasa 'usuario', sólo se ofrecen (y se aceptan) espacios de
     zonas que ese usuario puede usar: zonas sin facultad (libres para
@@ -52,12 +59,25 @@ class ReservaForm(forms.ModelForm):
                 .order_by("zona__nombre", "numero")
             )
 
+        self.reglamento = Reglamento.objects.first()
+        if self.reglamento:
+            apertura = self.reglamento.hora_apertura.strftime("%H:%M")
+            cierre = self.reglamento.hora_cierre.strftime("%H:%M")
+            for campo in ("hora_inicio", "hora_fin"):
+                self.fields[campo].widget.attrs.update({"min": apertura, "max": cierre})
+            self.fields["hora_inicio"].help_text += (
+                f" Horario del estacionamiento: de {apertura} a {cierre} hs."
+            )
+
     def clean(self):
         cleaned_data = super().clean()
         fecha = cleaned_data.get("fecha")
         hora_inicio = cleaned_data.get("hora_inicio")
         hora_fin = cleaned_data.get("hora_fin")
         espacio = cleaned_data.get("espacio")
+
+        if espacio and espacio.tipo_estado.nombre_estado == "Fuera de servicio":
+            self.add_error("espacio", "Ese espacio está fuera de servicio.")
 
         if not (fecha and hora_inicio and hora_fin):
             return cleaned_data
@@ -68,12 +88,43 @@ class ReservaForm(forms.ModelForm):
             )
             return cleaned_data
 
+        if self.reglamento:
+            apertura = self.reglamento.hora_apertura
+            cierre = self.reglamento.hora_cierre
+            fuera_de_horario = False
+            if hora_inicio < apertura:
+                self.add_error(
+                    "hora_inicio",
+                    f"El estacionamiento abre a las {apertura:%H:%M} hs: no se puede "
+                    f"reservar antes de esa hora.",
+                )
+                fuera_de_horario = True
+            if hora_fin > cierre:
+                self.add_error(
+                    "hora_fin",
+                    f"El estacionamiento cierra a las {cierre:%H:%M} hs: la reserva no "
+                    f"puede terminar después de esa hora.",
+                )
+                fuera_de_horario = True
+            if fuera_de_horario:
+                return cleaned_data
+
+        if fecha < timezone.localdate():
+            self.add_error("fecha", "No podés reservar una fecha anterior a hoy.")
+            return cleaned_data
+
         fecha_inicio = datetime.combine(fecha, hora_inicio)
         fecha_fin = datetime.combine(fecha, hora_fin)
         if timezone.is_naive(fecha_inicio):
             fecha_inicio = timezone.make_aware(fecha_inicio)
         if timezone.is_naive(fecha_fin):
             fecha_fin = timezone.make_aware(fecha_fin)
+
+        if fecha_inicio < timezone.now():
+            self.add_error(
+                "hora_inicio", "No podés reservar un horario que ya pasó."
+            )
+            return cleaned_data
 
         # fecha_inicio/fecha_fin no son campos de este form (se calculan
         # acá), así que se asignan directo a la instancia para que
@@ -363,6 +414,47 @@ class EspaciosForm(forms.Form):
                 numeros = ", ".join(str(n) for n in sorted(existentes))
                 raise forms.ValidationError(
                     f"Ya existen espacios con esos números en la zona '{zona}': {numeros}."
+                )
+
+        return cleaned_data
+
+
+class EspacioForm(forms.ModelForm):
+    """
+    Editar un espacio a mano (zona, número y estado). Sólo Administrador.
+
+    No deja cambiarle el estado a un espacio que tiene un vehículo
+    estacionado (un Movimiento sin salida): primero hay que registrar la
+    salida en "Ingresos y salidas", que además libera el espacio y
+    calcula el cobro. Cambiar el estado a mano sin hacer eso dejaría el
+    movimiento abierto y el espacio con un estado que no corresponde.
+    """
+
+    class Meta:
+        model = Espacio
+        fields = ["zona", "numero", "tipo_estado"]
+        error_messages = {
+            NON_FIELD_ERRORS: {
+                "unique_together": "Ya existe un espacio con ese número en esa zona.",
+            }
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["zona"].queryset = Zona.objects.order_by("nombre")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        estado = cleaned_data.get("tipo_estado")
+
+        if self.instance.pk and estado and estado.nombre_estado != "Ocupado":
+            movimiento = self.instance.movimiento_actual
+            if movimiento:
+                self.add_error(
+                    "tipo_estado",
+                    f"Hay un vehículo (patente {movimiento.patente}) estacionado en este "
+                    f"espacio: registrá su salida en 'Ingresos y salidas' antes de "
+                    f"cambiarle el estado.",
                 )
 
         return cleaned_data

@@ -6,6 +6,10 @@
 
     <title>CampusPark</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+
     <style>
         * {
             margin: 0;
@@ -18,6 +22,14 @@
             background: #f4f7fb;
             color: #1e293b;
             min-height: 100vh;
+
+            display: flex;
+            flex-direction: column;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
         }
 
         /* ===== BARRA SUPERIOR ===== */
@@ -63,36 +75,148 @@
             font-weight: 700;
         }
 
-        /* ===== NAVEGACIÓN ===== */
+        /* ===== BARRA SUPERIOR: acciones ===== */
 
-        nav {
+        .top-acciones {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
-        nav a {
+        .top-acciones a.top-link,
+        .top-acciones button,
+        .menu-cuenta summary {
+            display: inline-block;
+            padding: 10px 18px;
+
             color: white;
-            text-decoration: none;
-            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.35);
             border-radius: 8px;
+
             font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+
             transition: all 0.2s ease;
         }
 
-        nav a:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(-1px);
+        .top-acciones a.top-link:hover,
+        .top-acciones button:hover,
+        .menu-cuenta summary:hover,
+        .menu-cuenta[open] summary {
+            background: rgba(255, 255, 255, 0.25);
+            transform: none;
+            box-shadow: none;
         }
 
-        .logout {
-            border: 1px solid rgba(255,255,255,0.35);
+        /* Submenú "Mi cuenta" (desplegable nativo del navegador, no necesita JavaScript para abrirse) */
+
+        .menu-cuenta {
+            position: relative;
+        }
+
+        .menu-cuenta summary {
+            list-style: none;
+        }
+
+        .menu-cuenta summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .menu-cuenta summary::after {
+            content: "▾";
+            margin-left: 8px;
+            font-size: 12px;
+        }
+
+        .submenu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 8px);
+            z-index: 50;
+
+            min-width: 200px;
+            padding: 6px;
+
+            background: white;
+            border: 1px solid #e7edf5;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(15, 45, 82, 0.18);
+        }
+
+        .submenu a {
+            display: block;
+            padding: 10px 14px;
+            border-radius: 8px;
+
+            color: #1e293b;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .submenu a:hover {
+            background: #edf4fb;
+            color: #163b68;
+        }
+
+        /* ===== DISPOSICIÓN: menú lateral + contenido ===== */
+
+        .layout {
+            flex: 1;
+            display: flex;
+            align-items: stretch;
+        }
+
+        .sidebar {
+            flex: none;
+            width: 240px;
+            padding: 20px 12px;
+
+            background: white;
+            border-right: 1px solid #e7edf5;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 11px 14px;
+            margin-bottom: 2px;
+            border-radius: 8px;
+
+            color: #334155;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+
+            transition: background 0.15s ease;
+        }
+
+        .sidebar a:hover {
+            background: #edf4fb;
+            color: #163b68;
+        }
+
+        .sidebar a.activo {
+            background: #1d5fa7;
+            color: white;
+        }
+
+        .sidebar-titulo {
+            margin: 18px 14px 6px;
+
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #94a3b8;
         }
 
         /* ===== CONTENEDOR ===== */
 
         main {
-            width: 70%;
+            flex: 1;
+            min-width: 0;
             max-width: 1200px;
             margin: 0 auto;
             padding: 40px 25px;
@@ -141,7 +265,7 @@
         input,
         select,
         textarea {
-            width: 50%;
+            width: 30%;
             padding: 12px 14px;
 
             border: 1px solid #cbd5e1;
@@ -154,7 +278,11 @@
 
             transition: border-color 0.2s, box-shadow 0.2s;
         }
-
+		
+		input[type="checkbox"] {
+			width: 5%;
+		}
+	
         input:focus,
         select:focus,
         textarea:focus {
@@ -261,9 +389,52 @@
                 gap: 15px;
             }
 
-            nav {
+            .top-acciones {
                 flex-wrap: wrap;
                 justify-content: center;
+            }
+
+            /* En pantallas angostas el menú lateral pasa arriba del contenido */
+            .layout {
+                flex-direction: column;
+            }
+			
+			input,
+			select,
+			textarea {
+				width: 100%;
+				padding: 12px 14px;
+
+				border: 1px solid #cbd5e1;
+				border-radius: 8px;
+
+				font-size: 15px;
+				font-family: inherit;
+
+				background: white;
+
+				transition: border-color 0.2s, box-shadow 0.2s;
+			}
+		
+
+            .sidebar {
+                width: auto;
+                padding: 10px 12px;
+
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+
+                border-right: none;
+                border-bottom: 1px solid #e7edf5;
+            }
+
+            .sidebar a {
+                margin-bottom: 0;
+            }
+
+            .sidebar-titulo {
+                display: none;
             }
 
             main {
@@ -274,6 +445,7 @@
                 font-size: 21px;
             }
         }
+
     </style>
 </head>
 
@@ -283,7 +455,7 @@
 
     <header>
 
-        <a href="{% if user.is_authenticated %}{% url 'usuarios:perfil' %}{% else %}{% url 'usuarios:login' %}{% endif %}" class="logo">
+        <a href="{% url 'inicio' %}" class="logo">
 
             <div class="logo-icon">
                 P
@@ -295,91 +467,105 @@
 
         </a>
 
-
-        <nav>
+        <div class="top-acciones">
 
             {% if user.is_authenticated %}
 
-                <a href="{% url 'usuarios:perfil' %}">
-                    Mi perfil
-                </a>
+                <details class="menu-cuenta">
+                    <summary>
+					<span class="material-symbols-outlined">account_circle</span>Mi cuenta</summary>
+					
+                    <div class="submenu">
+                        <a href="{% url 'usuarios:perfil' %}">Mi perfil</a>
+                        <a href="{% url 'vehiculos:lista' %}">Mis vehículos</a>
+                        <a href="{% url 'estacionamiento:reservas_lista' %}">Mis reservas</a>
+                    </div>
+                </details>
 
-                <a href="{% url 'vehiculos:lista' %}">
-                    Mis vehículos
-                </a>
-
-				<a href="{% url 'estacionamiento:reservas_lista' %}">
-					Mis reservas
-				</a>
-
-				{% if user.perfil.es_personal %}
-				<a href="{% url 'estacionamiento:movimientos_lista' %}">
-					Ingresos y salidas
-				</a>
-				<a href="{% url 'estacionamiento:reservas_lista_todas' %}">
-					Reservas
-				</a>
-				<a href="{% url 'usuarios:lista' %}">
-					Usuarios
-				</a>
-				<a href="{% url 'vehiculos:lista_todos' %}">
-					Vehículos
-				</a>
-				<a href="{% url 'reglas:tarifas_lista' %}">
-					Tarifas
-				</a>
-				<a href="{% url 'estacionamiento:espacios_lista' %}">
-					Espacios
-				</a>
-				{% endif %}
-				{% if user.perfil.es_administrador %}
-				<a href="{% url 'estacionamiento:zonas_lista' %}">
-					Zonas
-				</a>
-				<a href="{% url 'universidad:facultades_lista' %}">
-					Facultades
-				</a>
-				{% endif %}
-
-               <form method="post" action="{% url 'usuarios:logout' %}" style="display:inline">
-	                {% csrf_token %}
-	                 <button type="submit">Cerrar sesión</button>
-	             </form>
+                <form method="post" action="{% url 'usuarios:logout' %}">
+                    {% csrf_token %}
+                    <button type="submit">Cerrar sesión <span class="material-symbols-outlined">logout</span></button>
+                </form>
 
             {% else %}
 
-                <a href="{% url 'usuarios:login' %}">
-                    Ingresar
-                </a>
-
-                <a href="{% url 'usuarios:registro' %}">
-                    Registrarme
-                </a>
+                <a href="{% url 'usuarios:login' %}" class="top-link">Ingresar</a>
+                <a href="{% url 'usuarios:registro' %}" class="top-link">Registrarme</a>
 
             {% endif %}
 
-        </nav>
+        </div>
 
     </header>
 
 
-    <!-- CONTENIDO DE CADA PÁGINA -->
+    <div class="layout">
 
-    <main>
+        <!-- MENÚ LATERAL (sólo con la sesión iniciada) -->
 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="card" style="border-left: 4px solid {% if message.tags == 'error' %}#b91c1c{% else %}#1d5fa7{% endif %};">
-                    {{ message }}
-                </div>
-            {% endfor %}
+        {% if user.is_authenticated %}
+        <nav class="sidebar" aria-label="Menú principal">
+            {% with vn=request.resolver_match.view_name %}
+
+            <a href="{% url 'reglas:reglamento' %}"{% if vn == 'reglas:reglamento' or vn == 'reglas:reglamento_editar' or vn == 'reglas:reglamento_horarios' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">menu_book</span> Reglas</a>
+			
+            <a href="{% url 'estacionamiento:espacios_lista' %}"{% if vn == 'estacionamiento:espacios_lista' or vn == 'estacionamiento:espacio_editar' or vn == 'estacionamiento:espacios_crear' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">grid_view</span> Espacios</a>
+
+            <a href="{% url 'reglas:tarifas_lista' %}"{% if vn == 'reglas:tarifas_lista' or vn == 'reglas:tarifa_crear' or vn == 'reglas:tarifa_editar' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">payments</span> Tarifas</a>
+			
+            {% if user.perfil.es_personal %}
+            <p class="sidebar-titulo">Gestión</p>
+			
+            <a href="{% url 'estacionamiento:movimientos_lista' %}"{% if vn == 'estacionamiento:movimientos_lista' or vn == 'estacionamiento:movimiento_ingreso' or vn == 'estacionamiento:movimiento_salida' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">swap_horiz</span> Ingresos y salidas</a>
+			
+            <a href="{% url 'estacionamiento:reservas_lista_todas' %}"{% if vn == 'estacionamiento:reservas_lista_todas' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">event_available</span> Reservas</a>
+			
+            <a href="{% url 'usuarios:lista' %}"{% if vn == 'usuarios:lista' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">person</span> Usuarios</a>
+			
+            <a href="{% url 'vehiculos:lista_todos' %}"{% if vn == 'vehiculos:lista_todos' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">directions_car</span> Vehículos</a>
+			
+            {% endif %}
+
+            {% if user.perfil.es_administrador %}
+            <p class="sidebar-titulo">Administración</p>
+            <a href="{% url 'estacionamiento:zonas_lista' %}"{% if vn == 'estacionamiento:zonas_lista' or vn == 'estacionamiento:zona_crear' or vn == 'estacionamiento:zona_editar' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">map</span> Zonas</a>
+			
+            <a href="{% url 'universidad:facultades_lista' %}"{% if vn == 'universidad:facultades_lista' or vn == 'universidad:facultad_crear' or vn == 'universidad:facultad_editar' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">school</span> Facultades</a>
+            {% endif %}
+
+            {% endwith %}
+        </nav>
         {% endif %}
 
-        {% block content %}
 
-        {% endblock %}
+        <!-- CONTENIDO DE CADA PÁGINA -->
 
-    </main>
+        <main>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="card" style="border-left: 4px solid {% if message.tags == 'error' %}#b91c1c{% else %}#1d5fa7{% endif %};">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}
+
+            {% endblock %}
+
+        </main>
+
+    </div>
 
 
     <!-- PIE DE PÁGINA -->
@@ -387,6 +573,15 @@
     <footer>
         CampusPark© 2026 · Sistema de Gestión de Estacionamiento
     </footer>
+
+    <script>
+        // Cierra el submenú "Mi cuenta" al hacer click en cualquier otro lado.
+        document.addEventListener("click", function (e) {
+            document.querySelectorAll("details.menu-cuenta[open]").forEach(function (d) {
+                if (!d.contains(e.target)) { d.removeAttribute("open"); }
+            });
+        });
+    </script>
 
 </body>
 </html>

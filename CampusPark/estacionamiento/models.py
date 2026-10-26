@@ -108,7 +108,14 @@ class Espacio(models.Model):
         """
         El Movimiento sin fecha_hora_salida en este espacio ahora mismo
         (el vehículo que está estacionado ahí), si lo hay.
+
+        Si la consulta precargó los movimientos abiertos en
+        'movimientos_abiertos' (ver estacionamiento.views.lista_espacios_view),
+        se usan esos y no se hace una consulta por cada espacio.
         """
+        abiertos = getattr(self, "movimientos_abiertos", None)
+        if abiertos is not None:
+            return abiertos[0] if abiertos else None
         return self.movimientos.filter(fecha_hora_salida__isnull=True).first()
 
 
