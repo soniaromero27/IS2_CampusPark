@@ -468,7 +468,12 @@
         </a>
 
         <div class="top-acciones">
-
+			{% if user.perfil.es_administrador %}
+				<a href="{% url 'estacionamiento:dashboard' %}" class="top-link">
+					<span class="material-symbols-outlined">monitoring</span> Dashboard de Cobros
+				</a>
+			{% endif %}
+			
             {% if user.is_authenticated %}
 
                 <details class="menu-cuenta">

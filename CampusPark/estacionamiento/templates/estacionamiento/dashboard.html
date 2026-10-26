@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 20px 0; }
+  .kpi { margin-bottom: 0; }
+  .kpi .valor { font-size: 28px; font-weight: 800; color: #163b68; }
+  .kpi .etiqueta { color: #64748b; font-size: 14px; }
+  .barra { background: #edf4fb; border-radius: 6px; height: 10px; min-width: 120px; }
+  .barra > div { background: #1d5fa7; height: 10px; border-radius: 6px; }
+  .filtros { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
+  .filtros .form-row { margin-bottom: 0; }
+  .filtros input, .filtros select { width: auto; }
+</style>
+
+<h2>Dashboard de recaudación</h2>
+
+<form method="get" class="filtros">
+  <div class="form-row">
+    <label for="id_periodo">Ver por</label>
+    <select name="periodo" id="id_periodo">
+      <option value="dia" {% if periodo == "dia" %}selected{% endif %}>Día</option>
+      <option value="mes" {% if periodo == "mes" %}selected{% endif %}>Mes</option>
+      <option value="anio" {% if periodo == "anio" %}selected{% endif %}>Año</option>
+    </select>
+  </div>
+  <div class="form-row" id="campo-dia"><label for="id_dia">Día</label><input type="date" name="dia" id="id_dia" value="{{ dia }}"></div>
+  <div class="form-row" id="campo-mes"><label for="id_mes">Mes</label><input type="month" name="mes" id="id_mes" value="{{ mes }}"></div>
+  <div class="form-row" id="campo-anio"><label for="id_anio">Año</label><input type="number" name="anio" id="id_anio" value="{{ anio }}" min="2000" max="2100" style="width:110px;"></div>
+  <button type="submit">Aplicar</button>
+</form>
+
+<div class="kpis">
+  <div class="card kpi">
+    <div class="etiqueta">Recaudado ({{ rango_texto }})</div>
+    <div class="valor">Gs. {{ total|floatformat:"0g" }}</div>
+  </div>
+  <div class="card kpi">
+    <div class="etiqueta">Tickets cobrados</div>
+    <div class="valor">{{ cantidad }}</div>
+  </div>
+  <div class="card kpi">
+    <div class="etiqueta">Emitido y todavía sin cobrar</div>
+    <div class="valor">Gs. {{ por_cobrar.total|default:0|floatformat:"0g" }}</div>
+    <div class="etiqueta">{{ por_cobrar.cantidad }} ticket{{ por_cobrar.cantidad|pluralize }}</div>
+  </div>
+</div>
+
+<h3>Por forma de pago</h3>
+<table>
+  <tr><th>Forma de pago</th><th>Tickets</th><th>Total</th><th>%</th><th></th></tr>
+  {% for m in por_metodo %}
+  <tr>
+    <td>{{ m.etiqueta }}</td>
+    <td>{{ m.cantidad }}</td>
+    <td>Gs. {{ m.total|floatformat:"0g" }}</td>
+    <td>{{ m.pct }}%</td>
+    <td><div class="barra"><div style="width:{{ m.pct }}%"></div></div></td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h3 style="margin-top:28px;">Evolución</h3>
+<table>
+  <tr>
+    <th>{% if periodo == "dia" %}Hora{% elif periodo == "mes" %}Día{% else %}Mes{% endif %}</th>
+    <th>Tickets</th><th>Total</th><th></th>
+  </tr>
+  {% for s in serie %}
+  <tr>
+    <td>{{ s.p|date:formato_serie }}</td>
+    <td>{{ s.cantidad }}</td>
+    <td>Gs. {{ s.total|floatformat:"0g" }}</td>
+    <td><div class="barra"><div style="width:{{ s.pct }}%"></div></div></td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="4">No hay pagos registrados en este período.</td></tr>
+  {% endfor %}
+</table>
+
+<script>
+(function () {
+  var sel = document.getElementById("id_periodo");
+  function ver() {
+    ["dia", "mes", "anio"].forEach(function (p) {
+      document.getElementById("campo-" + p).style.display = (sel.value === p) ? "" : "none";
+    });
+  }
+  sel.addEventListener("change", ver);
+  ver();
+})();
+</script>
+{% endblock %}

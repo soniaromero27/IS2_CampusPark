@@ -23,7 +23,10 @@ urlpatterns = [
     path("zonas/espacios/nuevos/", views.crear_espacios_view, name="espacios_crear"),
     
     path("mis-movimientos/", views.mis_movimientos_view, name="mis_movimientos"),
+    
     path("tickets/", views.lista_tickets_view, name="tickets_lista"),
     path("tickets/<int:pk>/", views.detalle_ticket_view, name="ticket_detalle"),
     path("tickets/<int:pk>/pagar/", views.pagar_ticket_view, name="ticket_pagar"),
+    
+    path("dashboard/", views.dashboard_view, name="dashboard")
 ]

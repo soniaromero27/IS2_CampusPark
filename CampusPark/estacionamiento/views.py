@@ -2,12 +2,14 @@ from collections import defaultdict
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Max, Prefetch, Q
+from django.db.models import Count, Max, Prefetch, Q, Count, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models.functions import TruncDate, TruncHour, TruncMonth
+import datetime as dt 
 
 from reglas.models import Reglamento
 from campuspark.paginacion import paginar
@@ -16,6 +18,8 @@ from usuarios.decorators import admin_requerido, personal_requerido
 
 from .forms import EspacioForm, EspaciosForm, IngresoForm, ReservaForm, ZonaForm, TicketPagoForm
 from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona, Ticket
+
+
 from vehiculos.models import Vehiculo
 
 from .cuadricula import contexto_cuadricula
@@ -539,7 +543,8 @@ def registrar_salida_view(request, pk):
                 reserva_en_curso.save()
 
         cobro = movimiento.calcular_cobro()
-        ticket = Ticket.emitir(movimiento, cobro)
+        ticket = Ticket.emitir(movimiento, cobro, validado_por=request.user.perfil)
+ 
         
         return render(
             request,
@@ -794,4 +799,109 @@ def pagar_ticket_view(request, pk):
             else:
                 messages.warning(request, "Este ticket no está pendiente de pago.")
     return redirect("estacionamiento:ticket_detalle", pk=pk)
+ 
+
+
+def _rango_periodo(periodo, dia, mes, anio):
+    """(inicio, fin) como fechas, con 'fin' exclusivo. ValueError si el valor es inválido."""
+    if periodo == "dia":
+        d = dt.date.fromisoformat(dia)
+        return d, d + dt.timedelta(days=1)
+    if periodo == "mes":
+        y, m = (int(x) for x in mes.split("-"))
+        inicio = dt.date(y, m, 1)
+        fin = dt.date(y + 1, 1, 1) if m == 12 else dt.date(y, m + 1, 1)
+        return inicio, fin
+    y = int(anio)
+    return dt.date(y, 1, 1), dt.date(y + 1, 1, 1)
+ 
+ 
+@admin_requerido
+def dashboard_view(request):
+    """
+    Resumen de recaudación (sólo Administrador). Cuenta los tickets PAGADOS
+    según su fecha de pago. Filtrable por día, mes o año:
+    ?periodo=dia&dia=AAAA-MM-DD | ?periodo=mes&mes=AAAA-MM | ?periodo=anio&anio=AAAA
+    """
+    hoy = timezone.localdate()
+    periodo = request.GET.get("periodo", "mes")
+    if periodo not in ("dia", "mes", "anio"):
+        periodo = "mes"
+    dia = request.GET.get("dia") or hoy.isoformat()
+    mes = request.GET.get("mes") or hoy.strftime("%Y-%m")
+    anio = request.GET.get("anio") or str(hoy.year)
+ 
+    try:
+        inicio_d, fin_d = _rango_periodo(periodo, dia, mes, anio)
+    except ValueError:
+        messages.error(request, "Fecha inválida: se muestra el mes actual.")
+        periodo, dia, mes, anio = "mes", hoy.isoformat(), hoy.strftime("%Y-%m"), str(hoy.year)
+        inicio_d, fin_d = _rango_periodo(periodo, dia, mes, anio)
+ 
+    inicio = timezone.make_aware(dt.datetime.combine(inicio_d, dt.time.min))
+    fin = timezone.make_aware(dt.datetime.combine(fin_d, dt.time.min))
+ 
+    pagados = Ticket.objects.filter(
+        estado=Ticket.Estado.PAGADO, fecha_pago__gte=inicio, fecha_pago__lt=fin
+    )
+ 
+    resumen = pagados.aggregate(total=Sum("monto"), cantidad=Count("id"))
+    total = resumen["total"] or 0
+ 
+    # Por forma de pago (se muestran las tres aunque alguna esté en cero)
+    agg = {
+        r["metodo_pago"]: r
+        for r in pagados.values("metodo_pago").annotate(total=Sum("monto"), cantidad=Count("id"))
+    }
+    por_metodo = []
+    for valor, etiqueta in Ticket.Metodo.choices:
+        r = agg.get(valor, {})
+        t = r.get("total") or 0
+        por_metodo.append(
+            {
+                "etiqueta": etiqueta,
+                "total": t,
+                "cantidad": r.get("cantidad", 0),
+                "pct": round(t * 100 / total) if total else 0,
+            }
+        )
+ 
+    # Evolución: por hora (día), por día (mes) o por mes (año)
+    trunc = {"dia": TruncHour, "mes": TruncDate, "anio": TruncMonth}[periodo]
+    serie = list(
+        pagados.annotate(p=trunc("fecha_pago"))
+        .values("p")
+        .annotate(total=Sum("monto"), cantidad=Count("id"))
+        .order_by("p")
+    )
+    maximo = max((s["total"] or 0 for s in serie), default=0)
+    for s in serie:
+        s["pct"] = round((s["total"] or 0) * 100 / maximo) if maximo else 0
+ 
+    # Lo emitido en el período que todavía no se cobró
+    por_cobrar = Ticket.objects.filter(
+        estado=Ticket.Estado.PENDIENTE, fecha_emision__gte=inicio, fecha_emision__lt=fin
+    ).aggregate(total=Sum("monto"), cantidad=Count("id"))
+ 
+    return render(
+        request,
+        "estacionamiento/dashboard.html",
+        {
+            "periodo": periodo,
+            "dia": dia,
+            "mes": mes,
+            "anio": anio,
+            "rango_texto": {
+                "dia": inicio_d.strftime("%d/%m/%Y"),
+                "mes": inicio_d.strftime("%m/%Y"),
+                "anio": str(inicio_d.year),
+            }[periodo],
+            "formato_serie": {"dia": "H:i", "mes": "d/m/Y", "anio": "m/Y"}[periodo],
+            "total": total,
+            "cantidad": resumen["cantidad"],
+            "por_metodo": por_metodo,
+            "serie": serie,
+            "por_cobrar": por_cobrar,
+        },
+    )
  
