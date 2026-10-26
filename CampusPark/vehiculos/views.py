@@ -1,14 +1,13 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.shortcuts import redirect, render
-
+from django.shortcuts import get_object_or_404, redirect, render
+ 
 from campuspark.paginacion import paginar
-
 from usuarios.decorators import personal_requerido
-
+ 
 from .forms import VehiculoForm
 from .models import Vehiculo
-
 
 @login_required
 def lista_vehiculos_view(request):
@@ -31,6 +30,27 @@ def agregar_vehiculo_view(request):
         form = VehiculoForm()
     return render(request, "vehiculos/agregar.html", {"form": form})
 
+
+@login_required
+def editar_vehiculo_view(request, pk):
+    """Editar los datos de un vehículo PROPIO (uno ajeno da 404)."""
+    vehiculo = get_object_or_404(Vehiculo, pk=pk, usuario=request.user.perfil)
+    matricula_original = vehiculo.matricula  # antes de que el form pise el objeto
+    if request.method == "POST":
+        form = VehiculoForm(request.POST, instance=vehiculo)
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request, f"Se guardaron los cambios del vehículo {vehiculo.matricula}."
+            )
+            return redirect("vehiculos:lista")
+    else:
+        form = VehiculoForm(instance=vehiculo)
+    return render(
+        request,
+        "vehiculos/editar.html",
+        {"form": form, "matricula": matricula_original},
+    )
 
 @personal_requerido
 def lista_todos_vehiculos_view(request):

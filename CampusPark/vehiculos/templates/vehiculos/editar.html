@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Editar vehículo {{ matricula }}</h2>
+<form method="post">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  {% for field in form %}
+    <div class="form-row">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+      {{ field.errors }}
+    </div>
+  {% endfor %}
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    <button type="submit">Guardar cambios</button>
+    <a href="{% url 'vehiculos:lista' %}" class="btn">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

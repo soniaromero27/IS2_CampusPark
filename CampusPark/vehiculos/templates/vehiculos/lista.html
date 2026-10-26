@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
+
+<style>
+  td a { color: inherit; text-decoration: none; }
+</style>
+
 <h2>Mis vehículos</h2>
 
 <a href="{% url 'vehiculos:agregar' %}" style="display:inline">
@@ -9,7 +14,7 @@
 <table>
   <tr>
     <th>Matrícula</th><th>Tipo</th><th>Cédula verde</th><th>Marca</th>
-    <th>Modelo</th><th>Color</th><th>Año</th><th>Chassis</th>
+    <th>Modelo</th><th>Color</th><th>Año</th><th>Chassis</th><th></th>
   </tr>
   {% for v in vehiculos %}
   <tr>
@@ -21,9 +26,12 @@
     <td>{{ v.color }}</td>
     <td>{{ v.anho }}</td>
     <td>{{ v.chassis }}</td>
+    <td style="white-space:nowrap;">
+      <a href="{% url 'vehiculos:editar' v.pk %}" title="Editar" aria-label="Editar"><span class="material-symbols-outlined">edit_square</span></a>
+    </td>
   </tr>
   {% empty %}
-  <tr><td colspan="4">Todavía no registraste vehículos.</td></tr>
+  <tr><td colspan="9">Todavía no registraste vehículos.</td></tr>
   {% endfor %}
 </table>
 {% include "_paginacion.html" %}
