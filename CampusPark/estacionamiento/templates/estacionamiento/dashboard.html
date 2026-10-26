@@ -30,19 +30,23 @@
 </form>
 
 <div class="kpis">
-  <div class="card kpi">
-    <div class="etiqueta">Recaudado ({{ rango_texto }})</div>
-    <div class="valor">Gs. {{ total|floatformat:"0g" }}</div>
-  </div>
-  <div class="card kpi">
-    <div class="etiqueta">Tickets cobrados</div>
-    <div class="valor">{{ cantidad }}</div>
-  </div>
-  <div class="card kpi">
-    <div class="etiqueta">Emitido y todavía sin cobrar</div>
-    <div class="valor">Gs. {{ por_cobrar.total|default:0|floatformat:"0g" }}</div>
-    <div class="etiqueta">{{ por_cobrar.cantidad }} ticket{{ por_cobrar.cantidad|pluralize }}</div>
-  </div>
+	<div class="card kpi">
+		<div class="etiqueta">Recaudado ({{ rango_texto }})</div>
+		<div class="valor">Gs. {{ total|floatformat:"0g" }}</div>
+	</div>
+	<div class="card kpi">
+		<div class="etiqueta">Tickets cobrados</div>
+		<div class="valor">{{ cantidad }}</div>
+	</div>
+	<div class="card kpi">
+		<div class="etiqueta">Emitido y todavía sin cobrar</div>
+		<div class="valor">Gs. {{ por_cobrar.total|default:0|floatformat:"0g" }}</div>
+		<div class="etiqueta">{{ por_cobrar.cantidad }} ticket{{ por_cobrar.cantidad|pluralize }}</div>
+	</div>
+	<div class="card kpi">
+		<div class="etiqueta">Tickets sin cargo (validados)</div>
+		<div class="valor">{{ sin_cargo }}</div>
+	</div>
 </div>
 
 <h3>Por forma de pago</h3>

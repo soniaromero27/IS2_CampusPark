@@ -882,7 +882,11 @@ def dashboard_view(request):
     por_cobrar = Ticket.objects.filter(
         estado=Ticket.Estado.PENDIENTE, fecha_emision__gte=inicio, fecha_emision__lt=fin
     ).aggregate(total=Sum("monto"), cantidad=Count("id"))
- 
+
+    sin_cargo = Ticket.objects.filter(
+        estado=Ticket.Estado.SIN_CARGO, fecha_pago__gte=inicio, fecha_pago__lt=fin
+    ).count()
+    
     return render(
         request,
         "estacionamiento/dashboard.html",
@@ -902,6 +906,7 @@ def dashboard_view(request):
             "por_metodo": por_metodo,
             "serie": serie,
             "por_cobrar": por_cobrar,
+            "sin_cargo": sin_cargo,
         },
     )
  
