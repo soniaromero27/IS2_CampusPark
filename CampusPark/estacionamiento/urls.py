@@ -16,17 +16,20 @@ urlpatterns = [
     path("movimientos/", views.lista_movimientos_view, name="movimientos_lista"),
     path("movimientos/ingreso/", views.registrar_ingreso_view, name="movimiento_ingreso"),
     path("movimientos/<int:pk>/salida/", views.registrar_salida_view, name="movimiento_salida"),
+    path("movimientos/<int:pk>/validar/", views.validar_ticket_view, name="ticket_validar"),
 
+    path("mis-movimientos/", views.mis_movimientos_view, name="mis_movimientos"),
+    
     path("zonas/", views.lista_zonas_view, name="zonas_lista"),
     path("zonas/nueva/", views.crear_zona_view, name="zona_crear"),
     path("zonas/<int:pk>/editar/", views.editar_zona_view, name="zona_editar"),
     path("zonas/espacios/nuevos/", views.crear_espacios_view, name="espacios_crear"),
-    
-    path("mis-movimientos/", views.mis_movimientos_view, name="mis_movimientos"),
-    
+        
     path("tickets/", views.lista_tickets_view, name="tickets_lista"),
     path("tickets/<int:pk>/", views.detalle_ticket_view, name="ticket_detalle"),
     path("tickets/<int:pk>/pagar/", views.pagar_ticket_view, name="ticket_pagar"),
     
-    path("dashboard/", views.dashboard_view, name="dashboard")
+    path("pagar-tickets/", views.pagar_tickets_view, name="pagar_tickets"),
+    
+    path("dashboard/", views.dashboard_view, name="dashboard"),
 ]

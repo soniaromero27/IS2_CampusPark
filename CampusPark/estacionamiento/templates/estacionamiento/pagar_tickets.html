@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Pagar tickets</h2>
+<p>Validá y pagá el ticket de tu vehículo antes de salir. Después de validar tenés
+   <strong>{{ tolerancia }} minutos</strong> para salir sin que se recalcule el cobro.</p>
+
+<table>
+  <tr>
+    <th>Vehículo</th><th>Espacio</th><th>Ingreso</th><th>Horas</th>
+    <th>Ya pagado</th><th>A pagar ahora</th><th></th>
+  </tr>
+  {% for i in items %}
+  <tr>
+    <td>{{ i.movimiento.patente }}</td>
+    <td>{{ i.movimiento.espacio.zona }} - N°{{ i.movimiento.espacio.numero }}</td>
+    <td>{{ i.movimiento.fecha_hora_ingreso }}</td>
+    <td>{{ i.cuenta.horas }}</td>
+    <td>Gs. {{ i.cuenta.pagado|floatformat:"0g" }}</td>
+    <td>{% if i.cuenta.a_pagar is None %}—{% else %}Gs. {{ i.cuenta.a_pagar|floatformat:"0g" }}{% endif %}</td>
+    <td>
+      {% if i.cuenta.validado %}
+        Validado hasta {{ i.movimiento.validado_hasta|time:"H:i" }}
+      {% elif i.cuenta.tarifa is None %}—
+      {% else %}
+        <a href="{% url 'estacionamiento:ticket_validar' i.movimiento.pk %}" class="btn">Validar ticket</a>
+      {% endif %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="7">No tenés vehículos dentro del estacionamiento en este momento.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

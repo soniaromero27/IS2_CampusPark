@@ -49,6 +49,7 @@
         Ticket{% if orden == 'ticket' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
       </a>
     </th>
+    <th>Validar ticket</th>
   </tr>
   {% for m in movimientos %}
   <tr>
@@ -62,9 +63,22 @@
         <a href="{% url 'estacionamiento:ticket_detalle' m.ticket.pk %}">{{ m.ticket.numero }} · {{ m.ticket.get_estado_display }}</a>
       {% else %}—{% endif %}
     </td>
+    <td>
+      {% if not m.fecha_hora_salida %}
+        {% with c=m.cobro_vigente %}
+          {% if c.validado %}
+            Validado hasta {{ m.validado_hasta|time:"H:i" }}
+          {% elif c.tarifa is None %}—
+          {% else %}
+            <a href="{% url 'estacionamiento:ticket_validar' m.pk %}" class="btn">Validar ticket{% if c.a_pagar %} (Gs. {{ c.a_pagar|floatformat:"0g" }}){% endif %}</a>
+            {% if m.validado_hasta %}<br><small>Validación vencida</small>{% endif %}
+          {% endif %}
+        {% endwith %}
+      {% else %}—{% endif %}
+    </td>
   </tr>
   {% empty %}
-  <tr><td colspan="6">No hay movimientos que coincidan con la búsqueda.</td></tr>
+  <tr><td colspan="7">No hay movimientos que coincidan con la búsqueda.</td></tr>
   {% endfor %}
 </table>
 {% endblock %}

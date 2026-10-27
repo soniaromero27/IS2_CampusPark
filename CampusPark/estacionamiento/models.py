@@ -2,6 +2,11 @@ from django.db import models
 from django.utils import timezone
 import math
 
+from datetime import timedelta
+from django.core.exceptions import ValidationError
+from django.db import models, transaction
+from django.db.models import Sum
+
 from universidad.models import Facultad
 from usuarios.models import TipoUsuario, Usuario
 from vehiculos.models import Vehiculo
@@ -173,6 +178,13 @@ class Movimiento(models.Model):
         null=True,
         blank=True,
     )
+    
+    validado_en = models.DateTimeField(null=True, blank=True)
+    validado_hasta = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Hasta cuándo puede salir sin que se recalcule el cobro (tolerancia tras validar).",
+    )
+    
     espacio = models.ForeignKey(Espacio, on_delete=models.CASCADE, related_name="movimientos")
 
     class Meta:
@@ -189,7 +201,7 @@ class Movimiento(models.Model):
             return f"{self.vehiculo.usuario.nombre} {self.vehiculo.usuario.apellido}"
         return "No registrado"
 
-    def calcular_cobro(self):
+    def calcular_cobro(self, hasta=None):
         """
         Calcula el monto a cobrar según la tarifa vigente para el tipo
         de usuario dueño del vehículo. Si la patente no está registrada
@@ -202,19 +214,21 @@ class Movimiento(models.Model):
         Devuelve un dict: {"tipo", "horas", "tarifa", "monto"}.
         'tarifa' y 'monto' quedan en None si no hay ninguna tarifa
         configurada (con vigencia <= la fecha de salida) para ese tipo.
-        """
+
+        Costo de TODA la estadía hasta `hasta` (o la salida, o ahora)."""
+        
         from reglas.models import Tarifa
         from usuarios.models import TipoUsuario
-
+ 
         if self.vehiculo_id and self.vehiculo.usuario_id:
             tipo = self.vehiculo.usuario.tipo
         else:
             tipo = TipoUsuario.objects.filter(nombre__iexact="Externo").first()
-
-        fin = self.fecha_hora_salida or timezone.now()
+ 
+        fin = hasta or self.fecha_hora_salida or timezone.now()
         segundos = (fin - self.fecha_hora_ingreso).total_seconds()
         horas = max(1, math.ceil(segundos / 3600))
-
+ 
         tarifa = None
         if tipo is not None:
             tarifa = (
@@ -222,11 +236,78 @@ class Movimiento(models.Model):
                 .order_by("-vigencia")
                 .first()
             )
-
+ 
         monto = tarifa.valor_por_hora * horas if tarifa else None
-
         return {"tipo": tipo, "horas": horas, "tarifa": tarifa, "monto": monto}
-        
+
+
+    def total_pagado(self):
+        """Todo lo abonado hasta ahora por esta estadía (validaciones + pago en la salida)."""
+        return self.pagos.aggregate(t=Sum("monto"))["t"] or 0
+ 
+    def cobro_vigente(self, momento=None):
+        """
+        Cuenta de la estadía al `momento` (por defecto: la salida, o ahora).
+ 
+        - Si está VALIDADO (momento <= validado_hasta): no se recalcula nada;
+          se queda con lo ya pagado y no hay nada más que cobrar.
+        - Si no (nunca se validó, o la validación VENCIÓ): se cobra toda la
+          estadía acumulada desde el ingreso, menos lo ya pagado (el excedente).
+ 
+        Devuelve el dict de calcular_cobro() más:
+          pagado, validado, monto_final (total de la estadía) y a_pagar (excedente).
+        'monto_final' y 'a_pagar' son None si no hay tarifa.
+        """
+        momento = momento or self.fecha_hora_salida or timezone.now()
+        pagado = self.total_pagado()
+        validado = bool(
+            self.validado_en and self.validado_hasta and momento <= self.validado_hasta
+        )
+        cobro = self.calcular_cobro(hasta=self.validado_en if validado else momento)
+ 
+        if cobro["tarifa"] is None:
+            total, a_pagar = None, None
+        elif validado:
+            total, a_pagar = pagado, 0
+        else:
+            total = cobro["monto"]
+            a_pagar = max(0, round(total - pagado, 2))
+ 
+        cobro.update(pagado=pagado, validado=validado, monto_final=total, a_pagar=a_pagar)
+        return cobro
+ 
+    def validar(self, metodo, registrado_por):
+        """
+        Cobra el excedente (si lo hay), y abre la ventana de tolerancia para
+        salir (ver Reglamento.tolerancia_validacion). Devuelve lo cobrado.
+        Llamar dentro de transaction.atomic() y con el movimiento bloqueado.
+        """
+        from reglas.models import Reglamento
+ 
+        if self.fecha_hora_salida:
+            raise ValidationError("Este vehículo ya registró su salida.")
+        ahora = timezone.now()
+        cuenta = self.cobro_vigente(momento=ahora)
+        if cuenta["tarifa"] is None:
+            raise ValidationError("No hay una tarifa configurada para este tipo de usuario.")
+        if cuenta["validado"]:
+            raise ValidationError(
+                "El ticket ya está validado hasta las "
+                f"{timezone.localtime(self.validado_hasta):%H:%M} hs."
+            )
+ 
+        a_pagar = cuenta["a_pagar"]
+        if a_pagar > 0:
+            Pago.objects.create(
+                movimiento=self, monto=a_pagar, metodo=metodo,
+                origen=Pago.Origen.VALIDACION, fecha_pago=ahora,
+                registrado_por=registrado_por,
+            )
+        self.validado_en = ahora
+        self.validado_hasta = ahora + timedelta(minutes=Reglamento.tolerancia_actual())
+        self.save(update_fields=["validado_en", "validado_hasta"])
+        return a_pagar
+
 
 class Ticket(models.Model):
     """
@@ -274,6 +355,10 @@ class Ticket(models.Model):
     cobrado_por = models.ForeignKey(
         Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name="tickets_cobrados"
     )
+    
+    monto_pagado_previo = models.FloatField(
+        default=0, help_text="Lo que el usuario ya había pagado (validaciones) antes de salir."
+    )
 
     class Meta:
         verbose_name = "Ticket"
@@ -287,24 +372,29 @@ class Ticket(models.Model):
     def numero(self):
         return f"T-{self.pk:06d}" if self.pk else "T-?"
 
+    @property
+    def monto_a_cobrar(self):
+        """Excedente que falta cobrar en la salida (monto total - pagado antes)."""
+        if self.monto is None:
+            return None
+        return max(0, round(self.monto - (self.monto_pagado_previo or 0), 2))
+        
+
     @classmethod
-    def emitir(cls, movimiento, cobro, validado_por=None):
+    def emitir(cls, movimiento, cuenta, validado_por=None):
         """
-        Crea (una sola vez por movimiento) el ticket a partir del dict que
-        devuelve Movimiento.calcular_cobro(). Requiere que el movimiento ya
-        tenga fecha_hora_salida.
- 
-        - Sin tarifa configurada  -> SIN_TARIFA
-        - Monto en 0              -> SIN_CARGO: queda validado al instante,
-                                     sin paso de cobro (validado_por = quien
-                                     registró la salida).
-        - Monto mayor a 0         -> PENDIENTE de pago
+        Crea (una vez por movimiento) el ticket de salida a partir de
+        Movimiento.cobro_vigente(). Estados:
+        - sin tarifa                      -> SIN_TARIFA
+        - total 0                         -> SIN_CARGO (validado al instante)
+        - nada que cobrar (ya pagó antes) -> PAGADO
+        - hay excedente                   -> PENDIENTE (lo cobra el personal)
         """
         usuario = None
         if movimiento.vehiculo_id and movimiento.vehiculo.usuario_id:
             usuario = movimiento.vehiculo.usuario
-        tarifa = cobro["tarifa"]
-        monto = cobro["monto"]
+        tarifa = cuenta["tarifa"]
+        monto = cuenta["monto_final"]
  
         extra = {}
         if tarifa is None:
@@ -312,6 +402,15 @@ class Ticket(models.Model):
         elif monto == 0:
             estado = cls.Estado.SIN_CARGO
             extra = {"fecha_pago": timezone.now(), "cobrado_por": validado_por}
+        elif cuenta["a_pagar"] == 0:
+            estado = cls.Estado.PAGADO
+            ultimo = movimiento.pagos.order_by("-fecha_pago").first()
+            if ultimo:
+                extra = {
+                    "metodo_pago": ultimo.metodo,
+                    "fecha_pago": ultimo.fecha_pago,
+                    "cobrado_por": ultimo.registrado_por,
+                }
         else:
             estado = cls.Estado.PENDIENTE
  
@@ -320,12 +419,13 @@ class Ticket(models.Model):
             defaults={
                 "usuario": usuario,
                 "patente": movimiento.patente,
-                "tipo_usuario": str(cobro["tipo"]) if cobro["tipo"] else "",
+                "tipo_usuario": str(cuenta["tipo"]) if cuenta["tipo"] else "",
                 "tarifa": tarifa,
                 "tarifa_descripcion": tarifa.descripcion if tarifa else "",
                 "valor_por_hora": tarifa.valor_por_hora if tarifa else None,
-                "horas": cobro["horas"],
+                "horas": cuenta["horas"],
                 "monto": monto,
+                "monto_pagado_previo": cuenta["pagado"],
                 "fecha_ingreso": movimiento.fecha_hora_ingreso,
                 "fecha_salida": movimiento.fecha_hora_salida,
                 "estado": estado,
@@ -335,8 +435,48 @@ class Ticket(models.Model):
         return ticket
 
     def registrar_pago(self, metodo, cobrado_por):
-        self.estado = self.Estado.PAGADO
-        self.metodo_pago = metodo
-        self.fecha_pago = timezone.now()
-        self.cobrado_por = cobrado_por
-        self.save()
+        """El personal cobra el excedente pendiente del ticket."""
+        with transaction.atomic():
+            resta = self.monto_a_cobrar or 0
+            if resta > 0:
+                Pago.objects.create(
+                    movimiento=self.movimiento, ticket=self, monto=resta, metodo=metodo,
+                    origen=Pago.Origen.SALIDA, registrado_por=cobrado_por,
+                )
+            self.estado = self.Estado.PAGADO
+            self.metodo_pago = metodo
+            self.fecha_pago = timezone.now()
+            self.cobrado_por = cobrado_por
+            self.save()
+ 
+ 
+class Pago(models.Model):
+    """
+    Cada pago de dinero realizado: es la fuente del Dashboard de recaudación.
+    Una estadía puede tener varios (una validación, otra al vencer, y el
+    excedente cobrado en la salida).
+    """
+ 
+    class Origen(models.TextChoices):
+        VALIDACION = "validacion", "Validación anticipada (usuario)"
+        SALIDA = "salida", "Cobro en la salida (personal)"
+ 
+    movimiento = models.ForeignKey(Movimiento, on_delete=models.PROTECT, related_name="pagos")
+    ticket = models.ForeignKey(
+        Ticket, on_delete=models.SET_NULL, null=True, blank=True, related_name="pagos"
+    )
+    monto = models.FloatField()
+    metodo = models.CharField(max_length=20, choices=Ticket.Metodo.choices)
+    origen = models.CharField(max_length=20, choices=Origen.choices)
+    fecha_pago = models.DateTimeField(default=timezone.now)
+    registrado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name="pagos_registrados"
+    )
+ 
+    class Meta:
+        verbose_name = "Pago"
+        verbose_name_plural = "Pagos"
+        ordering = ["-fecha_pago"]
+ 
+    def __str__(self):
+        return f"Pago #{self.pk} - Gs. {self.monto} ({self.get_metodo_display()})"

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Validar ticket — {{ movimiento.patente }}</h2>
+
+<div class="card">
+  <p><strong>Espacio:</strong> {{ movimiento.espacio.zona }} - N°{{ movimiento.espacio.numero }}</p>
+  <p><strong>Ingreso:</strong> {{ movimiento.fecha_hora_ingreso }}</p>
+
+  {% if cuenta.tarifa is None %}
+    <p>No hay una tarifa configurada para tu tipo de usuario. Consultá con el personal del estacionamiento.</p>
+
+  {% elif cuenta.validado %}
+    <h3>Ticket validado</h3>
+    <p>Podés salir hasta las <strong>{{ movimiento.validado_hasta|time:"H:i" }} hs</strong> sin que se recalcule el cobro.
+       Si pasa ese horario, se vuelve a acumular el tiempo y sólo se cobra el excedente de lo que ya pagaste.</p>
+
+  {% else %}
+    <p>{{ cuenta.horas }} hora{{ cuenta.horas|pluralize }} × Gs. {{ cuenta.tarifa.valor_por_hora|floatformat:"0g" }}/h
+       = Gs. {{ cuenta.monto|floatformat:"0g" }}</p>
+    <p>Ya pagado: Gs. {{ cuenta.pagado|floatformat:"0g" }}</p>
+    <h3>A pagar ahora: Gs. {{ cuenta.a_pagar|floatformat:"0g" }}</h3>
+    {% if movimiento.validado_hasta %}<p>Tu validación anterior venció.</p>{% endif %}
+    <p>Después de validar tenés {{ tolerancia }} minutos para salir sin recargo.</p>
+  {% endif %}
+</div>
+
+{% if cuenta.tarifa is not None and not cuenta.validado %}
+<form method="post">
+  {% csrf_token %}
+  {% for field in form %}
+    <div class="form-row">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {{ field.errors }}
+    </div>
+  {% endfor %}
+  <button type="submit">{% if cuenta.a_pagar %}Pagar y validar{% else %}Validar{% endif %}</button>
+</form>
+{% endif %}
+
+<p><a href="{% url 'estacionamiento:mis_movimientos' %}">Volver a mis movimientos</a></p>
+{% endblock %}

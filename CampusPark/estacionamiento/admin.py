@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona, Ticket
+from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona, Ticket, Pago
 
 
 @admin.register(Zona)
@@ -42,3 +42,7 @@ class TicketAdmin(admin.ModelAdmin):
     list_filter = ("estado", "metodo_pago")
     search_fields = ("patente", "usuario__nombre", "usuario__apellido")
  
+@admin.register(Pago)
+class PagoAdmin(admin.ModelAdmin):
+     list_display = ("id", "movimiento", "monto", "metodo", "origen", "fecha_pago", "registrado_por")
+     list_filter = ("metodo", "origen")

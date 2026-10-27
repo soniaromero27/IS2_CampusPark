@@ -9,18 +9,17 @@
   <p><strong>Ingreso:</strong> {{ movimiento.fecha_hora_ingreso }}</p>
   <p><strong>Salida:</strong> {{ movimiento.fecha_hora_salida }}</p>
 
-  {% if cobro.monto is not None %}
-    <h3>Monto a cobrar: Gs. {{ cobro.monto }}</h3>
-    <p>
-      {{ cobro.horas }} hora{{ cobro.horas|pluralize }} × Gs. {{ cobro.tarifa.valor_por_hora }}/h —
-      tarifa "{{ cobro.tarifa.descripcion }}" ({{ cobro.tipo }})
-    </p>
-  {% else %}
-    <p>
-      No hay una tarifa configurada para el tipo de usuario "{{ cobro.tipo|default:"Externo" }}".
-      No se pudo calcular el monto.
-    </p>
-  {% endif %}
+
+{% if cuenta.tarifa is None %}
+	<p>No hay una tarifa configurada para el tipo de usuario "{{ cuenta.tipo|default:"Externo" }}". No se pudo calcular el monto.</p>
+{% else %}
+	<p>{{ cuenta.horas }} hora{{ cuenta.horas|pluralize }} × Gs. {{ cuenta.tarifa.valor_por_hora|floatformat:"0g" }}/h — tarifa "{{ cuenta.tarifa.descripcion }}" ({{ cuenta.tipo }})</p>
+	<p>Total de la estadía: Gs. {{ cuenta.monto_final|floatformat:"0g" }}</p>
+	<p>Pagado antes de salir: Gs. {{ cuenta.pagado|floatformat:"0g" }}</p>
+	<h3>A cobrar: Gs. {{ cuenta.a_pagar|floatformat:"0g" }}</h3>
+	{% if cuenta.validado %}<p>Ticket validado dentro de la tolerancia: no se recalculó el cobro.</p>{% endif %}
+{% endif %}
+ 
 </div>
 {% if ticket %}
   <p><strong>Ticket:</strong> <a href="{% url 'estacionamiento:ticket_detalle' ticket.pk %}">{{ ticket.numero }}</a> ({{ ticket.get_estado_display }})</p>

@@ -15,19 +15,21 @@
 
 {% if reglamento %}
 <div class="card">
-  <p><strong>Horario de apertura:</strong> {{ reglamento.hora_apertura|time:"H:i" }} hs</p>
-  <p><strong>Horario de cierre:</strong> {{ reglamento.hora_cierre|time:"H:i" }} hs</p>
+	<p><strong>Horario de apertura:</strong> {{ reglamento.hora_apertura|time:"H:i" }} hs</p>
+	<p><strong>Horario de cierre:</strong> {{ reglamento.hora_cierre|time:"H:i" }} hs</p>
+	<p><strong>Tolerancia para salir tras validar el ticket:</strong> {{ reglamento.tolerancia_validacion }} minutos</p>
 </div>
 <div class="card">
-  {% if reglamento.reglamento %}
-    <p style="white-space: pre-line;">{{ reglamento.reglamento }}</p>
-  {% else %}
-    <p>Todavía no se cargó el texto del reglamento.</p>
-  {% endif %}
+	{% if reglamento.reglamento %}
+		<p style="white-space: pre-line;">{{ reglamento.reglamento }}</p>
+	{% else %}
+		<p>Todavía no se cargó el texto del reglamento.</p>
+	{% endif %}
 </div>
+
 {% else %}
 <div class="card">
-  <p>Todavía no se cargó el reglamento ni los horarios.</p>
+	<p>Todavía no se cargó el reglamento ni los horarios.</p>
 </div>
 {% endif %}
 {% endblock %}

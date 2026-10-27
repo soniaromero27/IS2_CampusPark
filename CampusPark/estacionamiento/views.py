@@ -2,13 +2,14 @@ from collections import defaultdict
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Max, Prefetch, Q, Count, Sum
+from django.db.models import Count, Max, Prefetch, Q, Count, Sum, F
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models.functions import TruncDate, TruncHour, TruncMonth
+
 import datetime as dt 
 
 from reglas.models import Reglamento
@@ -17,7 +18,7 @@ from campuspark.paginacion import paginar
 from usuarios.decorators import admin_requerido, personal_requerido
 
 from .forms import EspacioForm, EspaciosForm, IngresoForm, ReservaForm, ZonaForm, TicketPagoForm
-from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona, Ticket
+from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona, Ticket, Pago
 
 
 from vehiculos.models import Vehiculo
@@ -507,58 +508,55 @@ def registrar_ingreso_view(request):
 @personal_requerido
 def registrar_salida_view(request, pk):
     """
-    Registrar salida de vehículo: sólo Personal de Estacionamiento o
-    Administrador. Al confirmar, calcula el monto a cobrar (según la
-    tarifa vigente para el tipo de usuario dueño del vehículo, o
-    'Externo' si no está registrado) y lo muestra en un recibo. Si el
-    ingreso vino de una reserva 'Confirmada' en ese mismo espacio, la
-    cierra como 'Finalizada'.
+    Registrar salida: sólo Personal o Administrador. Si el ticket está
+    validado y dentro de la tolerancia, no se recalcula nada. Si no, se
+    cobra sólo el excedente de lo que el usuario ya pagó (ver
+    Movimiento.cobro_vigente). Emite el ticket de salida.
     """
-    movimiento = get_object_or_404(
-        Movimiento,
-        pk=pk,
-        fecha_hora_salida__isnull=True,
-    )
+    movimiento = get_object_or_404(Movimiento, pk=pk, fecha_hora_salida__isnull=True)
     if request.method == "POST":
         with transaction.atomic():
+            # bloqueo: evita que el usuario valide/pague a la vez que se registra la salida
+            movimiento = get_object_or_404(
+                Movimiento.objects.select_for_update(of=("self",)),
+                pk=pk, fecha_hora_salida__isnull=True,
+            )
             movimiento.fecha_hora_salida = timezone.now()
             movimiento.save()
-
+ 
             estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
             espacio = movimiento.espacio
             espacio.tipo_estado = estado_libre
             espacio.save()
-
-        if movimiento.vehiculo_id and movimiento.vehiculo.usuario_id:
-            reserva_en_curso = Reserva.objects.filter(
-                espacio=espacio,
-                usuario=movimiento.vehiculo.usuario,
-                tipo_estado_reserva__nombre_estado_reserva="Confirmada",
-            ).first()
-            if reserva_en_curso:
-                estado_finalizada, _ = TipoEstadoReserva.objects.get_or_create(
-                    nombre_estado_reserva="Finalizada"
-                )
-                reserva_en_curso.tipo_estado_reserva = estado_finalizada
-                reserva_en_curso.save()
-
-        cobro = movimiento.calcular_cobro()
-        ticket = Ticket.emitir(movimiento, cobro, validado_por=request.user.perfil)
  
-        
+            if movimiento.vehiculo_id and movimiento.vehiculo.usuario_id:
+                reserva_en_curso = Reserva.objects.filter(
+                    espacio=espacio,
+                    usuario=movimiento.vehiculo.usuario,
+                    tipo_estado_reserva__nombre_estado_reserva="Confirmada",
+                ).first()
+                if reserva_en_curso:
+                    estado_finalizada, _ = TipoEstadoReserva.objects.get_or_create(
+                        nombre_estado_reserva="Finalizada"
+                    )
+                    reserva_en_curso.tipo_estado_reserva = estado_finalizada
+                    reserva_en_curso.save()
+ 
+            cuenta = movimiento.cobro_vigente()
+            ticket = Ticket.emitir(movimiento, cuenta, validado_por=request.user.perfil)
+ 
         return render(
             request,
             "estacionamiento/salida_recibo.html",
-            {"movimiento": movimiento, "cobro": cobro, "ticket": ticket},
+            {"movimiento": movimiento, "cuenta": cuenta, "ticket": ticket},
         )
-
-    cobro_estimado = movimiento.calcular_cobro()
+ 
     return render(
         request,
         "estacionamiento/salida_confirmar.html",
-        {"movimiento": movimiento, "cobro": cobro_estimado},
+        {"movimiento": movimiento, "cuenta": movimiento.cobro_vigente()},
     )
-
+ 
 
 @admin_requerido
 def lista_zonas_view(request):
@@ -841,18 +839,17 @@ def dashboard_view(request):
     inicio = timezone.make_aware(dt.datetime.combine(inicio_d, dt.time.min))
     fin = timezone.make_aware(dt.datetime.combine(fin_d, dt.time.min))
  
-    pagados = Ticket.objects.filter(
-        estado=Ticket.Estado.PAGADO, fecha_pago__gte=inicio, fecha_pago__lt=fin
-    )
+    pagados = Pago.objects.filter(fecha_pago__gte=inicio, fecha_pago__lt=fin)
  
     resumen = pagados.aggregate(total=Sum("monto"), cantidad=Count("id"))
     total = resumen["total"] or 0
  
     # Por forma de pago (se muestran las tres aunque alguna esté en cero)
     agg = {
-        r["metodo_pago"]: r
-        for r in pagados.values("metodo_pago").annotate(total=Sum("monto"), cantidad=Count("id"))
+       r["metodo"]: r
+       for r in pagados.values("metodo").annotate(total=Sum("monto"), cantidad=Count("id"))
     }
+
     por_metodo = []
     for valor, etiqueta in Ticket.Metodo.choices:
         r = agg.get(valor, {})
@@ -880,8 +877,8 @@ def dashboard_view(request):
  
     # Lo emitido en el período que todavía no se cobró
     por_cobrar = Ticket.objects.filter(
-        estado=Ticket.Estado.PENDIENTE, fecha_emision__gte=inicio, fecha_emision__lt=fin
-    ).aggregate(total=Sum("monto"), cantidad=Count("id"))
+       estado=Ticket.Estado.PENDIENTE, fecha_emision__gte=inicio, fecha_emision__lt=fin
+    ).aggregate(total=Sum(F("monto") - F("monto_pagado_previo")), cantidad=Count("id"))
 
     sin_cargo = Ticket.objects.filter(
         estado=Ticket.Estado.SIN_CARGO, fecha_pago__gte=inicio, fecha_pago__lt=fin
@@ -907,6 +904,75 @@ def dashboard_view(request):
             "serie": serie,
             "por_cobrar": por_cobrar,
             "sin_cargo": sin_cargo,
+        },
+    )
+
+
+def _abiertos_del_usuario(perfil):
+    return Movimiento.objects.filter(
+        vehiculo__usuario=perfil, fecha_hora_salida__isnull=True
+    ).select_related("espacio", "espacio__zona", "vehiculo", "vehiculo__usuario__tipo")
+ 
+ 
+@login_required
+def pagar_tickets_view(request):
+    """Botón 'Pagar Tickets' del encabezado: vehículos propios que están dentro ahora."""
+    items = [
+        {"movimiento": m, "cuenta": m.cobro_vigente()}
+        for m in _abiertos_del_usuario(request.user.perfil).order_by("-fecha_hora_ingreso")
+    ]
+    return render(
+        request,
+        "estacionamiento/pagar_tickets.html",
+        {"items": items, "tolerancia": Reglamento.tolerancia_actual()},
+    )
+ 
+ 
+@login_required
+def validar_ticket_view(request, pk):
+    """
+    El usuario valida y paga su propio ticket ANTES de salir. Paga sólo lo
+    que falta (excedente de lo ya pagado) y queda con la tolerancia del
+    Reglamento para salir sin recálculo.
+    """
+    perfil = request.user.perfil
+    movimiento = get_object_or_404(
+        _abiertos_del_usuario(perfil), pk=pk
+    )
+    tolerancia = Reglamento.tolerancia_actual()
+ 
+    if request.method == "POST":
+        form = TicketPagoForm(request.POST)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    bloqueado = get_object_or_404(
+                        Movimiento.objects.select_for_update(of=("self",)),
+                        pk=pk, vehiculo__usuario=perfil, fecha_hora_salida__isnull=True,
+                    )
+                    cobrado = bloqueado.validar(form.cleaned_data["metodo"], perfil)
+                hasta = timezone.localtime(bloqueado.validado_hasta)
+                messages.success(
+                    request,
+                    f"Ticket de {bloqueado.patente} validado"
+                    f"{f' (pagaste Gs. {int(cobrado)})' if cobrado else ''}. "
+                    f"Tenés hasta las {hasta:%H:%M} hs para salir sin recargo.",
+                )
+                return redirect("estacionamiento:mis_movimientos")
+            except ValidationError as e:
+                messages.error(request, " ".join(e.messages))
+                movimiento = get_object_or_404(_abiertos_del_usuario(perfil), pk=pk)
+    else:
+        form = TicketPagoForm()
+ 
+    return render(
+        request,
+        "estacionamiento/validar_ticket.html",
+        {
+            "movimiento": movimiento,
+            "cuenta": movimiento.cobro_vigente(),
+            "form": form,
+            "tolerancia": tolerancia,
         },
     )
  

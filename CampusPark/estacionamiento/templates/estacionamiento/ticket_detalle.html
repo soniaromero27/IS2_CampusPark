@@ -12,12 +12,14 @@
   <p><strong>Salida:</strong> {{ ticket.fecha_salida }}</p>
   <p><strong>Emitido:</strong> {{ ticket.fecha_emision }}</p>
 
-  {% if ticket.monto is not None %}
-    <h3>Monto: Gs. {{ ticket.monto|floatformat:0 }}</h3>
-    <p>{{ ticket.horas }} hora{{ ticket.horas|pluralize }} × Gs. {{ ticket.valor_por_hora|floatformat:0 }}/h — tarifa "{{ ticket.tarifa_descripcion }}"</p>
-  {% else %}
-    <p>No había tarifa configurada al momento de la salida: no se calculó el monto.</p>
-  {% endif %}
+{% if ticket.monto is not None %}
+	<h3>Total de la estadía: Gs. {{ ticket.monto|floatformat:"0g" }}</h3>
+		<p>{{ ticket.horas }} hora{{ ticket.horas|pluralize }} × Gs. {{ ticket.valor_por_hora|floatformat:"0g" }}/h — tarifa "{{ ticket.tarifa_descripcion }}"</p>
+		<p>Pagado antes de salir: Gs. {{ ticket.monto_pagado_previo|floatformat:"0g" }}</p>
+		<p><strong>Excedente a cobrar en la salida: Gs. {{ ticket.monto_a_cobrar|floatformat:"0g" }}</strong></p>
+{% else %}
+		<p>No había tarifa configurada al momento de la salida: no se calculó el monto.</p>
+{% endif %}
 
   <p><strong>Estado:</strong> {{ ticket.get_estado_display }}</p>
   {% if ticket.estado == "pagado" %}

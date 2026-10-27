@@ -8,19 +8,20 @@
   Ingresó el {{ movimiento.fecha_hora_ingreso }}.
 </p>
 
+
 <div class="card">
-  {% if cobro.monto is not None %}
-    <p>
-      Monto estimado si se registra la salida ahora mismo:
-      <strong>Gs. {{ cobro.monto }}</strong>
-      ({{ cobro.horas }} hora{{ cobro.horas|pluralize }} × Gs. {{ cobro.tarifa.valor_por_hora }}/h,
-      tarifa "{{ cobro.tarifa.descripcion }}" — {{ cobro.tipo }})
-    </p>
+  {% if cuenta.tarifa is None %}
+    <p>No hay una tarifa configurada para el tipo de usuario "{{ cuenta.tipo|default:"Externo" }}",
+       así que no se puede estimar el monto todavía.</p>
+  {% elif cuenta.validado %}
+    <p><strong>Ticket validado y dentro de la tolerancia:</strong> no se recalcula el cobro.</p>
+    <p>Ya abonado: Gs. {{ cuenta.pagado|floatformat:"0g" }} — A cobrar ahora: <strong>Gs. 0</strong></p>
   {% else %}
-    <p>
-      No hay una tarifa configurada para el tipo de usuario "{{ cobro.tipo|default:"Externo" }}",
-      así que no se puede estimar el monto todavía.
-    </p>
+    <p>{{ cuenta.horas }} hora{{ cuenta.horas|pluralize }} × Gs. {{ cuenta.tarifa.valor_por_hora|floatformat:"0g" }}/h
+       = Gs. {{ cuenta.monto|floatformat:"0g" }} (tarifa "{{ cuenta.tarifa.descripcion }}" — {{ cuenta.tipo }})</p>
+    {% if movimiento.validado_hasta %}<p>La validación anterior venció: se acumuló nuevamente todo el tiempo.</p>{% endif %}
+    <p>Ya abonado: Gs. {{ cuenta.pagado|floatformat:"0g" }}</p>
+    <p>A cobrar ahora: <strong>Gs. {{ cuenta.a_pagar|floatformat:"0g" }}</strong></p>
   {% endif %}
 </div>
 
