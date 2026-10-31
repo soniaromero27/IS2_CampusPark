@@ -9,20 +9,29 @@ from django.utils import timezone
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models.functions import TruncDate, TruncHour, TruncMonth
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 
 import datetime as dt 
 
 from reglas.models import Reglamento
 from campuspark.paginacion import paginar
-
 from usuarios.decorators import admin_requerido, personal_requerido
+from vehiculos.models import Vehiculo
 
 from .forms import EspacioForm, EspaciosForm, IngresoForm, ReservaForm, ZonaForm, TicketPagoForm, PatenteForm
 from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona, Ticket, Pago
 from .ingreso import analizar_patente, agrupar_por_zona
 from .cuadricula import contexto_cuadricula
+from .reservas_estado import actualizar_reservas_vencidas
 
-from vehiculos.models import Vehiculo
+@login_required
+@require_POST
+def actualizar_reservas_view(request):
+    """Repite la actualización de reservas vencidas sin recargar la página (la llama el botón Actualizar)."""
+    return JsonResponse({"actualizadas": actualizar_reservas_vencidas()})
+
+
 
 @login_required
 def lista_reservas_view(request):
@@ -33,6 +42,16 @@ def lista_reservas_view(request):
     estado, y filtrar por rango de fechas (sobre el día de la reserva)
     con ?desde=AAAA-MM-DD y/o ?hasta=AAAA-MM-DD.
     """
+    
+    actualizadas = actualizar_reservas_vencidas()
+    if actualizadas:
+        messages.info(
+            request,
+            f"Se actualizó {actualizadas} reserva vencida."
+            if actualizadas == 1
+            else f"Se actualizaron {actualizadas} reservas vencidas.",
+        )
+
     campos_orden = {
         "zona": ["espacio__zona__nombre"],
         "espacio": ["espacio__numero"],
@@ -162,6 +181,15 @@ def lista_todas_reservas_view(request):
     zona y estado, y filtrar por rango de fechas (sobre el día de la
     reserva) con ?desde=AAAA-MM-DD y/o ?hasta=AAAA-MM-DD.
     """
+    actualizadas = actualizar_reservas_vencidas()
+    if actualizadas:
+        messages.info(
+            request,
+            f"Se actualizó {actualizadas} reserva vencida."
+            if actualizadas == 1
+            else f"Se actualizaron {actualizadas} reservas vencidas.",
+        )    
+    
     campos_orden = {
         "usuario": ["usuario__apellido", "usuario__nombre"],
         "zona": ["espacio__zona__nombre"],
@@ -998,4 +1026,118 @@ def validar_ticket_view(request, pk):
             "tolerancia": tolerancia,
         },
     )
- 
+
+
+def _leer_periodo(request):
+    """
+    Lee el filtro ?periodo=dia|mes|anio (&dia= / &mes= / &anio=) y devuelve
+    lo que necesitan los dashboards: el rango [inicio, fin) y datos para el formulario.
+    """
+    hoy = timezone.localdate()
+    periodo = request.GET.get("periodo", "mes")
+    if periodo not in ("dia", "mes", "anio"):
+        periodo = "mes"
+    dia = request.GET.get("dia") or hoy.isoformat()
+    mes = request.GET.get("mes") or hoy.strftime("%Y-%m")
+    anio = request.GET.get("anio") or str(hoy.year)
+
+    try:
+        inicio_d, fin_d = _rango_periodo(periodo, dia, mes, anio)
+    except ValueError:
+        messages.error(request, "Fecha inválida: se muestra el mes actual.")
+        periodo, dia, mes, anio = "mes", hoy.isoformat(), hoy.strftime("%Y-%m"), str(hoy.year)
+        inicio_d, fin_d = _rango_periodo(periodo, dia, mes, anio)
+
+    return {
+        "periodo": periodo,
+        "dia": dia,
+        "mes": mes,
+        "anio": anio,
+        "inicio": timezone.make_aware(dt.datetime.combine(inicio_d, dt.time.min)),
+        "fin": timezone.make_aware(dt.datetime.combine(fin_d, dt.time.min)),
+        "rango_texto": {
+            "dia": inicio_d.strftime("%d/%m/%Y"),
+            "mes": inicio_d.strftime("%m/%Y"),
+            "anio": str(inicio_d.year),
+        }[periodo],
+        "formato_serie": {"dia": "H:i", "mes": "d/m/Y", "anio": "m/Y"}[periodo],
+    }
+
+
+@admin_requerido
+def dashboard_ocupacion_view(request):
+    """
+    Dashboard de ocupación (sólo Administrador; cambiá el decorador por
+    personal_requerido si querés que también lo vea el personal).
+
+    - Estado ACTUAL de los espacios (libres/ocupados/reservados/fuera de
+      servicio) por zona y en total: es una foto de "ahora", no depende del filtro.
+    - Entradas y salidas registradas en el período elegido (día, mes o año),
+      en total, por zona y a lo largo del tiempo.
+    """
+    f = _leer_periodo(request)
+    inicio, fin, periodo = f["inicio"], f["fin"], f["periodo"]
+
+    entradas = Movimiento.objects.filter(fecha_hora_ingreso__gte=inicio, fecha_hora_ingreso__lt=fin)
+    salidas = Movimiento.objects.filter(fecha_hora_salida__gte=inicio, fecha_hora_salida__lt=fin)
+
+    # ---- Espacios por zona (estado actual) + entradas/salidas del período por zona ----
+    zonas = list(
+        Zona.objects.select_related("facultad")
+        .annotate(
+            total=Count("espacios"),
+            libres=Count("espacios", filter=Q(espacios__tipo_estado__nombre_estado="Libre")),
+            ocupados=Count("espacios", filter=Q(espacios__tipo_estado__nombre_estado="Ocupado")),
+            reservados=Count("espacios", filter=Q(espacios__tipo_estado__nombre_estado="Reservado")),
+            fuera=Count("espacios", filter=Q(espacios__tipo_estado__nombre_estado="Fuera de servicio")),
+        )
+        .order_by("nombre")
+    )
+    ent_zona = {r["espacio__zona"]: r["n"] for r in entradas.values("espacio__zona").annotate(n=Count("id"))}
+    sal_zona = {r["espacio__zona"]: r["n"] for r in salidas.values("espacio__zona").annotate(n=Count("id"))}
+
+    def pct(parte, todo):
+        return round(parte * 100 / todo) if todo else 0
+
+    for z in zonas:
+        z.entradas = ent_zona.get(z.pk, 0)
+        z.salidas = sal_zona.get(z.pk, 0)
+        z.pct_ocupado = pct(z.ocupados, z.total - z.fuera)   # sobre espacios operativos
+
+    totales = {
+        campo: sum(getattr(z, campo) for z in zonas)
+        for campo in ("total", "libres", "ocupados", "reservados", "fuera", "entradas", "salidas")
+    }
+    totales["pct_ocupado"] = pct(totales["ocupados"], totales["total"] - totales["fuera"])
+    dentro_ahora = Movimiento.objects.filter(fecha_hora_salida__isnull=True).count()
+
+    # ---- Evolución: por hora (día), por día (mes) o por mes (año) ----
+    trunc = {"dia": TruncHour, "mes": TruncDate, "anio": TruncMonth}[periodo]
+    ent = {
+        r["p"]: r["n"]
+        for r in entradas.annotate(p=trunc("fecha_hora_ingreso")).values("p").annotate(n=Count("id"))
+    }
+    sal = {
+        r["p"]: r["n"]
+        for r in salidas.annotate(p=trunc("fecha_hora_salida")).values("p").annotate(n=Count("id"))
+    }
+    serie = [
+        {"p": k, "entradas": ent.get(k, 0), "salidas": sal.get(k, 0)}
+        for k in sorted(set(ent) | set(sal))
+    ]
+    maximo = max((max(s["entradas"], s["salidas"]) for s in serie), default=0)
+    for s in serie:
+        s["pct_entradas"] = pct(s["entradas"], maximo)
+        s["pct_salidas"] = pct(s["salidas"], maximo)
+
+    return render(
+        request,
+        "estacionamiento/dashboard_ocupacion.html",
+        {
+            **f,
+            "zonas": zonas,
+            "totales": totales,
+            "dentro_ahora": dentro_ahora,
+            "serie": serie,
+        },
+    )

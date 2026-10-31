@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin: 20px 0; }
+  .kpi { margin-bottom: 0; }
+  .kpi .valor { font-size: 28px; font-weight: 800; color: #163b68; }
+  .kpi .etiqueta { color: #64748b; font-size: 14px; }
+  .barra { background: #edf4fb; border-radius: 6px; height: 10px; min-width: 100px; }
+  .barra > div { height: 10px; border-radius: 6px; background: #1d5fa7; }
+  .barra.salida > div { background: #d97706; }
+  .filtros { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
+  .filtros .form-row { margin-bottom: 0; }
+  .filtros input, .filtros select { width: auto; }
+  .num { text-align: right; }
+  tr.total td { font-weight: 700; background: #edf4fb; }
+</style>
+
+<h2>Dashboard de ocupación</h2>
+
+{% include "estacionamiento/_filtro_periodo.html" %}
+
+<h3 style="margin-top:28px;">Espacios ahora</h3>
+<p style="color:#64748b;">Estado actual de los espacios (no depende del período elegido).</p>
+<div class="kpis">
+  <div class="card kpi">
+    <div class="etiqueta">Espacios libres</div>
+    <div class="valor">{{ totales.libres }} <span style="font-size:16px; color:#64748b;">de {{ totales.total }}</span></div>
+  </div>
+  <div class="card kpi">
+    <div class="etiqueta">Ocupados / Reservados</div>
+    <div class="valor">{{ totales.ocupados }} / {{ totales.reservados }}</div>
+  </div>
+  <div class="card kpi">
+    <div class="etiqueta">% ocupado (sobre espacios operativos)</div>
+    <div class="valor">{{ totales.pct_ocupado }}%</div>
+  </div>
+  <div class="card kpi">
+    <div class="etiqueta">Vehículos dentro ahora</div>
+    <div class="valor">{{ dentro_ahora }}</div>
+  </div>
+</div>
+
+<h3>Por zona</h3>
+<p style="color:#64748b;">Entradas y salidas corresponden al período: {{ rango_texto }}.</p>
+<table>
+  <tr>
+    <th>Zona</th><th>Facultad</th>
+    <th class="num">Total</th><th class="num">Libres</th><th class="num">Ocupados</th>
+    <th class="num">Reservados</th><th class="num">Fuera de serv.</th><th class="num">% ocupado</th>
+    <th class="num">Entradas</th><th class="num">Salidas</th>
+  </tr>
+  {% for z in zonas %}
+  <tr>
+    <td>{{ z.nombre }}</td>
+    <td>{{ z.facultad|default:"Pública" }}</td>
+    <td class="num">{{ z.total }}</td>
+    <td class="num"><strong>{{ z.libres }}</strong></td>
+    <td class="num">{{ z.ocupados }}</td>
+    <td class="num">{{ z.reservados }}</td>
+    <td class="num">{{ z.fuera }}</td>
+    <td class="num">{{ z.pct_ocupado }}%</td>
+    <td class="num">{{ z.entradas }}</td>
+    <td class="num">{{ z.salidas }}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="10">Todavía no hay zonas cargadas.</td></tr>
+  {% endfor %}
+  {% if zonas %}
+  <tr class="total">
+    <td colspan="2">Total</td>
+    <td class="num">{{ totales.total }}</td>
+    <td class="num">{{ totales.libres }}</td>
+    <td class="num">{{ totales.ocupados }}</td>
+    <td class="num">{{ totales.reservados }}</td>
+    <td class="num">{{ totales.fuera }}</td>
+    <td class="num">{{ totales.pct_ocupado }}%</td>
+    <td class="num">{{ totales.entradas }}</td>
+    <td class="num">{{ totales.salidas }}</td>
+  </tr>
+  {% endif %}
+</table>
+
+<h3 style="margin-top:28px;">Entradas y salidas ({{ rango_texto }})</h3>
+<div class="kpis">
+  <div class="card kpi">
+    <div class="etiqueta">Entradas registradas</div>
+    <div class="valor">{{ totales.entradas }}</div>
+  </div>
+  <div class="card kpi">
+    <div class="etiqueta">Salidas registradas</div>
+    <div class="valor">{{ totales.salidas }}</div>
+  </div>
+</div>
+
+<table>
+  <tr>
+    <th>{% if periodo == "dia" %}Hora{% elif periodo == "mes" %}Día{% else %}Mes{% endif %}</th>
+    <th class="num">Entradas</th><th></th>
+    <th class="num">Salidas</th><th></th>
+  </tr>
+  {% for s in serie %}
+  <tr>
+    <td>{{ s.p|date:formato_serie }}</td>
+    <td class="num">{{ s.entradas }}</td>
+    <td><div class="barra"><div style="width:{{ s.pct_entradas }}%"></div></div></td>
+    <td class="num">{{ s.salidas }}</td>
+    <td><div class="barra salida"><div style="width:{{ s.pct_salidas }}%"></div></div></td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="5">No hay entradas ni salidas registradas en este período.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

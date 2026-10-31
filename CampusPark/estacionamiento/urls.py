@@ -9,7 +9,8 @@ urlpatterns = [
     path("reservas/nueva/", views.crear_reserva_view, name="reserva_crear"),
     path("reservas/<int:pk>/cancelar/", views.cancelar_reserva_view, name="reserva_cancelar"),
     path("reservas/todas/", views.lista_todas_reservas_view, name="reservas_lista_todas"),
-
+    path("reservas/actualizar/", views.actualizar_reservas_view, name="reservas_actualizar"),
+    
     path("espacios/", views.lista_espacios_view, name="espacios_lista"),
     path("espacios/<int:pk>/editar/", views.editar_espacio_view, name="espacio_editar"),
 
@@ -32,4 +33,5 @@ urlpatterns = [
     path("pagar-tickets/", views.pagar_tickets_view, name="pagar_tickets"),
     
     path("dashboard/", views.dashboard_view, name="dashboard"),
+    path("dashboard/ocupacion/", views.dashboard_ocupacion_view, name="dashboard_ocupacion"),
 ]
