@@ -1,31 +1,152 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-  form button a{
-    color: inherit;
-    text-decoration: none;
+  .toggle-vista { display: inline-flex; border: 1px solid #1d5fa7; border-radius: 8px; overflow: hidden; margin: 6px 0 14px; }
+  .toggle-vista a { padding: 10px 20px; text-decoration: none; font-size: 14px; font-weight: 600; color: #1d5fa7; background: white; }
+  .toggle-vista a.activo { background: #1d5fa7; color: white; }
+  .acciones { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+
+  /* Cuadrícula: una zona desplegable, un cuadro por espacio (radio escondido) */
+  .sala { margin-top: 12px; }
+  .sala > summary {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+    padding: 12px 16px; cursor: pointer; list-style: none;
+    background: white; border: 1px solid #e7edf5; border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 45, 82, 0.06);
   }
+  .sala > summary::-webkit-details-marker { display: none; }
+  .sala > summary::before { content: "▶"; font-size: 12px; color: #1d5fa7; transition: transform 0.15s ease; }
+  .sala[open] > summary::before { transform: rotate(90deg); }
+  .sala-nombre { font-weight: 700; font-size: 16px; color: #163b68; margin-right: auto; }
+  .sala-info { color: #64748b; font-size: 14px; }
+  .asientos {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px;
+    margin-top: 10px; padding: 16px; background: white;
+    border: 1px solid #e7edf5; border-radius: 14px; box-shadow: 0 4px 15px rgba(15, 45, 82, 0.07);
+  }
+  .cuadro-espacio { display: block; position: relative; cursor: pointer; margin: 0; font-weight: normal; }
+  .cuadro-espacio input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+  .caja {
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    min-height: 64px; padding: 10px 6px; border-radius: 10px; border: 2px solid #16a34a;
+    background: #dcfce7; color: #14532d; text-align: center; line-height: 1.25; transition: all 0.15s ease;
+  }
+  .caja .num { font-weight: 700; font-size: 17px; }
+  .caja .sub { font-size: 12px; }
+  .caja.reservado { background: #fef3c7; border-color: #d97706; color: #78350f; }
+  .caja.conflicto { background: #fee2e2; border-color: #dc2626; color: #7f1d1d; }
+  .cuadro-espacio:hover .caja { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(15, 45, 82, 0.2); }
+  .cuadro-espacio input:checked + .caja { background: #1d5fa7; border-color: #154b86; color: white; }
+  .cuadro-espacio input:focus-visible + .caja { outline: 3px solid #93c5fd; outline-offset: 2px; }
 </style>
 
 <h2>Registrar ingreso</h2>
-<form method="post">
-  {% csrf_token %}
-  {{ form.non_field_errors }}
-  {% for field in form %}
+
+{% if paso == 1 %}
+
+  <p>Paso 1 de 2: ingresá la chapa del vehículo.</p>
+  <form method="get">
+    {{ form.non_field_errors }}
     <div class="form-row">
-      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-      {{ field }}
-      {{ field.errors }}
+      <label for="{{ form.patente.id_for_label }}">{{ form.patente.label }}</label>
+      {{ form.patente }}
+      {{ form.patente.errors }}
     </div>
-  {% endfor %}
-  <button type="submit">Ingresar vehículo</button>
-  <button><a href="{% url 'estacionamiento:movimientos_lista' %}">Atrás</a></button>
-</form>
+    <input type="hidden" name="vista" value="{{ vista }}">
+    <div class="acciones">
+      <button type="submit">Continuar</button>
+      <a href="{% url 'estacionamiento:movimientos_lista' %}" class="btn">Atrás</a>
+    </div>
+  </form>
+  <datalist id="patentes-datalist">
+    {% for p in patentes %}<option value="{{ p }}"></option>{% endfor %}
+  </datalist>
 
-<datalist id="patentes-datalist">
-  {% for p in patentes %}
-    <option value="{{ p }}"></option>
-  {% endfor %}
-</datalist>
+{% else %}
 
+  <p>Paso 2 de 2: elegí el espacio para <strong>{{ patente }}</strong>.
+     <a href="{% url 'estacionamiento:movimiento_ingreso' %}?vista={{ vista }}">Cambiar chapa</a></p>
+
+  <div class="card">
+    {% if usuario %}
+      <p><strong>Titular:</strong> {{ usuario.nombre }} {{ usuario.apellido }} — {{ usuario.tipo }}{% if usuario.facultad %} — {{ usuario.facultad }}{% endif %}</p>
+    {% else %}
+      <p><strong>Patente no registrada:</strong> sólo puede usar zonas públicas (sin facultad).</p>
+    {% endif %}
+
+    {% if con_reserva %}
+      <p><strong>Tiene {{ reservas|length }} reserva{{ reservas|length|pluralize }} vigente{{ reservas|length|pluralize }} ahora.</strong>
+         Elegí uno de los espacios reservados.</p>
+      <p><small>Si el espacio reservado está ocupado, se asigna automáticamente otro libre de la misma zona.</small></p>
+    {% else %}
+      <p>No tiene reservas vigentes: se muestran los espacios libres de las zonas a las que tiene acceso.</p>
+    {% endif %}
+  </div>
+
+  <div class="toggle-vista">
+    <a href="?patente={{ patente|urlencode }}&vista=lista" class="{% if vista == 'lista' %}activo{% endif %}">Lista</a>
+    <a href="?patente={{ patente|urlencode }}&vista=cuadros" class="{% if vista == 'cuadros' %}activo{% endif %}">Cuadrícula</a>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.patente }}
+    <input type="hidden" name="vista" value="{{ vista }}">
+    {{ form.non_field_errors }}
+    {{ form.patente.errors }}
+
+    {% if not espacios %}
+      <p>No hay espacios disponibles para esta chapa en este momento.</p>
+
+    {% elif vista == 'cuadros' %}
+      {% for g in grupos %}
+      <details class="sala" open>
+        <summary>
+          <span class="sala-nombre">{{ g.zona }}</span>
+          <span class="sala-info">{% if g.zona.facultad %}Facultad: {{ g.zona.facultad }}{% else %}Zona pública{% endif %}</span>
+        </summary>
+        <div class="asientos">
+          {% for e in g.espacios %}
+          <label class="cuadro-espacio" title="{{ e.zona }} - N°{{ e.numero }}">
+            <input type="radio" name="espacio" value="{{ e.pk }}" required
+                   {% if form.espacio.value|stringformat:"s" == e.pk|stringformat:"s" %}checked{% endif %}>
+            <span class="caja{% if e.conflicto %} conflicto{% elif e.reserva %} reservado{% endif %}">
+              <span class="num">{{ e.numero }}</span>
+              <span class="sub">
+                {% if e.conflicto %}{{ e.tipo_estado }}
+                {% elif e.reserva %}Reserva {{ e.reserva.fecha_inicio|time:"H:i" }}–{{ e.reserva.fecha_fin|time:"H:i" }}
+                {% else %}Libre{% endif %}
+              </span>
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+      </details>
+      {% endfor %}
+
+    {% else %}
+      <div class="form-row">
+        <label for="id_espacio">Espacio</label>
+        <select name="espacio" id="id_espacio" required>
+          <option value="">---------</option>
+          {% for e in espacios %}
+          <option value="{{ e.pk }}" {% if form.espacio.value|stringformat:"s" == e.pk|stringformat:"s" %}selected{% endif %}>
+            {{ e.zona }} - N°{{ e.numero }}
+            {% if e.reserva %}· Reserva {{ e.reserva.fecha_inicio|time:"H:i" }}–{{ e.reserva.fecha_fin|time:"H:i" }}{% endif %}
+            {% if e.conflicto %}· {{ e.tipo_estado }} (se reasigna){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endif %}
+
+    {{ form.espacio.errors }}
+
+    <div class="acciones">
+      {% if espacios %}<button type="submit">Ingresar vehículo</button>{% endif %}
+      <a href="{% url 'estacionamiento:movimientos_lista' %}" class="btn">Atrás</a>
+    </div>
+  </form>
+
+{% endif %}
 {% endblock %}

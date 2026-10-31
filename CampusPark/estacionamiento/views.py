@@ -17,13 +17,12 @@ from campuspark.paginacion import paginar
 
 from usuarios.decorators import admin_requerido, personal_requerido
 
-from .forms import EspacioForm, EspaciosForm, IngresoForm, ReservaForm, ZonaForm, TicketPagoForm
+from .forms import EspacioForm, EspaciosForm, IngresoForm, ReservaForm, ZonaForm, TicketPagoForm, PatenteForm
 from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona, Ticket, Pago
-
+from .ingreso import analizar_patente, agrupar_por_zona
+from .cuadricula import contexto_cuadricula
 
 from vehiculos.models import Vehiculo
-
-from .cuadricula import contexto_cuadricula
 
 @login_required
 def lista_reservas_view(request):
@@ -424,24 +423,31 @@ def lista_movimientos_view(request):
         },
     )
 
-
 @personal_requerido
 def registrar_ingreso_view(request):
     """
-    Registrar ingreso de vehículo: sólo Personal de Estacionamiento o
-    Administrador. Se ingresa únicamente la patente; si coincide con un
-    Vehiculo registrado se linkea (y con él su Usuario dueño), y si no,
-    el movimiento se crea igual, sin Vehiculo asociado ("No registrado"),
-    sin crear ningún Vehiculo ni Usuario nuevo.
+    Registrar ingreso de vehículo en 2 pasos (sólo Personal o Administrador):
 
-    Si el dueño tiene una reserva vigente ahora mismo, IngresoForm ya
-    resolvió el espacio como el reservado (ver form.reserva_activa) o,
-    si ese espacio estaba ocupado, por otro libre de la misma zona (ver
-    form.reasignado/form.espacio_original); acá sólo falta marcar esa
-    reserva como 'Confirmada' (actualizando su espacio si hubo
-    reasignación) y avisar del cambio. En cualquier caso, marca el
-    espacio final como 'Ocupado'.
+      Paso 1  GET  ?patente=...   -> se escribe la chapa (PatenteForm).
+      Paso 2  GET  (chapa válida) -> se muestran los espacios elegibles, en
+              lista o en cuadrícula (?vista=lista|cuadros): los espacios
+              RESERVADOS si la chapa tiene reservas vigentes, o los libres
+              de las zonas a las que el usuario tiene acceso si no.
+              POST                -> se valida de nuevo (IngresoForm) y se
+              registra el movimiento.
+
+    Si el ingreso corresponde a una reserva, se la marca 'Confirmada'
+    (actualizando su espacio si hubo reasignación) y se avisa; en todos los
+    casos el espacio final queda 'Ocupado'.
     """
+    vista = request.GET.get("vista") or request.POST.get("vista") or "lista"
+    if vista not in ("lista", "cuadros"):
+        vista = "lista"
+
+    form = None      # formulario del paso 2
+    paso1 = None     # formulario del paso 1
+    patente = ""
+
     if request.method == "POST":
         form = IngresoForm(request.POST)
         if form.is_valid():
@@ -466,44 +472,61 @@ def registrar_ingreso_view(request):
                 )
                 reserva = form.reserva_activa
                 reserva.tipo_estado_reserva = estado_confirmada
-                reserva.estado_reserva = 2
                 if form.reasignado:
                     reserva.espacio = espacio
                 reserva.save()
 
                 if form.reasignado:
-                    if form.cambio_de_zona:
-                        messages.warning(
-                            request,
-                            f"{patente} tenía reservado el espacio N°{form.espacio_original.numero} "
-                            f"de la zona '{form.espacio_original.zona}', pero estaba ocupado y no "
-                            f"había otro libre ahí: se lo asignó al espacio N°{espacio.numero} de "
-                            f"la zona '{espacio.zona}'.",
-                        )
-                    else:
-                        messages.warning(
-                            request,
-                            f"{patente} tenía reservado el espacio N°{form.espacio_original.numero} "
-                            f"de la zona '{espacio.zona}', pero estaba ocupado: se lo reasignó al "
-                            f"espacio N°{espacio.numero} de la misma zona.",
-                        )
+                    messages.warning(
+                        request,
+                        f"{patente} tenía reservado el espacio N°{form.espacio_original.numero} "
+                        f"de la zona '{espacio.zona}', pero estaba ocupado: se lo reasignó al "
+                        f"espacio N°{espacio.numero} de la misma zona.",
+                    )
                 else:
                     messages.success(
                         request,
-                        f"{patente} tenía una reserva vigente: se lo asignó automáticamente a "
-                        f"la zona '{espacio.zona}', espacio N°{espacio.numero}.",
+                        f"{patente} ingresó en su espacio reservado: zona '{espacio.zona}', "
+                        f"espacio N°{espacio.numero}.",
                     )
 
             return redirect("estacionamiento:movimientos_lista")
-    else:
-        form = IngresoForm()
+
+        patente = form.cleaned_data.get("patente") or ""
+        if not patente:  # la chapa dejó de ser válida entre un paso y el otro
+            paso1 = PatenteForm({"patente": request.POST.get("patente", "")})
+            paso1.is_valid()
+
+    elif request.GET.get("patente"):
+        paso1 = PatenteForm(request.GET)
+        if paso1.is_valid():
+            patente = paso1.cleaned_data["patente"]
+            form = IngresoForm(initial={"patente": patente})
+
+    if patente:
+        analisis = analizar_patente(patente)
+        return render(
+            request,
+            "estacionamiento/ingreso_form.html",
+            {
+                "paso": 2,
+                "form": form,
+                "vista": vista,
+                "patente": patente,
+                "usuario": analisis["usuario"],
+                "reservas": analisis["reservas"],
+                "con_reserva": analisis["con_reserva"],
+                "espacios": analisis["espacios"],
+                "grupos": agrupar_por_zona(analisis["espacios"]),
+            },
+        )
+
     patentes = Vehiculo.objects.order_by("matricula").values_list("matricula", flat=True)
     return render(
         request,
         "estacionamiento/ingreso_form.html",
-        {"form": form, "patentes": patentes},
+        {"paso": 1, "form": paso1 or PatenteForm(), "vista": vista, "patentes": patentes},
     )
-
 
 @personal_requerido
 def registrar_salida_view(request, pk):
