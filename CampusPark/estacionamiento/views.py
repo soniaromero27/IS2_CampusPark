@@ -793,9 +793,36 @@ def mis_movimientos_view(request):
         {"movimientos": movimientos, "orden": orden, "dir": direccion, "q": q},
     )
  
+
 @personal_requerido
 def lista_tickets_view(request):
-    """Todos los tickets. Filtros: ?estado=pendiente|pagado|sin_tarifa y ?q=..."""
+    """
+    Todos los tickets. Filtros: ?estado=pendiente|pagado|sin_cargo|sin_tarifa y ?q=...
+    (número, patente, nombre, apellido o documento). Se puede ordenar por cualquier
+    columna con ?orden=<campo>&dir=<asc|desc>.
+    """
+    campos_orden = {
+        "numero": ["numero"],
+        "patente": ["patente", "numero"],
+        "usuario": ["usuario__apellido", "usuario__nombre", "numero"],
+        "salida": ["fecha_salida"],
+        "horas": ["horas", "numero"],
+        "monto": ["monto", "numero"],
+        "estado": ["estado", "numero"],
+    }
+ 
+    orden = request.GET.get("orden", "numero")
+    if orden not in campos_orden:
+        orden = "numero"
+ 
+    direccion = request.GET.get("dir", "desc")
+    if direccion not in ("asc", "desc"):
+        direccion = "desc"
+ 
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+ 
     q = request.GET.get("q", "").strip()
     estado = request.GET.get("estado", "")
  
@@ -804,18 +831,27 @@ def lista_tickets_view(request):
         tickets = tickets.filter(estado=estado)
     if q:
         tickets = tickets.filter(
-            Q(patente__icontains=q)
+            Q(numero__icontains=q)
+            | Q(patente__icontains=q)
             | Q(usuario__nombre__icontains=q)
             | Q(usuario__apellido__icontains=q)
             | Q(usuario__documento__icontains=q)
         )
+    tickets = tickets.order_by(*campos)
+ 
     return render(
         request,
         "estacionamiento/tickets_lista.html",
-        {"tickets": tickets, "q": q, "estado": estado, "estados": Ticket.Estado.choices},
+        {
+            **paginar(request, tickets, "tickets"),
+            "q": q,
+            "estado": estado,
+            "estados": Ticket.Estado.choices,
+            "orden": orden,
+            "dir": direccion,
+        },
     )
- 
- 
+
 @login_required
 def detalle_ticket_view(request, pk):
     """Ticket: lo ve su dueño o el personal/administrador."""
@@ -979,42 +1015,42 @@ def pagar_tickets_view(request):
     )
  
  
+
 @login_required
 def validar_ticket_view(request, pk):
     """
-    El usuario valida y paga su propio ticket ANTES de salir. Paga sólo lo
-    que falta (excedente de lo ya pagado) y queda con la tolerancia del
-    Reglamento para salir sin recálculo.
+    El usuario valida (y paga, si hay algo que pagar) su propio ticket ANTES de salir.
+    Si no hay nada para cobrar (0 Gs.), no se piden formas de pago: alcanza con
+    el botón Validar. El monto se vuelve a calcular al confirmar, con el movimiento
+    bloqueado: si mientras tanto pasó a haber algo que pagar, pide la forma de pago.
     """
     perfil = request.user.perfil
-    movimiento = get_object_or_404(
-        _abiertos_del_usuario(perfil), pk=pk
-    )
+    movimiento = get_object_or_404(_abiertos_del_usuario(perfil), pk=pk)
     tolerancia = Reglamento.tolerancia_actual()
+    form = TicketPagoForm()
  
     if request.method == "POST":
         form = TicketPagoForm(request.POST)
-        if form.is_valid():
-            try:
-                with transaction.atomic():
-                    bloqueado = get_object_or_404(
-                        Movimiento.objects.select_for_update(of=("self",)),
-                        pk=pk, vehiculo__usuario=perfil, fecha_hora_salida__isnull=True,
-                    )
-                    cobrado = bloqueado.validar(form.cleaned_data["metodo"], perfil)
-                hasta = timezone.localtime(bloqueado.validado_hasta)
-                messages.success(
-                    request,
-                    f"Ticket de {bloqueado.patente} validado"
-                    f"{f' (pagaste Gs. {int(cobrado)})' if cobrado else ''}. "
-                    f"Tenés hasta las {hasta:%H:%M} hs para salir sin recargo.",
+        metodo = form.cleaned_data["metodo"] if form.is_valid() else None
+        try:
+            with transaction.atomic():
+                bloqueado = get_object_or_404(
+                    Movimiento.objects.select_for_update(of=("self",)),
+                    pk=pk, vehiculo__usuario=perfil, fecha_hora_salida__isnull=True,
                 )
-                return redirect("estacionamiento:mis_movimientos")
-            except ValidationError as e:
-                messages.error(request, " ".join(e.messages))
-                movimiento = get_object_or_404(_abiertos_del_usuario(perfil), pk=pk)
-    else:
-        form = TicketPagoForm()
+                cobrado = bloqueado.validar(metodo, perfil)
+            hasta = timezone.localtime(bloqueado.validado_hasta)
+            messages.success(
+                request,
+                f"Ticket de {bloqueado.patente} validado"
+                f"{f' (pagaste Gs. {int(cobrado)})' if cobrado else ''}. "
+                f"Tenés hasta las {hasta:%H:%M} hs para salir sin recargo.",
+            )
+            return redirect("estacionamiento:mis_movimientos")
+        except ValidationError as e:
+            messages.error(request, " ".join(e.messages))
+            movimiento = get_object_or_404(_abiertos_del_usuario(perfil), pk=pk)
+            form = TicketPagoForm()  # formulario limpio, sin errores de campo
  
     return render(
         request,
@@ -1026,6 +1062,7 @@ def validar_ticket_view(request, pk):
             "tolerancia": tolerancia,
         },
     )
+ 
 
 
 def _leer_periodo(request):

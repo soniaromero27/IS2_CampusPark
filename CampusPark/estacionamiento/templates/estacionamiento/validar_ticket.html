@@ -14,27 +14,44 @@
     <p>Podés salir hasta las <strong>{{ movimiento.validado_hasta|time:"H:i" }} hs</strong> sin que se recalcule el cobro.
        Si pasa ese horario, se vuelve a acumular el tiempo y sólo se cobra el excedente de lo que ya pagaste.</p>
 
-  {% else %}
+  {% elif cuenta.a_pagar %}
     <p>{{ cuenta.horas }} hora{{ cuenta.horas|pluralize }} × Gs. {{ cuenta.tarifa.valor_por_hora|floatformat:"0g" }}/h
        = Gs. {{ cuenta.monto|floatformat:"0g" }}</p>
     <p>Ya pagado: Gs. {{ cuenta.pagado|floatformat:"0g" }}</p>
     <h3>A pagar ahora: Gs. {{ cuenta.a_pagar|floatformat:"0g" }}</h3>
     {% if movimiento.validado_hasta %}<p>Tu validación anterior venció.</p>{% endif %}
     <p>Después de validar tenés {{ tolerancia }} minutos para salir sin recargo.</p>
+
+  {% else %}
+    <h3>No tenés nada para pagar</h3>
+    {% if cuenta.pagado %}
+      <p>Lo que ya pagaste (Gs. {{ cuenta.pagado|floatformat:"0g" }}) cubre toda tu estadía hasta ahora.</p>
+    {% else %}
+      <p>Tu ticket no tiene cargo (Gs. 0).</p>
+    {% endif %}
+    {% if movimiento.validado_hasta %}<p>Tu validación anterior venció.</p>{% endif %}
+    <p>Validalo y tenés {{ tolerancia }} minutos para salir sin recargo.</p>
   {% endif %}
 </div>
 
 {% if cuenta.tarifa is not None and not cuenta.validado %}
 <form method="post">
-	{% csrf_token %}
-	{% for field in form %}
-		<div class="form-row">
-			<label for="{{ field.id_for_label }}">{{ field.label }}</label>
-				{{ field }}
-			{{ field.errors }}
-		</div>
-	{% endfor %}
-	<button type="submit">{% if cuenta.a_pagar %}Pagar y validar{% else %}Validar{% endif %}</button>
+  {% csrf_token %}
+  {% if cuenta.a_pagar %}
+    {# Hay algo para pagar: se elige la forma de pago #}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      <div class="form-row">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+    <button type="submit">Pagar y validar</button>
+  {% else %}
+    {# Sin cargo: sólo el botón #}
+    <button type="submit">Validar</button>
+  {% endif %}
 </form>
 {% endif %}
 

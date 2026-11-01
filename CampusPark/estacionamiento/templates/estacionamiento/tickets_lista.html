@@ -1,22 +1,66 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  th a, th a:visited, th a:hover, th a:active, td a {
+    color: inherit;
+    text-decoration: none;
+  }
+</style>
+
 <h2>Tickets de salida</h2>
 
-<form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:600px;">
-  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por patente, nombre o documento..." style="width:100%;">
+<form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:650px;">
+  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por N°, patente, nombre o documento..." style="width:100%;">
   <select name="estado" style="width:auto;">
     <option value="">Todos</option>
     {% for valor, etiqueta in estados %}
       <option value="{{ valor }}" {% if valor == estado %}selected{% endif %}>{{ etiqueta }}</option>
     {% endfor %}
   </select>
+  <input type="hidden" name="orden" value="{{ orden }}">
+  <input type="hidden" name="dir" value="{{ dir }}">
   <button type="submit">Filtrar</button>
-  {% if q or estado %}<a href="{% url 'estacionamiento:tickets_lista' %}">Limpiar</a>{% endif %}
+  {% if q or estado %}<a href="?orden={{ orden }}&dir={{ dir }}" class="btn">Limpiar</a>{% endif %}
 </form>
 
 <table>
   <tr>
-    <th>N°</th><th>Patente</th><th>Usuario</th><th>Salida</th><th>Horas</th><th>Monto</th><th>Estado</th><th></th>
+    <th>
+      <a href="?orden=numero&dir={% if orden == 'numero' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
+        N°{% if orden == 'numero' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=patente&dir={% if orden == 'patente' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
+        Patente{% if orden == 'patente' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=usuario&dir={% if orden == 'usuario' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
+        Usuario{% if orden == 'usuario' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=salida&dir={% if orden == 'salida' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
+        Salida{% if orden == 'salida' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=horas&dir={% if orden == 'horas' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
+        Horas{% if orden == 'horas' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=monto&dir={% if orden == 'monto' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
+        Monto{% if orden == 'monto' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=estado&dir={% if orden == 'estado' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
+        Estado{% if orden == 'estado' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th></th>
   </tr>
   {% for t in tickets %}
   <tr>
@@ -25,12 +69,16 @@
     <td>{% if t.usuario %}{{ t.usuario.nombre }} {{ t.usuario.apellido }}{% else %}No registrado{% endif %}</td>
     <td>{{ t.fecha_salida }}</td>
     <td>{{ t.horas }}</td>
-    <td>{% if t.monto is not None %}Gs. {{ t.monto|floatformat:0 }}{% else %}—{% endif %}</td>
+    <td>{% if t.monto is not None %}Gs. {{ t.monto|floatformat:"0g" }}{% else %}—{% endif %}</td>
     <td>{{ t.get_estado_display }}</td>
-    <td><a href="{% url 'estacionamiento:ticket_detalle' t.pk %}">Ver</a></td>
+    <td><a href="{% url 'estacionamiento:ticket_detalle' t.pk %}">
+		<span class="material-symbols-outlined">description</span></a>
+	</td>
+		
   </tr>
   {% empty %}
   <tr><td colspan="8">No hay tickets que coincidan.</td></tr>
   {% endfor %}
 </table>
+{% include "_paginacion.html" %}
 {% endblock %}

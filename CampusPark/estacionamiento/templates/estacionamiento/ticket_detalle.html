@@ -43,9 +43,9 @@
 
 <p>
   {% if user.perfil.es_personal %}
-    <a href="{% url 'estacionamiento:tickets_lista' %}">Volver a tickets</a>
+    <a href="{% url 'estacionamiento:tickets_lista' %}" class="btn">Volver a tickets</a>
   {% else %}
-    <a href="{% url 'estacionamiento:mis_movimientos' %}">Volver a mis movimientos</a>
+    <a href="{% url 'estacionamiento:mis_movimientos' %}" class="btn">Volver a mis movimientos</a>
   {% endif %}
 </p>
 {% endblock %}

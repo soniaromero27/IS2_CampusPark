@@ -297,11 +297,14 @@ class Movimiento(models.Model):
  
         a_pagar = cuenta["a_pagar"]
         if a_pagar > 0:
+            if not metodo:
+                raise ValidationError("Elegí una forma de pago para continuar.")
             Pago.objects.create(
                 movimiento=self, monto=a_pagar, metodo=metodo,
                 origen=Pago.Origen.VALIDACION, fecha_pago=ahora,
                 registrado_por=registrado_por,
             )
+ 
         self.validado_en = ahora
         self.validado_hasta = ahora + timedelta(minutes=Reglamento.tolerancia_actual())
         self.save(update_fields=["validado_en", "validado_hasta"])
@@ -314,7 +317,8 @@ class Ticket(models.Model):
     guarda una "foto" del cobro (tarifa, horas, monto) por si después
     cambian las tarifas o se borra el vehículo. Incluye el estado de pago.
     """
-
+    from django.db import IntegrityError, models, transaction
+    
     class Estado(models.TextChoices):
         PENDIENTE = "pendiente", "Pendiente de pago"
         PAGADO = "pagado", "Pagado"
@@ -329,6 +333,9 @@ class Ticket(models.Model):
     movimiento = models.OneToOneField(
         Movimiento, on_delete=models.PROTECT, related_name="ticket"
     )
+    
+    numero = models.CharField(max_length=20, unique=True, editable=False)
+    
     usuario = models.ForeignKey(
         Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name="tickets",
         help_text="Dueño del vehículo al momento de la salida (vacío = no registrado).",
@@ -366,10 +373,6 @@ class Ticket(models.Model):
 
     def __str__(self):
         return f"{self.numero} - {self.patente}"
-
-    @property
-    def numero(self):
-        return f"T-{self.pk:06d}" if self.pk else "T-?"
 
     @property
     def monto_a_cobrar(self):
@@ -447,6 +450,35 @@ class Ticket(models.Model):
             self.fecha_pago = timezone.now()
             self.cobrado_por = cobrado_por
             self.save()
+ 
+    def save(self, *args, **kwargs):
+        """
+        Numeración: T-AAAAMMDD + secuencia de 5 dígitos que arranca en 00001 cada
+        día (según la fecha local de emisión). Ej: T-2026103100004 = 4.º ticket
+        del 31/10/2026. Si dos tickets pidieran el mismo número a la vez, la
+        restricción unique lo impide y se reintenta con el siguiente.
+        """
+        if self.numero:
+            return super().save(*args, **kwargs)
+ 
+        prefijo = f"T-{timezone.localdate():%Y%m%d}"
+        ultimo_error = None
+        for _ in range(10):
+            ultimo = (
+                Ticket.objects.filter(numero__startswith=prefijo)
+                .order_by("-numero")
+                .values_list("numero", flat=True)
+                .first()
+            )
+            secuencia = int(ultimo[len(prefijo):]) + 1 if ultimo else 1
+            self.numero = f"{prefijo}{secuencia:05d}"
+            try:
+                with transaction.atomic():
+                    return super().save(*args, **kwargs)
+            except IntegrityError as e:
+                ultimo_error = e
+        self.numero = ""
+        raise ultimo_error
  
  
 class Pago(models.Model):

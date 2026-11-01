@@ -554,11 +554,14 @@
 				</a>
 				<a href="{% url 'estacionamiento:dashboard_ocupacion' %}" class="top-link">
 					<span class="material-symbols-outlined">local_parking</span> Dashboard de Ocupación
-				</a>			
-				<a href="{% url 'usuarios:solicitudes' %}" class="top-link" title="Solicitudes de registro">
-					<span class="material-symbols-outlined">notifications</span>
-					{% if solicitudes_pendientes %}<span class="badge">{{ solicitudes_pendientes }}</span>{% endif %}
 				</a>
+				
+				{% if solicitudes_pendientes %}				
+					<a href="{% url 'usuarios:solicitudes' %}" class="top-link" title="Solicitudes de registro">
+						<span class="material-symbols-outlined">notifications</span>
+						<span class="badge">{{ solicitudes_pendientes }}</span>
+					</a>
+				{% endif %}
 			{% endif %}
 			
             {% if user.is_authenticated %}
