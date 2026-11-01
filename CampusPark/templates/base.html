@@ -407,7 +407,54 @@
             color: #64748b;
             font-size: 13px;
         }
-
+		
+        /* ===== MENÚ LATERAL: secciones desplegables ===== */
+ 
+        .menu-seccion {
+            margin-top: 10px;
+        }
+ 
+        .menu-seccion > summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-radius: 8px;
+ 
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #64748b;
+ 
+            cursor: pointer;
+            list-style: none;
+            user-select: none;
+        }
+ 
+        .menu-seccion > summary::-webkit-details-marker {
+            display: none;
+        }
+ 
+        .menu-seccion > summary::after {
+            content: "▸";
+            font-size: 14px;
+            transition: transform 0.15s ease;
+        }
+ 
+        .menu-seccion[open] > summary::after {
+            transform: rotate(90deg);
+        }
+ 
+        .menu-seccion > summary:hover {
+            background: #edf4fb;
+            color: #163b68;
+        }
+ 
+        .menu-seccion > a {
+            margin-left: 6px;
+        }
+ 
         /* ===== RESPONSIVE ===== */
 
         @media (max-width: 800px) {
@@ -473,6 +520,10 @@
             .logo-text {
                 font-size: 21px;
             }
+			
+			.menu-seccion {
+				flex-basis: 100%;
+			}
         }
 
     </style>
@@ -553,62 +604,71 @@
 
     <div class="layout">
 
-        <!-- MENÚ LATERAL (sólo con la sesión iniciada) -->
+	<!-- MENÚ LATERAL (sólo con la sesión iniciada) -->
 
-        {% if user.is_authenticated %}
-        <nav class="sidebar" aria-label="Menú principal">
-            {% with vn=request.resolver_match.view_name %}
 
-            <a href="{% url 'reglas:reglamento' %}"{% if vn == 'reglas:reglamento' or vn == 'reglas:reglamento_editar' or vn == 'reglas:reglamento_horarios' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">menu_book</span> Reglas</a>
+	{% if user.is_authenticated %}
+	<nav class="sidebar" aria-label="Menú principal">
+		{% with vn=request.resolver_match.view_name %}
+	 
+		<details class="menu-seccion" data-seccion="principal">
+			<summary><span>Principal</span></summary>
 			
-            <a href="{% url 'estacionamiento:espacios_lista' %}"{% if vn == 'estacionamiento:espacios_lista' or vn == 'estacionamiento:espacio_editar' or vn == 'estacionamiento:espacios_crear' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">grid_view</span> Espacios</a>
-
-            <a href="{% url 'reglas:tarifas_lista' %}"{% if vn == 'reglas:tarifas_lista' or vn == 'reglas:tarifa_crear' or vn == 'reglas:tarifa_editar' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">payments</span> Tarifas</a>
-			
-            {% if user.perfil.es_personal %}
-            <p class="sidebar-titulo">Gestión</p>
-			
-            <a href="{% url 'estacionamiento:movimientos_lista' %}"{% if vn == 'estacionamiento:movimientos_lista' or vn == 'estacionamiento:movimiento_ingreso' or vn == 'estacionamiento:movimiento_salida' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">swap_horiz</span> Ingresos y salidas</a>
-			
-            <a href="{% url 'estacionamiento:reservas_lista_todas' %}"{% if vn == 'estacionamiento:reservas_lista_todas' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">event_available</span> Reservas</a>
-			
-            <a href="{% url 'usuarios:lista' %}"{% if vn == 'usuarios:lista' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">person</span> Usuarios</a>
-			
-            <a href="{% url 'vehiculos:lista_todos' %}"{% if vn == 'vehiculos:lista_todos' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">directions_car</span> Vehículos</a>
-			
-			<a href="{% url 'estacionamiento:tickets_lista' %}">
-			<span class="material-symbols-outlined">parking_meter</span>Tickets</a>
-            {% endif %}
-
-            {% if user.perfil.es_administrador %}
-            <p class="sidebar-titulo">Administración</p>
-            <a href="{% url 'estacionamiento:zonas_lista' %}"{% if vn == 'estacionamiento:zonas_lista' or vn == 'estacionamiento:zona_crear' or vn == 'estacionamiento:zona_editar' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">map</span> Zonas</a>
-			
-            <a href="{% url 'universidad:facultades_lista' %}"{% if vn == 'universidad:facultades_lista' or vn == 'universidad:facultad_crear' or vn == 'universidad:facultad_editar' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">school</span> Facultades</a>
-
+			<a href="{% url 'reglas:reglamento' %}"{% if vn == 'reglas:reglamento' or vn == 'reglas:reglamento_editar' or vn == 'reglas:reglamento_horarios' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">menu_book</span> Reglas</a>
+		 
+			<a href="{% url 'estacionamiento:espacios_lista' %}"{% if vn == 'estacionamiento:espacios_lista' or vn == 'estacionamiento:espacio_editar' or vn == 'estacionamiento:espacios_crear' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">grid_view</span> Espacios</a>
+		 
+			<a href="{% url 'reglas:tarifas_lista' %}"{% if vn == 'reglas:tarifas_lista' or vn == 'reglas:tarifa_crear' or vn == 'reglas:tarifa_editar' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">payments</span> Tarifas</a>
+		</details>
+		{% if user.perfil.es_personal %}
+		<details class="menu-seccion" data-seccion="gestion">
+			<summary><span>Gestión</span></summary>
+	 
+			<a href="{% url 'estacionamiento:movimientos_lista' %}"{% if vn == 'estacionamiento:movimientos_lista' or vn == 'estacionamiento:movimiento_ingreso' or vn == 'estacionamiento:movimiento_salida' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">swap_horiz</span> Ingresos y salidas</a>
+	 
+			<a href="{% url 'estacionamiento:reservas_lista_todas' %}"{% if vn == 'estacionamiento:reservas_lista_todas' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">event_available</span> Reservas</a>
+	 
+			<a href="{% url 'usuarios:lista' %}"{% if vn == 'usuarios:lista' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">person</span> Usuarios</a>
+	 
+			<a href="{% url 'vehiculos:lista_todos' %}"{% if vn == 'vehiculos:lista_todos' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">directions_car</span> Vehículos</a>
+	 
+			<a href="{% url 'estacionamiento:tickets_lista' %}"{% if vn == 'estacionamiento:tickets_lista' or vn == 'estacionamiento:ticket_detalle' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">parking_meter</span> Tickets</a>
+		</details>
+		{% endif %}
+	 
+		{% if user.perfil.es_administrador %}
+		<details class="menu-seccion" data-seccion="administracion">
+			<summary>
+				<span>Administración{% if solicitudes_pendientes %} <span class="badge">{{ solicitudes_pendientes }}</span>{% endif %}</span>
+			</summary>
+	 
+			<a href="{% url 'estacionamiento:zonas_lista' %}"{% if vn == 'estacionamiento:zonas_lista' or vn == 'estacionamiento:zona_crear' or vn == 'estacionamiento:zona_editar' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">map</span> Zonas</a>
+	 
+			<a href="{% url 'universidad:facultades_lista' %}"{% if vn == 'universidad:facultades_lista' or vn == 'universidad:facultad_crear' or vn == 'universidad:facultad_editar' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">school</span> Facultades</a>
+	 
 			<a href="{% url 'usuarios:solicitudes' %}"{% if vn == 'usuarios:solicitudes' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">how_to_reg</span> Solicitudes
-			{% if solicitudes_pendientes %}<span class="badge">{{ solicitudes_pendientes }}</span>{% endif %}
-			</a>
-			
+				<span class="material-symbols-outlined">how_to_reg</span> Solicitudes
+				{% if solicitudes_pendientes %}<span class="badge">{{ solicitudes_pendientes }}</span>{% endif %}</a>
+	 
 			<a href="{% url 'usuarios:tipos_lista' %}"{% if vn == 'usuarios:tipos_lista' or vn == 'usuarios:tipo_crear' or vn == 'usuarios:tipo_editar' or vn == 'usuarios:tipo_eliminar' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">badge</span> Tipos de usuario
-			</a>
-            {% endif %}
-
-            {% endwith %}
-        </nav>
-        {% endif %}
-
+				<span class="material-symbols-outlined">badge</span> Tipos de usuario</a>
+		</details>
+		{% endif %}
+	 
+		{% endwith %}
+	</nav>
+	{% endif %}
+	 
 
         <!-- CONTENIDO DE CADA PÁGINA -->
 
@@ -642,6 +702,23 @@
                 if (!d.contains(e.target)) { d.removeAttribute("open"); }
             });
         });
+		
+		// Menú lateral: las secciones arrancan cerradas. Se abren solas si la página actual
+		// está dentro de ellas (para ver cuál está activa), y recuerdan lo que abriste o cerraste
+		// a mano mientras navegás.
+		document.querySelectorAll("details.menu-seccion").forEach(function (d) {
+			var clave = "menu-" + d.dataset.seccion;
+			var guardado = null;
+			try { guardado = sessionStorage.getItem(clave); } catch (e) {}
+	 
+			if (d.querySelector("a.activo") || guardado === "1") { d.open = true; }
+	 
+			d.querySelector("summary").addEventListener("click", function () {
+				setTimeout(function () {
+					try { sessionStorage.setItem(clave, d.open ? "1" : "0"); } catch (e) {}
+				}, 0);
+			});
+		});
     </script>
 
 </body>
