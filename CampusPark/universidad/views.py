@@ -12,20 +12,44 @@ from .models import Facultad
 @admin_requerido
 def lista_facultades_view(request):
     """
-    Ver todas las facultades, con cuántas zonas y usuarios tiene cada
-    una. Sólo Administrador. Admite búsqueda por ?q=... sobre nombre
-    y descripción.
+    Ver todas las facultades, con cuántas zonas y usuarios tiene cada una. Sólo
+    Administrador. Admite búsqueda por ?q=... sobre nombre y descripción y se puede
+    ordenar por cualquier columna con ?orden=<campo>&dir=<asc|desc>.
     """
+    campos_orden = {
+        "nombre": ["nombre"],
+        "descripcion": ["descripcion", "nombre"],
+        "zonas": ["cantidad_zonas", "nombre"],
+        "usuarios": ["cantidad_usuarios", "nombre"],
+    }
+ 
+    orden = request.GET.get("orden", "nombre")
+    if orden not in campos_orden:
+        orden = "nombre"
+ 
+    direccion = request.GET.get("dir", "asc")
+    if direccion not in ("asc", "desc"):
+        direccion = "asc"
+ 
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+ 
     q = request.GET.get("q", "").strip()
     facultades = Facultad.objects.annotate(
         cantidad_zonas=Count("zonas", distinct=True),
         cantidad_usuarios=Count("usuarios", distinct=True),
-    ).order_by("nombre")
+    )
     if q:
         facultades = facultades.filter(Q(nombre__icontains=q) | Q(descripcion__icontains=q))
-    return render(request, "universidad/facultades_lista.html", {**paginar(request, facultades, "facultades"), "q": q})
-
-
+    facultades = facultades.order_by(*campos)
+ 
+    return render(
+        request,
+        "universidad/facultades_lista.html",
+        {**paginar(request, facultades, "facultades"), "orden": orden, "dir": direccion, "q": q},
+    )
+ 
 @admin_requerido
 def crear_facultad_view(request):
     """Alta de una facultad. Sólo Administrador."""

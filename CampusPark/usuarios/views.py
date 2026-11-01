@@ -166,16 +166,45 @@ def rechazar_solicitud_view(request, pk):
     return redirect("usuarios:solicitudes")
  
 
+
 @admin_requerido
 def lista_tipos_view(request):
-    """Todos los tipos de usuario, con su rol y cuántos usuarios tiene cada uno. Sólo Administrador."""
-    tipos = TipoUsuario.objects.annotate(cantidad_usuarios=Count("usuarios")).order_by("nombre")
+    """
+    Todos los tipos de usuario, con su rol y cuántos usuarios tiene cada uno. Sólo
+    Administrador. Se puede ordenar por cualquier columna, ascendente o descendente,
+    con ?orden=<campo>&dir=<asc|desc>.
+    """
+    campos_orden = {
+        "nombre": ["nombre"],
+        "descripcion": ["descripcion", "nombre"],
+        "rol": ["rol", "nombre"],
+        "usuarios": ["cantidad_usuarios", "nombre"],
+    }
+ 
+    orden = request.GET.get("orden", "nombre")
+    if orden not in campos_orden:
+        orden = "nombre"
+ 
+    direccion = request.GET.get("dir", "asc")
+    if direccion not in ("asc", "desc"):
+        direccion = "asc"
+ 
+    campos = campos_orden[orden]
+    if direccion == "desc":
+        campos = [f"-{c}" for c in campos]
+ 
+    tipos = TipoUsuario.objects.annotate(cantidad_usuarios=Count("usuarios")).order_by(*campos)
+ 
     return render(
         request,
         "usuarios/tipos_lista.html",
-        {**paginar(request, tipos, "tipos"), "externo_defecto": TipoUsuario.externo_por_defecto()},
+        {
+            **paginar(request, tipos, "tipos"),
+            "orden": orden,
+            "dir": direccion,
+            "externo_defecto": TipoUsuario.externo_por_defecto(),
+        },
     )
- 
  
 @admin_requerido
 def crear_tipo_view(request):
