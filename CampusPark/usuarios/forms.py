@@ -2,10 +2,11 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
+from django.contrib.auth.hashers import make_password
 
 from universidad.models import Facultad
 
-from .models import TipoUsuario, Usuario
+from .models import TipoUsuario, Usuario, SolicitudRegistro
 
 
 class RegistroUsuarioForm(UserCreationForm):
@@ -51,21 +52,39 @@ class RegistroUsuarioForm(UserCreationForm):
         self.fields["password1"].label = "Contraseña"
         self.fields["password2"].label = "Confirmar contraseña"
         self.fields["password2"].help_text = "Escribí la misma contraseña para verificarla."
+        self.fields["tipo"].help_text = (
+            "Los usuarios Externos se registran al instante. Los demás tipos quedan "
+            "pendientes hasta que un Administrador apruebe la solicitud."
+        )
+        
         self.error_messages = {
             **self.error_messages,
             "password_mismatch": "Las dos contraseñas no coinciden.",
         }
+        
+
+    def clean_username(self):
+        username = super().clean_username()
+        if SolicitudRegistro.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError(
+                "Ese nombre de usuario ya fue solicitado y está pendiente de aprobación."
+            )
+        return username
  
     def clean_documento(self):
         documento = self.cleaned_data["documento"]
         if Usuario.objects.filter(documento=documento).exists():
             raise forms.ValidationError("Ya existe un usuario con ese documento.")
+        if SolicitudRegistro.objects.filter(documento=documento).exists():
+            raise forms.ValidationError("Ya hay una solicitud de registro pendiente con ese documento.")
         return documento
-
+ 
     def clean_correo(self):
         correo = self.cleaned_data["correo"]
         if Usuario.objects.filter(correo=correo).exists():
             raise forms.ValidationError("Ya existe un usuario con ese correo.")
+        if SolicitudRegistro.objects.filter(correo=correo).exists():
+            raise forms.ValidationError("Ya hay una solicitud de registro pendiente con ese correo.")
         return correo
 
     def clean(self):
@@ -85,7 +104,27 @@ class RegistroUsuarioForm(UserCreationForm):
             )
         return cleaned_data
 
+    @property
+    def requiere_aprobacion(self):
+        return self.cleaned_data["tipo"].requiere_aprobacion
+ 
     def save(self, commit=True):
+        if self.requiere_aprobacion:
+            # No se crea ningún User ni perfil: sólo queda la solicitud, con la contraseña cifrada.
+            return SolicitudRegistro.objects.create(
+                username=self.cleaned_data["username"],
+                password=make_password(self.cleaned_data["password1"]),
+                nombre=self.cleaned_data["nombre"],
+                apellido=self.cleaned_data["apellido"],
+                documento=self.cleaned_data["documento"],
+                fecha_nacimiento=self.cleaned_data["fecha_nacimiento"],
+                correo=self.cleaned_data["correo"],
+                telefono=self.cleaned_data.get("telefono", ""),
+                nro_licencia=self.cleaned_data.get("nro_licencia"),
+                tipo=self.cleaned_data["tipo"],
+                facultad=self.cleaned_data.get("facultad"),
+            )
+ 
         user = super().save(commit=commit)
         if commit:
             Usuario.objects.create(
@@ -101,8 +140,8 @@ class RegistroUsuarioForm(UserCreationForm):
                 facultad=self.cleaned_data.get("facultad"),
             )
         return user
-
-
+ 
+ 
 class UsuarioEditForm(forms.ModelForm):
     """
     Editar el propio perfil. No incluye 'tipo' (rol/permisos) a propósito

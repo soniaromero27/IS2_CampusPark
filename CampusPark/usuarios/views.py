@@ -1,30 +1,39 @@
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import PasswordChangeView
+from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
+from django.db import transaction
 from django.db.models import Q
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse_lazy
+from django.core.exceptions import ValidationError
+from django.views.decorators.http import require_POST
 
-from .decorators import personal_requerido
+from .decorators import personal_requerido, admin_requerido
 from .forms import RegistroUsuarioForm, UsuarioEditForm, CambiarPasswordForm
-from .models import Usuario
+from .models import Usuario, SolicitudRegistro
 
 from campuspark.paginacion import paginar
 
+
 def registro_view(request):
-    """HU01 - Registrar usuario: alta con tipo de usuario asociado."""
+    """
+    HU01 - Registrar usuario. Los Externos se crean y entran al instante; los
+    demás tipos quedan como solicitud pendiente hasta que un Administrador la apruebe.
+    """
     if request.method == "POST":
         form = RegistroUsuarioForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)  # inicia sesión automáticamente tras el registro
+            resultado = form.save()
+            if form.requiere_aprobacion:
+                return redirect("usuarios:registro_pendiente")
+            login(request, resultado)  # inicia sesión automáticamente (sólo Externos)
             return redirect("usuarios:perfil")
     else:
         form = RegistroUsuarioForm()
     return render(request, "usuarios/registro.html", {"form": form})
-
-
+ 
 @login_required
 def perfil_view(request):
     """Pantalla de confirmación: muestra los datos del usuario registrado."""
@@ -106,4 +115,53 @@ class CambiarPasswordView(SuccessMessageMixin, PasswordChangeView):
     template_name = "usuarios/password_cambiar.html"
     success_url = reverse_lazy("usuarios:perfil")
     success_message = "Tu contraseña se cambió correctamente."
+ 
+
+def registro_pendiente_view(request):
+    """Aviso al solicitante: su pedido espera la aprobación de un Administrador."""
+    return render(request, "usuarios/registro_pendiente.html")
+ 
+ 
+@admin_requerido
+def lista_solicitudes_view(request):
+    """Notificaciones: todos los perfiles que pidieron crearse y esperan aprobación (más antiguos primero)."""
+    solicitudes = SolicitudRegistro.objects.select_related("tipo", "facultad").order_by(
+        "fecha_solicitud"
+    )
+    return render(
+        request,
+        "usuarios/solicitudes_lista.html",
+        {**paginar(request, solicitudes, "solicitudes")},
+    )
+ 
+ 
+@admin_requerido
+@require_POST
+def aprobar_solicitud_view(request, pk):
+    """Aprueba una solicitud: se crea el usuario y su perfil, y la solicitud desaparece."""
+    try:
+        with transaction.atomic():
+            solicitud = get_object_or_404(SolicitudRegistro.objects.select_for_update(), pk=pk)
+            perfil = solicitud.aprobar()
+    except ValidationError as e:
+        messages.error(request, " ".join(e.messages))
+    else:
+        messages.success(
+            request,
+            f"Se aprobó el perfil de {perfil.nombre} {perfil.apellido} ({perfil.tipo}). "
+            f"Ya puede ingresar con el usuario '{perfil.user.username}'.",
+        )
+    return redirect("usuarios:solicitudes")
+ 
+ 
+@admin_requerido
+@require_POST
+def rechazar_solicitud_view(request, pk):
+    """Rechaza una solicitud: se borran todos los datos preliminares."""
+    with transaction.atomic():
+        solicitud = get_object_or_404(SolicitudRegistro.objects.select_for_update(), pk=pk)
+        nombre = f"{solicitud.nombre} {solicitud.apellido}"
+        solicitud.delete()
+    messages.success(request, f"Se rechazó la solicitud de {nombre} y se eliminaron todos sus datos.")
+    return redirect("usuarios:solicitudes")
  

@@ -27,6 +27,20 @@
             flex-direction: column;
         }
 
+        .badge {
+            display: inline-block;
+            min-width: 20px;
+            padding: 2px 7px;
+            margin-left: 6px;
+            border-radius: 999px;
+            background: #dc2626;
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: center;
+            vertical-align: middle;
+        }
+		
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
             vertical-align: middle;
@@ -489,7 +503,11 @@
 				</a>
 				<a href="{% url 'estacionamiento:dashboard_ocupacion' %}" class="top-link">
 					<span class="material-symbols-outlined">local_parking</span> Dashboard de Ocupación
-				</a>				
+				</a>			
+				<a href="{% url 'usuarios:solicitudes' %}" class="top-link" title="Solicitudes de registro">
+					<span class="material-symbols-outlined">notifications</span>
+					{% if solicitudes_pendientes %}<span class="badge">{{ solicitudes_pendientes }}</span>{% endif %}
+				</a>
 			{% endif %}
 			
             {% if user.is_authenticated %}
@@ -576,6 +594,11 @@
 			
             <a href="{% url 'universidad:facultades_lista' %}"{% if vn == 'universidad:facultades_lista' or vn == 'universidad:facultad_crear' or vn == 'universidad:facultad_editar' %} class="activo"{% endif %}>
 			<span class="material-symbols-outlined">school</span> Facultades</a>
+
+			<a href="{% url 'usuarios:solicitudes' %}"{% if vn == 'usuarios:solicitudes' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">how_to_reg</span> Solicitudes
+			{% if solicitudes_pendientes %}<span class="badge">{{ solicitudes_pendientes }}</span>{% endif %}
+			</a>
             {% endif %}
 
             {% endwith %}
