@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
 
 from universidad.models import Facultad
 
@@ -15,6 +16,7 @@ class RegistroUsuarioForm(UserCreationForm):
     fecha_nacimiento, nro_licencia, facultad). La facultad es
     obligatoria sólo para Docente y Estudiante (ver clean()).
     """
+
     nombre = forms.CharField(max_length=150, label="Nombre")
     apellido = forms.CharField(max_length=150, label="Apellido")
     documento = forms.CharField(max_length=20, label="Documento")
@@ -40,6 +42,20 @@ class RegistroUsuarioForm(UserCreationForm):
         model = User
         fields = ("username",)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["username"].label = "Nombre de usuario"
+        self.fields["username"].help_text = (
+            "Obligatorio. Hasta 150 caracteres: letras, números y @ . + - _ solamente."
+        )
+        self.fields["password1"].label = "Contraseña"
+        self.fields["password2"].label = "Confirmar contraseña"
+        self.fields["password2"].help_text = "Escribí la misma contraseña para verificarla."
+        self.error_messages = {
+            **self.error_messages,
+            "password_mismatch": "Las dos contraseñas no coinciden.",
+        }
+ 
     def clean_documento(self):
         documento = self.cleaned_data["documento"]
         if Usuario.objects.filter(documento=documento).exists():
@@ -142,3 +158,14 @@ class UsuarioEditForm(forms.ModelForm):
                 "Los usuarios Externos no pueden pertenecer a una facultad.",
             )
         return cleaned_data
+        
+
+class CambiarPasswordForm(PasswordChangeForm):
+    """Cambiar la propia contraseña: pide la actual y la nueva dos veces."""
+ 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["old_password"].label = "Contraseña actual"
+        self.fields["new_password1"].label = "Nueva contraseña"
+        self.fields["new_password2"].label = "Confirmar nueva contraseña"
+        self.fields["new_password2"].help_text = "Escribí la misma contraseña para verificarla."

@@ -2,8 +2,25 @@
 {% block content %}
 <h2>Mi perfil</h2>
 
-<a href="{% url 'usuarios:perfil_editar' %}"><button>Editar mi perfil</button></a>
+<div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+  <a href="{% url 'usuarios:perfil_editar' %}" class="btn">Editar mi perfil</a>
+  <a href="{% url 'usuarios:password_cambiar' %}" class="btn">Cambiar contraseña</a>
+</div>
 
+<h3 style="margin-top:24px;">Mi cuenta</h3>
+<table>
+  <tr><th>Nombre de usuario</th><td>{{ perfil.user.username }}</td></tr>
+  <tr>
+    <th>Contraseña</th>
+    <td>
+      <span title="Por seguridad la contraseña se guarda cifrada y no se puede mostrar">••••••••••</span>
+      <a href="{% url 'usuarios:password_cambiar' %}" style="margin-left:12px;">Cambiar</a>
+    </td>
+  </tr>
+  <tr><th>Último acceso</th><td>{{ perfil.user.last_login|default:"—" }}</td></tr>
+</table>
+
+<h3 style="margin-top:24px;">Mis datos</h3>
 <table>
   <tr><th>Nombre</th><td>{{ perfil.nombre }}</td></tr>
   <tr><th>Apellido</th><td>{{ perfil.apellido }}</td></tr>
@@ -16,14 +33,4 @@
   <tr><th>Facultad</th><td>{{ perfil.facultad|default:"—" }}</td></tr>
   <tr><th>Fecha de registro</th><td>{{ perfil.fecha_registro }}</td></tr>
 </table>
-
-<!--div class="menu-acciones" style="margin-top:1em; display:flex; gap:0.5em; flex-wrap:wrap;">
-  <a href="{% url 'usuarios:perfil_editar' %}"><button>Editar mi perfil</button></a>
-  <a href="{% url 'vehiculos:lista' %}"><button>Mis vehículos</button></a>
-  <a href="{% url 'estacionamiento:reservas_lista' %}"><button>Mis reservas</button></a>
-  {% if user.perfil.es_personal %}
-  <a href="{% url 'estacionamiento:movimientos_lista' %}"><button>Ingresos y salidas</button></a>
-  <a href="{% url 'estacionamiento:movimiento_ingreso' %}"><button>Registrar ingreso</button></a>
-  {% endif %}
-</div-->
 {% endblock %}

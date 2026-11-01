@@ -1,14 +1,16 @@
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import PasswordChangeView
+from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Q
 from django.shortcuts import redirect, render
-
-from campuspark.paginacion import paginar
+from django.urls import reverse_lazy
 
 from .decorators import personal_requerido
-from .forms import RegistroUsuarioForm, UsuarioEditForm
+from .forms import RegistroUsuarioForm, UsuarioEditForm, CambiarPasswordForm
 from .models import Usuario
 
+from campuspark.paginacion import paginar
 
 def registro_view(request):
     """HU01 - Registrar usuario: alta con tipo de usuario asociado."""
@@ -93,3 +95,15 @@ def lista_usuarios_view(request):
     usuarios = usuarios.order_by(*campos)
     
     return render(request, "usuarios/usuarios_lista.html", {**paginar(request, usuarios, "usuarios"), "orden": orden, "dir": direccion, "q": q})
+    
+
+class CambiarPasswordView(SuccessMessageMixin, PasswordChangeView):
+    """
+    Cambiar la propia contraseña (requiere estar logueado y conocer la actual).
+    Al terminar, la sesión sigue abierta y se vuelve al perfil.
+    """
+    form_class = CambiarPasswordForm
+    template_name = "usuarios/password_cambiar.html"
+    success_url = reverse_lazy("usuarios:perfil")
+    success_message = "Tu contraseña se cambió correctamente."
+ 

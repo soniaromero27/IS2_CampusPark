@@ -487,15 +487,14 @@
 				<a href="{% url 'estacionamiento:dashboard' %}" class="top-link">
 					<span class="material-symbols-outlined">monitoring</span> Dashboard de Cobros
 				</a>
-				
+				<a href="{% url 'estacionamiento:dashboard_ocupacion' %}" class="top-link">
+					<span class="material-symbols-outlined">local_parking</span> Dashboard de Ocupación
+				</a>				
 			{% endif %}
 			
             {% if user.is_authenticated %}
 				<a href="{% url 'estacionamiento:pagar_tickets' %}" class="top-link">
 					<span class="material-symbols-outlined">receipt_long</span> Pagar Tickets
-				</a>
-				<a href="{% url 'estacionamiento:dashboard_ocupacion' %}" class="top-link">
-					<span class="material-symbols-outlined">local_parking</span> Dashboard de Ocupación
 				</a>
 				
                 <details class="menu-cuenta">
