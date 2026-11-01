@@ -218,12 +218,11 @@ class Movimiento(models.Model):
         Costo de TODA la estadía hasta `hasta` (o la salida, o ahora)."""
         
         from reglas.models import Tarifa
-        from usuarios.models import TipoUsuario
  
         if self.vehiculo_id and self.vehiculo.usuario_id:
             tipo = self.vehiculo.usuario.tipo
         else:
-            tipo = TipoUsuario.objects.filter(nombre__iexact="Externo").first()
+            tipo = TipoUsuario.externo_por_defecto()
  
         fin = hasta or self.fecha_hora_salida or timezone.now()
         segundos = (fin - self.fecha_hora_ingreso).total_seconds()

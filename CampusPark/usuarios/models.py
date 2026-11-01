@@ -19,24 +19,89 @@ TIPOS_CON_FACULTAD = ("docente", "estudiante", "funcionario")
 
 class TipoUsuario(models.Model):
     """
-    Corresponde a la entidad 'tipo_usuario' del DER (Sprint 1).
-    Ej: Docente, Estudiante, Funcionario, Externo, Administrador,
-    Personal de estacionamiento.
+    Tipo de usuario (Docente, Estudiante, Funcionario, Externo, ...). Cada tipo
+    tiene un ROL que define qué puede hacer: el administrador puede crear
+    todos los tipos que quiera, pero siempre asignándoles uno de estos 4 roles.
     """
+ 
+    class Rol(models.TextChoices):
+        ADMINISTRADOR = "administrador", "Administrador"
+        PERSONAL = "personal", "Personal"
+        UNIVERSITARIO = "universitario", "Ciudadano Universitario"
+        EXTERNO = "externo", "Externo"
+ 
     nombre = models.CharField(max_length=50, unique=True)
     descripcion = models.CharField(max_length=255, blank=True)
-
+    rol = models.CharField(max_length=20, choices=Rol.choices, default=Rol.EXTERNO)
+ 
     class Meta:
         verbose_name = "Tipo de usuario"
         verbose_name_plural = "Tipos de usuario"
-
+ 
     def __str__(self):
         return self.nombre
-
+ 
     @property
     def requiere_aprobacion(self):
-        """True si registrarse con este tipo necesita la aprobación de un Administrador."""
-        return self.nombre.strip().lower() not in TIPOS_REGISTRO_LIBRE
+        """Registrarse con este tipo necesita la aprobación de un Administrador (todos menos Externo)."""
+        return self.rol != self.Rol.EXTERNO
+ 
+    @classmethod
+    def externo_por_defecto(cls, crear=False):
+        """
+        El tipo Externo al que pasan los usuarios de un tipo eliminado, y el que se
+        usa para cobrar a las patentes no registradas: el llamado 'Externo' o, si no
+        existe, el primero con rol Externo. Con crear=True se crea si no hay ninguno.
+        """
+        qs = cls.objects.filter(rol=cls.Rol.EXTERNO)
+        tipo = qs.filter(nombre__iexact="Externo").first() or qs.order_by("pk").first()
+        if tipo is None and crear:
+            tipo = cls.objects.create(
+                nombre="Externo",
+                descripcion="Usuario externo a la comunidad universitaria",
+                rol=cls.Rol.EXTERNO,
+            )
+        return tipo
+ 
+    def motivos_bloqueo_eliminar(self, perfil_actual=None):
+        """Razones por las que NO se puede eliminar este tipo (lista vacía = se puede)."""
+        motivos = []
+        defecto = TipoUsuario.externo_por_defecto()
+        if defecto is not None and defecto.pk == self.pk:
+            motivos.append(
+                "Es el tipo Externo por defecto: a él pasan los usuarios de los tipos que se eliminan."
+            )
+        if perfil_actual is not None and perfil_actual.tipo_id == self.pk:
+            motivos.append("Es tu propio tipo de usuario: no podés eliminarlo.")
+        if (
+            self.rol == self.Rol.ADMINISTRADOR
+            and self.usuarios.exists()
+            and not Usuario.objects.filter(tipo__rol=self.Rol.ADMINISTRADOR).exclude(tipo=self).exists()
+        ):
+            motivos.append("Es el único tipo con Administradores: el sistema quedaría sin ninguno.")
+        n = self.tarifas.count()
+        if n:
+            motivos.append(
+                f"Tiene {n} tarifa{'s' if n != 1 else ''} asociada{'s' if n != 1 else ''}: "
+                "cambiales el tipo desde Tarifas > editar antes de eliminarlo."
+            )
+        n = self.solicitudes.count()
+        if n:
+            motivos.append(
+                f"Tiene {n} solicitud{'es' if n != 1 else ''} de registro pendiente{'s' if n != 1 else ''}: "
+                "aprobalas o rechazalas primero."
+            )
+        return motivos
+ 
+    def advertencias_eliminar(self):
+        """Efectos secundarios (no bloqueantes) de eliminar este tipo."""
+        zonas = list(self.zonas_permitidas.values_list("nombre", flat=True))
+        if zonas:
+            return [
+                "Está habilitado en las zonas: " + ", ".join(zonas) + ". Si alguna zona queda sin "
+                "tipos permitidos, podrá usarla cualquier tipo de su facultad."
+            ]
+        return []
  
 
 class Usuario(models.Model):
@@ -78,25 +143,25 @@ class Usuario(models.Model):
     def __str__(self):
         return f"{self.nombre} ({self.tipo})"
 
+
     @property
     def es_personal(self):
-        """True si el tipo de usuario es Personal de Estacionamiento o Administrador."""
-        return self.tipo.nombre.strip().lower() in TIPOS_PERSONAL
-
+        """True si el rol del tipo es Personal o Administrador."""
+        return self.tipo.rol in (TipoUsuario.Rol.ADMINISTRADOR, TipoUsuario.Rol.PERSONAL)
+ 
     @property
     def es_administrador(self):
-        """True sólo si el tipo de usuario es exactamente Administrador."""
-        return self.tipo.nombre.strip().lower() == "administrador"
-
+        return self.tipo.rol == TipoUsuario.Rol.ADMINISTRADOR
+ 
     @property
     def requiere_facultad(self):
-        """True si el tipo de usuario es Docente, Estudiante o Funcionario."""
-        return self.tipo.nombre.strip().lower() in TIPOS_CON_FACULTAD
-
+        """True si el rol es Ciudadano Universitario (Docente, Estudiante, Funcionario, ...)."""
+        return self.tipo.rol == TipoUsuario.Rol.UNIVERSITARIO
+ 
     @property
     def es_externo(self):
-        """True si el tipo de usuario es Externo (nunca pertenece a una facultad)."""
-        return self.tipo.nombre.strip().lower() == "externo"
+        return self.tipo.rol == TipoUsuario.Rol.EXTERNO
+ 
 
 
 class SolicitudRegistro(models.Model):

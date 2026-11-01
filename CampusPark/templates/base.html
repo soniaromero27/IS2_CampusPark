@@ -599,6 +599,10 @@
 			<span class="material-symbols-outlined">how_to_reg</span> Solicitudes
 			{% if solicitudes_pendientes %}<span class="badge">{{ solicitudes_pendientes }}</span>{% endif %}
 			</a>
+			
+			<a href="{% url 'usuarios:tipos_lista' %}"{% if vn == 'usuarios:tipos_lista' or vn == 'usuarios:tipo_crear' or vn == 'usuarios:tipo_editar' or vn == 'usuarios:tipo_eliminar' %} class="activo"{% endif %}>
+			<span class="material-symbols-outlined">badge</span> Tipos de usuario
+			</a>
             {% endif %}
 
             {% endwith %}

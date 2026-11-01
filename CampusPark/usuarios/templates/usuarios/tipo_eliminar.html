@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Eliminar tipo de usuario: {{ tipo.nombre }}</h2>
+
+<div class="card">
+  <p><strong>Rol:</strong> {{ tipo.get_rol_display }} — <strong>Usuarios con este tipo:</strong> {{ cantidad }}</p>
+
+  {% if bloqueos %}
+    <p><strong>No se puede eliminar por los siguientes motivos:</strong></p>
+    <ul>{% for b in bloqueos %}<li>{{ b }}</li>{% endfor %}</ul>
+  {% else %}
+    <p>Los <strong>{{ cantidad }}</strong> usuario{{ cantidad|pluralize }} de este tipo pasarán a ser
+       <strong>{{ externo.nombre|default:"Externo" }}</strong> y perderán su facultad: sólo podrán usar zonas públicas
+       y se les cobrará la tarifa de Externo. Sus reservas ya hechas no se modifican.</p>
+    {% for a in advertencias %}<p><em>{{ a }}</em></p>{% endfor %}
+    <p>Esta acción no se puede deshacer.</p>
+  {% endif %}
+</div>
+
+<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+  {% if not bloqueos %}
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" style="background:#b91c1c;">Sí, eliminar</button>
+  </form>
+  {% endif %}
+  <a href="{% url 'usuarios:tipos_lista' %}" class="btn">Atrás</a>
+</div>
+{% endblock %}

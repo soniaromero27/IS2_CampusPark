@@ -20,4 +20,9 @@ urlpatterns = [
     path("solicitudes/", views.lista_solicitudes_view, name="solicitudes"),
     path("solicitudes/<int:pk>/aprobar/", views.aprobar_solicitud_view, name="solicitud_aprobar"),
     path("solicitudes/<int:pk>/rechazar/", views.rechazar_solicitud_view, name="solicitud_rechazar"),
+    
+    path("tipos/", views.lista_tipos_view, name="tipos_lista"),
+    path("tipos/nuevo/", views.crear_tipo_view, name="tipo_crear"),
+    path("tipos/<int:pk>/editar/", views.editar_tipo_view, name="tipo_editar"),
+    path("tipos/<int:pk>/eliminar/", views.eliminar_tipo_view, name="tipo_eliminar"),
 ]

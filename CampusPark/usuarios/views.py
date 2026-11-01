@@ -4,15 +4,15 @@ from django.contrib.auth.views import PasswordChangeView
 from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse_lazy
 from django.core.exceptions import ValidationError
 from django.views.decorators.http import require_POST
 
 from .decorators import personal_requerido, admin_requerido
-from .forms import RegistroUsuarioForm, UsuarioEditForm, CambiarPasswordForm
-from .models import Usuario, SolicitudRegistro
+from .forms import RegistroUsuarioForm, UsuarioEditForm, CambiarPasswordForm, TipoUsuarioForm
+from .models import Usuario, SolicitudRegistro, TipoUsuario
 
 from campuspark.paginacion import paginar
 
@@ -164,4 +164,102 @@ def rechazar_solicitud_view(request, pk):
         solicitud.delete()
     messages.success(request, f"Se rechazó la solicitud de {nombre} y se eliminaron todos sus datos.")
     return redirect("usuarios:solicitudes")
+ 
+
+@admin_requerido
+def lista_tipos_view(request):
+    """Todos los tipos de usuario, con su rol y cuántos usuarios tiene cada uno. Sólo Administrador."""
+    tipos = TipoUsuario.objects.annotate(cantidad_usuarios=Count("usuarios")).order_by("nombre")
+    return render(
+        request,
+        "usuarios/tipos_lista.html",
+        {**paginar(request, tipos, "tipos"), "externo_defecto": TipoUsuario.externo_por_defecto()},
+    )
+ 
+ 
+@admin_requerido
+def crear_tipo_view(request):
+    """Alta de un tipo de usuario, asignándole uno de los 4 roles. Sólo Administrador."""
+    if request.method == "POST":
+        form = TipoUsuarioForm(request.POST)
+        if form.is_valid():
+            tipo = form.save()
+            messages.success(request, f"Se creó el tipo de usuario '{tipo.nombre}' ({tipo.get_rol_display()}).")
+            return redirect("usuarios:tipos_lista")
+    else:
+        form = TipoUsuarioForm()
+    return render(request, "usuarios/tipo_form.html", {"form": form})
+ 
+ 
+@admin_requerido
+def editar_tipo_view(request, pk):
+    """
+    Editar un tipo (nombre, descripción, rol). Si pasa a rol Externo, sus usuarios
+    pierden la facultad (los Externos no tienen). Sólo Administrador.
+    """
+    tipo = get_object_or_404(TipoUsuario, pk=pk)
+    rol_anterior = tipo.rol
+    if request.method == "POST":
+        form = TipoUsuarioForm(request.POST, instance=tipo, perfil_actual=request.user.perfil)
+        if form.is_valid():
+            with transaction.atomic():
+                tipo = form.save()
+                if rol_anterior != tipo.rol:
+                    if tipo.rol == TipoUsuario.Rol.EXTERNO:
+                        n = tipo.usuarios.update(facultad=None)
+                        if n:
+                            messages.info(request, f"{n} usuario(s) de este tipo perdieron su facultad por ser Externos.")
+                    elif tipo.rol == TipoUsuario.Rol.UNIVERSITARIO:
+                        n = tipo.usuarios.filter(facultad__isnull=True).count()
+                        if n:
+                            messages.warning(
+                                request,
+                                f"{n} usuario(s) de este tipo no tienen facultad: sólo podrán usar zonas "
+                                "públicas hasta que la completen en su perfil.",
+                            )
+            messages.success(request, f"Se guardó el tipo de usuario '{tipo.nombre}'.")
+            return redirect("usuarios:tipos_lista")
+    else:
+        form = TipoUsuarioForm(instance=tipo, perfil_actual=request.user.perfil)
+    return render(request, "usuarios/tipo_form.html", {"form": form, "tipo": tipo})
+ 
+ 
+@admin_requerido
+def eliminar_tipo_view(request, pk):
+    """
+    Eliminar un tipo: todos los usuarios que lo tenían pasan a ser Externos (tipo
+    Externo por defecto) y pierden su facultad. Hay casos que lo impiden (ver
+    TipoUsuario.motivos_bloqueo_eliminar). Sólo Administrador.
+    """
+    perfil = request.user.perfil
+    if request.method == "POST":
+        with transaction.atomic():
+            tipo = get_object_or_404(TipoUsuario.objects.select_for_update(), pk=pk)
+            bloqueos = tipo.motivos_bloqueo_eliminar(perfil)
+            if bloqueos:
+                for motivo in bloqueos:
+                    messages.error(request, f"No se puede eliminar '{tipo.nombre}': {motivo}")
+                return redirect("usuarios:tipos_lista")
+            externo = TipoUsuario.externo_por_defecto(crear=True)
+            movidos = Usuario.objects.filter(tipo=tipo).update(tipo=externo, facultad=None)
+            nombre = tipo.nombre
+            tipo.delete()
+        messages.success(
+            request,
+            f"Se eliminó el tipo '{nombre}'. {movidos} usuario(s) pasaron a ser '{externo.nombre}'.",
+        )
+        return redirect("usuarios:tipos_lista")
+ 
+    tipo = get_object_or_404(TipoUsuario, pk=pk)
+    return render(
+        request,
+        "usuarios/tipo_eliminar.html",
+        {
+            "tipo": tipo,
+            "cantidad": tipo.usuarios.count(),
+            "bloqueos": tipo.motivos_bloqueo_eliminar(perfil),
+            "advertencias": tipo.advertencias_eliminar(),
+            "externo": TipoUsuario.externo_por_defecto(),
+        },
+    )
  

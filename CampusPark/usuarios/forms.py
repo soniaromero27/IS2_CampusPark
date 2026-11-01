@@ -36,7 +36,7 @@ class RegistroUsuarioForm(UserCreationForm):
         queryset=Facultad.objects.all(),
         required=False,
         label="Facultad",
-        help_text="Obligatoria si el tipo de usuario es Docente, Estudiante o Funcionario.",
+        help_text="Obligatoria para los tipos con rol Ciudadano Universitario (Docente, Estudiante, etc.).",
     )
 
     class Meta(UserCreationForm.Meta):
@@ -87,23 +87,16 @@ class RegistroUsuarioForm(UserCreationForm):
             raise forms.ValidationError("Ya hay una solicitud de registro pendiente con ese correo.")
         return correo
 
+
     def clean(self):
         cleaned_data = super().clean()
         tipo = cleaned_data.get("tipo")
         facultad = cleaned_data.get("facultad")
-        nombre_tipo = tipo.nombre.strip().lower() if tipo else ""
-        if nombre_tipo in ("docente", "estudiante", "funcionario") and not facultad:
-            self.add_error(
-                "facultad",
-                "Los usuarios de tipo Docente, Estudiante o Funcionario deben indicar una facultad.",
-            )
-        if nombre_tipo == "externo" and facultad:
-            self.add_error(
-                "facultad",
-                "Los usuarios Externos no pueden pertenecer a una facultad.",
-            )
+        if tipo and tipo.rol == TipoUsuario.Rol.UNIVERSITARIO and not facultad:
+            self.add_error("facultad", "Los Ciudadanos Universitarios deben indicar una facultad.")
+        if tipo and tipo.rol == TipoUsuario.Rol.EXTERNO and facultad:
+            self.add_error("facultad", "Los usuarios Externos no pueden pertenecer a una facultad.")
         return cleaned_data
-
     @property
     def requiere_aprobacion(self):
         return self.cleaned_data["tipo"].requiere_aprobacion
@@ -189,7 +182,7 @@ class UsuarioEditForm(forms.ModelForm):
         if self.instance.requiere_facultad and not facultad:
             self.add_error(
                 "facultad",
-                "Los usuarios de tipo Docente, Estudiante o Funcionario deben indicar una facultad.",
+                "Los Ciudadanos Universitarios deben indicar una facultad.",
             )
         if self.instance.es_externo and facultad:
             self.add_error(
@@ -208,3 +201,66 @@ class CambiarPasswordForm(PasswordChangeForm):
         self.fields["new_password1"].label = "Nueva contraseña"
         self.fields["new_password2"].label = "Confirmar nueva contraseña"
         self.fields["new_password2"].help_text = "Escribí la misma contraseña para verificarla."
+        
+
+class TipoUsuarioForm(forms.ModelForm):
+    """Crear o editar un tipo de usuario (sólo Administrador). Todo tipo lleva uno de los 4 roles."""
+ 
+    class Meta:
+        model = TipoUsuario
+        fields = ["nombre", "descripcion", "rol"]
+        help_texts = {
+            "rol": (
+                "Administrador: acceso total (zonas, facultades, tipos, solicitudes, dashboards). "
+                "Personal: registra ingresos y salidas, ve usuarios, vehículos y todas las reservas. "
+                "Ciudadano Universitario: pertenece a una facultad (Docente, Estudiante, Funcionario...). "
+                "Externo: sin facultad, sólo zonas públicas, se registra sin aprobación."
+            )
+        }
+ 
+    def __init__(self, *args, perfil_actual=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.perfil_actual = perfil_actual
+ 
+    def clean_nombre(self):
+        nombre = self.cleaned_data["nombre"].strip()
+        otros = TipoUsuario.objects.filter(nombre__iexact=nombre)
+        if self.instance.pk:
+            otros = otros.exclude(pk=self.instance.pk)
+        if otros.exists():
+            raise forms.ValidationError("Ya existe un tipo de usuario con ese nombre.")
+        if (
+            self.instance.pk
+            and self.instance.nombre.strip().lower() == "externo"
+            and nombre.lower() != "externo"
+        ):
+            raise forms.ValidationError("El tipo Externo por defecto no se puede renombrar.")
+        return nombre
+ 
+    def clean(self):
+        cleaned_data = super().clean()
+        nombre = cleaned_data.get("nombre")
+        rol = cleaned_data.get("rol")
+        Rol = TipoUsuario.Rol
+        if nombre and rol and nombre.lower() == "externo" and rol != Rol.EXTERNO:
+            self.add_error("rol", "Un tipo llamado 'Externo' tiene que tener el rol Externo.")
+ 
+        if self.instance.pk and rol:
+            original = TipoUsuario.objects.get(pk=self.instance.pk)  # la instancia aún no se modificó
+            if original.rol != rol:
+                defecto = TipoUsuario.externo_por_defecto()
+                if defecto is not None and defecto.pk == original.pk:
+                    self.add_error("rol", "El tipo Externo por defecto no puede cambiar de rol.")
+                if original.rol == Rol.ADMINISTRADOR:
+                    if self.perfil_actual is not None and self.perfil_actual.tipo_id == original.pk:
+                        self.add_error("rol", "No podés quitarte a vos mismo el rol de Administrador.")
+                    elif (
+                        original.usuarios.exists()
+                        and not Usuario.objects.filter(tipo__rol=Rol.ADMINISTRADOR)
+                        .exclude(tipo=original)
+                        .exists()
+                    ):
+                        self.add_error(
+                            "rol", "Es el único tipo con Administradores: el sistema quedaría sin ninguno."
+                        )
+        return cleaned_data
