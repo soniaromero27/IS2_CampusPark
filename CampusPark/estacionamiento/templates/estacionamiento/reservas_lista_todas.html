@@ -33,52 +33,54 @@
 <p id="aviso-actualizar" style="margin:8px 0; color:#64748b; min-height:1.2em;"></p>
 
 <div id="contenido-reservas">
-<table>
-  <tr>
-    <th>
-      <a href="?orden=usuario&dir={% if orden == 'usuario' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
-        Usuario{% if orden == 'usuario' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=zona&dir={% if orden == 'zona' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
-        Zona{% if orden == 'zona' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=espacio&dir={% if orden == 'espacio' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
-        Espacio{% if orden == 'espacio' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=desde&dir={% if orden == 'desde' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
-        Desde{% if orden == 'desde' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=hasta&dir={% if orden == 'hasta' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
-        Hasta{% if orden == 'hasta' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=estado&dir={% if orden == 'estado' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
-        Estado{% if orden == 'estado' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-  </tr>
-  {% for r in reservas %}
-  <tr>
-    <td>{{ r.usuario.nombre }} {{ r.usuario.apellido }}</td>
-    <td>{{ r.espacio.zona }}</td>
-    <td>N°{{ r.espacio.numero }}</td>
-    <td>{{ r.fecha_inicio }}</td>
-    <td>{{ r.fecha_fin }}</td>
-    <td class="{{ r.tipo_estado_reserva }}">{{ r.tipo_estado_reserva }}</td>
-  </tr>
-  {% empty %}
-  <tr><td colspan="6">No hay reservas que coincidan con la búsqueda.</td></tr>
-  {% endfor %}
-</table>
+	<div class="table-responsive">
+		<table>
+		  <tr>
+			<th>
+			  <a href="?orden=usuario&dir={% if orden == 'usuario' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
+				Usuario{% if orden == 'usuario' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+			  </a>
+			</th>
+			<th>
+			  <a href="?orden=zona&dir={% if orden == 'zona' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
+				Zona{% if orden == 'zona' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+			  </a>
+			</th>
+			<th>
+			  <a href="?orden=espacio&dir={% if orden == 'espacio' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
+				Espacio{% if orden == 'espacio' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+			  </a>
+			</th>
+			<th>
+			  <a href="?orden=desde&dir={% if orden == 'desde' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
+				Desde{% if orden == 'desde' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+			  </a>
+			</th>
+			<th>
+			  <a href="?orden=hasta&dir={% if orden == 'hasta' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
+				Hasta{% if orden == 'hasta' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+			  </a>
+			</th>
+			<th>
+			  <a href="?orden=estado&dir={% if orden == 'estado' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
+				Estado{% if orden == 'estado' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+			  </a>
+			</th>
+		  </tr>
+		  {% for r in reservas %}
+		  <tr>
+			<td>{{ r.usuario.nombre }} {{ r.usuario.apellido }}</td>
+			<td>{{ r.espacio.zona }}</td>
+			<td>N°{{ r.espacio.numero }}</td>
+			<td>{{ r.fecha_inicio }}</td>
+			<td>{{ r.fecha_fin }}</td>
+			<td class="{{ r.tipo_estado_reserva }}">{{ r.tipo_estado_reserva }}</td>
+		  </tr>
+		  {% empty %}
+		  <tr><td colspan="6">No hay reservas que coincidan con la búsqueda.</td></tr>
+		  {% endfor %}
+		</table>
+	</div>
 {% include "_paginacion.html" %}
 </div>
 

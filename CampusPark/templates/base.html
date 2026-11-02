@@ -22,7 +22,6 @@
             background: #f4f7fb;
             color: #1e293b;
             min-height: 100vh;
-
             display: flex;
             flex-direction: column;
         }
@@ -51,14 +50,19 @@
         header {
             background: linear-gradient(135deg, #0f2d52, #1d4f91);
             color: white;
-            padding: 0 40px;
-            height: 72px;
+            padding: 0 30px;
+            min-height: 72px;
 
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
 
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
         .logo {
@@ -82,6 +86,7 @@
 
             font-size: 22px;
             font-weight: bold;
+            flex-shrink: 0;
         }
 
         .logo-text {
@@ -94,23 +99,28 @@
         .top-acciones {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            flex-wrap: wrap;
+            position: relative; /* Permite posicionar correctamente los elementos flotantes internos */
         }
 
         .top-acciones a.top-link,
         .menu-cuenta summary {
-            display: inline-block;
-            padding: 10px 18px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
 
             color: white;
             background: rgba(255, 255, 255, 0.12);
             border: 1px solid rgba(255, 255, 255, 0.35);
             border-radius: 8px;
 
-            font-size: 14px;
+            font-size: 13.5px;
             font-weight: 600;
             text-decoration: none;
             cursor: pointer;
+            white-space: nowrap;
 
             transition: all 0.2s ease;
         }
@@ -123,7 +133,7 @@
             box-shadow: none;
         }
 
-        /* Submenú "Mi cuenta" (desplegable nativo del navegador, no necesita JavaScript para abrirse) */
+        /* Submenú "Mi cuenta" */
 
         .menu-cuenta {
             position: relative;
@@ -139,7 +149,7 @@
 
         .menu-cuenta summary::after {
             content: "▾";
-            margin-left: 8px;
+            margin-left: 6px;
             font-size: 12px;
         }
 
@@ -147,9 +157,9 @@
             position: absolute;
             right: 0;
             top: calc(100% + 8px);
-            z-index: 50;
+            z-index: 999;
 
-            min-width: 200px;
+            min-width: 220px;
             padding: 6px;
 
             background: white;
@@ -198,6 +208,7 @@
             flex: 1;
             display: flex;
             align-items: stretch;
+            width: 100%;
         }
 
         .sidebar {
@@ -210,9 +221,11 @@
         }
 
         .sidebar a {
-            display: block;
-            padding: 11px 14px;
-            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            margin-bottom: 3px;
             border-radius: 8px;
 
             color: #334155;
@@ -248,22 +261,26 @@
         main {
             flex: 1;
             min-width: 0;
+            width: 100%;
             max-width: 1200px;
             margin: 0 auto;
-            padding: 40px 25px;
+            padding: 30px 25px;
         }
 
         /* ===== TÍTULOS ===== */
 
         h1, h2, h3 {
             color: #163b68;
+            word-break: break-word;
         }
 
         h1 {
+            font-size: 1.8rem;
             margin-bottom: 10px;
         }
 
         h2 {
+            font-size: 1.4rem;
             margin-bottom: 20px;
         }
 
@@ -278,12 +295,15 @@
 
             border: 1px solid #e7edf5;
             margin-bottom: 25px;
+            width: 100%;
+            overflow-x: auto;
         }
 
-        /* ===== FORMULARIOS ===== */
+        /* ===== FORMULARIOS RESPONSIVOS ===== */
 
         .form-row {
             margin-bottom: 18px;
+            width: 100%;
         }
 
         label {
@@ -296,7 +316,8 @@
         input,
         select,
         textarea {
-            width: 30%;
+            width: 100%;
+            max-width: 500px;
             padding: 12px 14px;
 
             border: 1px solid #cbd5e1;
@@ -311,7 +332,10 @@
         }
 		
         input[type="checkbox"] {
-            width: 5%;
+            width: auto;
+            min-width: 18px;
+            height: 18px;
+            cursor: pointer;
         }
 	
         input:focus,
@@ -327,7 +351,10 @@
 
         button,
         .btn {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
 
             padding: 11px 20px;
 
@@ -353,20 +380,25 @@
             box-shadow: 0 4px 10px rgba(21, 75, 134, 0.25);
         }
 
-        /* ===== TABLAS ===== */
+        /* ===== TABLAS RESPONSIVAS CON SCROLL ===== */
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(15, 45, 82, 0.07);
+        }
 
         table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
 
-            margin-top: 20px;
-
             background: white;
-            border-radius: 12px;
             overflow: hidden;
-
-            box-shadow: 0 4px 15px rgba(15, 45, 82, 0.07);
+            min-width: 600px;
         }
 
         th {
@@ -381,6 +413,7 @@
         td {
             padding: 14px 16px;
             border-bottom: 1px solid #e5eaf0;
+            white-space: nowrap;
         }
 
         tr:last-child td {
@@ -406,19 +439,20 @@
             padding: 25px;
             color: #64748b;
             font-size: 13px;
+            margin-top: auto;
         }
 		
         /* ===== MENÚ LATERAL: secciones desplegables ===== */
  
         .menu-seccion {
-            margin-top: 10px;
+            margin-top: 8px;
         }
  
         .menu-seccion > summary {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 10px 14px;
+            padding: 10px 12px;
             border-radius: 8px;
  
             font-size: 12px;
@@ -454,76 +488,86 @@
         .menu-seccion > a {
             margin-left: 6px;
         }
- 
-        /* ===== RESPONSIVE ===== */
 
-        @media (max-width: 800px) {
+        /* ===== MEDIA QUERIES PARA PANTALLAS PEQUEÑAS (MÓVILES Y TABLETS) ===== */
+
+        @media (max-width: 850px) {
 
             header {
-                height: auto;
-                padding: 18px 20px;
+                padding: 12px 16px;
+                justify-content: space-between;
+            }
 
-                flex-direction: column;
-                gap: 15px;
+            .logo-text {
+                font-size: 20px;
             }
 
             .top-acciones {
-                flex-wrap: wrap;
-                justify-content: center;
+                width: 100%;
+                justify-content: flex-start;
+                gap: 6px;
             }
 
             .layout {
                 flex-direction: column;
             }
-			
-            input,
-            select,
-            textarea {
-                width: 100%;
-                padding: 12px 14px;
-
-                border: 1px solid #cbd5e1;
-                border-radius: 8px;
-
-                font-size: 15px;
-                font-family: inherit;
-
-                background: white;
-
-                transition: border-color 0.2s, box-shadow 0.2s;
-            }
 
             .sidebar {
-                width: auto;
-                padding: 10px 12px;
-
-                display: flex;
-                flex-wrap: wrap;
-                gap: 6px;
-
+                width: 100%;
+                padding: 10px;
                 border-right: none;
                 border-bottom: 1px solid #e7edf5;
             }
 
-            .sidebar a {
-                margin-bottom: 0;
+            .menu-seccion {
+                margin-top: 4px;
             }
 
-            .sidebar-titulo {
-                display: none;
+            .menu-seccion > a {
+                margin-left: 0;
             }
 
             main {
-                padding: 25px 15px;
+                padding: 20px 15px;
+            }
+
+            input,
+            select,
+            textarea {
+                max-width: 100%;
+            }
+
+            /* Aseguramos que el submenú se alinee correctamente sin salirse de la pantalla en móvil */
+            .submenu {
+                right: 0;
+                left: auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
             }
 
             .logo-text {
-                font-size: 21px;
+                font-size: 18px;
             }
-			
-			.menu-seccion {
-				flex-basis: 100%;
-			}
+
+            .top-acciones a.top-link, 
+            .menu-cuenta summary {
+                padding: 7px 10px;
+                font-size: 12px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .card {
+                padding: 16px;
+            }
         }
 
     </style>
@@ -580,10 +624,10 @@
                         <a href="{% url 'estacionamiento:reservas_lista' %}">Mis reservas</a>
                         <a href="{% url 'estacionamiento:mis_movimientos' %}">Mis movimientos</a>
                         
-                        <!-- Línea separadora opcional -->
+                        <!-- Línea separadora -->
                         <div class="submenu-divider"></div>
 
-                        <!-- Formulario de Cerrar sesión reubicado dentro del submenú -->
+                        <!-- Formulario de Cerrar sesión -->
                         <form method="post" action="{% url 'usuarios:logout' %}">
                             {% csrf_token %}
                             <button type="submit" class="submenu-btn">
@@ -609,7 +653,6 @@
 
 	<!-- MENÚ LATERAL (sólo con la sesión iniciada) -->
 
-
 	{% if user.is_authenticated %}
 	<nav class="sidebar" aria-label="Menú principal">
 		{% with vn=request.resolver_match.view_name %}
@@ -626,6 +669,7 @@
 			<a href="{% url 'reglas:tarifas_lista' %}"{% if vn == 'reglas:tarifas_lista' or vn == 'reglas:tarifa_crear' or vn == 'reglas:tarifa_editar' %} class="activo"{% endif %}>
 				<span class="material-symbols-outlined">payments</span> Tarifas</a>
 		</details>
+
 		{% if user.perfil.es_personal %}
 		<details class="menu-seccion" data-seccion="gestion">
 			<summary><span>Gestión</span></summary>
@@ -706,9 +750,7 @@
             });
         });
 		
-		// Menú lateral: las secciones arrancan cerradas. Se abren solas si la página actual
-		// está dentro de ellas (para ver cuál está activa), y recuerdan lo que abriste o cerraste
-		// a mano mientras navegás.
+		// Menú lateral: abre la sección activa y guarda su estado
 		document.querySelectorAll("details.menu-seccion").forEach(function (d) {
 			var clave = "menu-" + d.dataset.seccion;
 			var guardado = null;

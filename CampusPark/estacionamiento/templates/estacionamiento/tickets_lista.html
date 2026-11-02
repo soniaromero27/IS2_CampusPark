@@ -23,62 +23,65 @@
   {% if q or estado %}<a href="?orden={{ orden }}&dir={{ dir }}" class="btn">Limpiar</a>{% endif %}
 </form>
 
-<table>
-  <tr>
-    <th>
-      <a href="?orden=numero&dir={% if orden == 'numero' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
-        N°{% if orden == 'numero' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=patente&dir={% if orden == 'patente' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
-        Patente{% if orden == 'patente' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=usuario&dir={% if orden == 'usuario' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
-        Usuario{% if orden == 'usuario' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=salida&dir={% if orden == 'salida' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
-        Salida{% if orden == 'salida' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=horas&dir={% if orden == 'horas' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
-        Horas{% if orden == 'horas' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=monto&dir={% if orden == 'monto' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
-        Monto{% if orden == 'monto' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=estado&dir={% if orden == 'estado' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
-        Estado{% if orden == 'estado' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th></th>
-  </tr>
-  {% for t in tickets %}
-  <tr>
-    <td>{{ t.numero }}</td>
-    <td>{{ t.patente }}</td>
-    <td>{% if t.usuario %}{{ t.usuario.nombre }} {{ t.usuario.apellido }}{% else %}No registrado{% endif %}</td>
-    <td>{{ t.fecha_salida }}</td>
-    <td>{{ t.horas }}</td>
-    <td>{% if t.monto is not None %}Gs. {{ t.monto|floatformat:"0g" }}{% else %}—{% endif %}</td>
-    <td>{{ t.get_estado_display }}</td>
-    <td><a href="{% url 'estacionamiento:ticket_detalle' t.pk %}">
-		<span class="material-symbols-outlined">description</span></a>
-	</td>
-		
-  </tr>
-  {% empty %}
-  <tr><td colspan="8">No hay tickets que coincidan.</td></tr>
-  {% endfor %}
-</table>
+<div class="table-responsive">
+	<table>
+	  <tr>
+		<th>
+		  <a href="?orden=numero&dir={% if orden == 'numero' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
+			N°{% if orden == 'numero' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=patente&dir={% if orden == 'patente' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
+			Patente{% if orden == 'patente' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=usuario&dir={% if orden == 'usuario' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
+			Usuario{% if orden == 'usuario' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=salida&dir={% if orden == 'salida' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
+			Salida{% if orden == 'salida' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=horas&dir={% if orden == 'horas' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
+			Horas{% if orden == 'horas' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=monto&dir={% if orden == 'monto' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
+			Monto{% if orden == 'monto' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=estado&dir={% if orden == 'estado' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&estado={{ estado }}">
+			Estado{% if orden == 'estado' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th></th>
+	  </tr>
+	  {% for t in tickets %}
+	  <tr>
+		<td>{{ t.numero }}</td>
+		<td>{{ t.patente }}</td>
+		<td>{% if t.usuario %}{{ t.usuario.nombre }} {{ t.usuario.apellido }}{% else %}No registrado{% endif %}</td>
+		<td>{{ t.fecha_salida }}</td>
+		<td>{{ t.horas }}</td>
+		<td>{% if t.monto is not None %}Gs. {{ t.monto|floatformat:"0g" }}{% else %}—{% endif %}</td>
+		<td>{{ t.get_estado_display }}</td>
+		<td><a href="{% url 'estacionamiento:ticket_detalle' t.pk %}">
+			<span class="material-symbols-outlined">description</span></a>
+		</td>
+			
+	  </tr>
+	  {% empty %}
+	  <tr><td colspan="8">No hay tickets que coincidan.</td></tr>
+	  {% endfor %}
+	</table>
+</div>
+
 {% include "_paginacion.html" %}
 {% endblock %}

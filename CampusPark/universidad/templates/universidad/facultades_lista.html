@@ -24,41 +24,44 @@ search
   {% if q %}<a href="?orden={{ orden }}&dir={{ dir }}" class="btn">Limpiar</a>{% endif %}
 </form>
 
-<table>
-  <tr>
-    <th>
-      <a href="?orden=nombre&dir={% if orden == 'nombre' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Nombre{% if orden == 'nombre' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=descripcion&dir={% if orden == 'descripcion' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Descripción{% if orden == 'descripcion' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=zonas&dir={% if orden == 'zonas' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Zonas{% if orden == 'zonas' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=usuarios&dir={% if orden == 'usuarios' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Usuarios{% if orden == 'usuarios' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th></th>
-  </tr>
-  {% for f in facultades %}
-  <tr>
-    <td>{{ f.nombre }}</td>
-    <td>{{ f.descripcion }}</td>
-    <td>{{ f.cantidad_zonas }}</td>
-    <td>{{ f.cantidad_usuarios }}</td>
-    <td><a href="{% url 'universidad:facultad_editar' f.pk %}"><span class="material-symbols-outlined">edit_square</span></a></td>
-  </tr>
-  {% empty %}
-  <tr><td colspan="5">No hay facultades que coincidan con la búsqueda.</td></tr>
-  {% endfor %}
-</table>
+<div class="table-responsive">
+	<table>
+	  <tr>
+		<th>
+		  <a href="?orden=nombre&dir={% if orden == 'nombre' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Nombre{% if orden == 'nombre' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=descripcion&dir={% if orden == 'descripcion' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Descripción{% if orden == 'descripcion' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=zonas&dir={% if orden == 'zonas' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Zonas{% if orden == 'zonas' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=usuarios&dir={% if orden == 'usuarios' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Usuarios{% if orden == 'usuarios' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th></th>
+	  </tr>
+	  {% for f in facultades %}
+	  <tr>
+		<td>{{ f.nombre }}</td>
+		<td>{{ f.descripcion }}</td>
+		<td>{{ f.cantidad_zonas }}</td>
+		<td>{{ f.cantidad_usuarios }}</td>
+		<td><a href="{% url 'universidad:facultad_editar' f.pk %}"><span class="material-symbols-outlined">edit_square</span></a></td>
+	  </tr>
+	  {% empty %}
+	  <tr><td colspan="5">No hay facultades que coincidan con la búsqueda.</td></tr>
+	  {% endfor %}
+	</table>
+</div>
+
 {% include "_paginacion.html" %}
 {% endblock %}

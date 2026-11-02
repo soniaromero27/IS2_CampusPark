@@ -25,63 +25,66 @@ search
   {% if q %}<a href="{% url 'estacionamiento:zonas_lista' %}" class="btn">Limpiar</a>{% endif %}
 </form>
 
-<table>
-  <tr>
-    <th>
-      <a href="?orden=nombre&dir={% if orden == 'nombre' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Nombre{% if orden == 'nombre' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=facultad&dir={% if orden == 'facultad' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Facultad{% if orden == 'facultad' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-	<th>
-	<a href="?orden=tipos&dir={% if orden == 'tipos' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Tipos Permitidos{% if orden == 'tipos' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-	</th>
-    <th>
-      <a href="?orden=descripcion&dir={% if orden == 'descripcion' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Descripcion{% if orden == 'descripcion' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=espacios&dir={% if orden == 'espacios' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Cantidad de Espacios{% if orden == 'espacios' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-	<th></th>
-  </tr>
+<div class="table-responsive">
+	<table>
+	  <tr>
+		<th>
+		  <a href="?orden=nombre&dir={% if orden == 'nombre' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Nombre{% if orden == 'nombre' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=facultad&dir={% if orden == 'facultad' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Facultad{% if orden == 'facultad' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		<a href="?orden=tipos&dir={% if orden == 'tipos' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Tipos Permitidos{% if orden == 'tipos' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=descripcion&dir={% if orden == 'descripcion' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Descripcion{% if orden == 'descripcion' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=espacios&dir={% if orden == 'espacios' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Cantidad de Espacios{% if orden == 'espacios' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th></th>
+	  </tr>
 
-  <!--tr>
-    <th>Nombre</th><th>Facultad</th><th>Descripción</th><th>Cantidad de espacios</th><th></th>
-  </tr-->
-  {% for z in zonas %}
-  <tr>
-    <td>{{ z.nombre }}</td>
-    <td>{{ z.facultad|default:"Ninguna" }}</td>
-	<td>
-      {% if not z.facultad %}
-        Todos
-      {% else %}
-        {% with tipos=z.tipos_usuario_permitidos.all %}
-          {% if tipos %}
-            {% for t in tipos %}{{ t.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
-          {% else %}
-            Todos
-          {% endif %}
-        {% endwith %}
-      {% endif %}
-    </td>
-    <td>{{ z.descripcion }}</td>
-    <td>{{ z.cantidad_espacios }}</td>
-    <td><a href="{% url 'estacionamiento:zona_editar' z.pk %}"><span class="material-symbols-outlined">edit_square</span></a></td>
-  </tr>
-  {% empty %}
-  <tr><td colspan="5">No hay zonas que coincidan con la búsqueda.</td></tr>
-  {% endfor %}
-</table>
+	  <!--tr>
+		<th>Nombre</th><th>Facultad</th><th>Descripción</th><th>Cantidad de espacios</th><th></th>
+	  </tr-->
+	  {% for z in zonas %}
+	  <tr>
+		<td>{{ z.nombre }}</td>
+		<td>{{ z.facultad|default:"Ninguna" }}</td>
+		<td>
+		  {% if not z.facultad %}
+			Todos
+		  {% else %}
+			{% with tipos=z.tipos_usuario_permitidos.all %}
+			  {% if tipos %}
+				{% for t in tipos %}{{ t.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+			  {% else %}
+				Todos
+			  {% endif %}
+			{% endwith %}
+		  {% endif %}
+		</td>
+		<td>{{ z.descripcion }}</td>
+		<td>{{ z.cantidad_espacios }}</td>
+		<td><a href="{% url 'estacionamiento:zona_editar' z.pk %}"><span class="material-symbols-outlined">edit_square</span></a></td>
+	  </tr>
+	  {% empty %}
+	  <tr><td colspan="5">No hay zonas que coincidan con la búsqueda.</td></tr>
+	  {% endfor %}
+	</table>
+</div>
+
 {% include "_paginacion.html" %}
 {% endblock %}

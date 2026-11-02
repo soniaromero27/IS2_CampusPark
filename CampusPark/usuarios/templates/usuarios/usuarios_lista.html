@@ -20,68 +20,70 @@ search
   {% if q %}<a href="{% url 'usuarios:lista' %}" class="btn">Limpiar</a>{% endif %}
 </form>
 
-<table>
-  <tr>
-    <th>
-      <a href="?orden=nombre&dir={% if orden == 'nombre' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Nombre{% if orden == 'nombre' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=apellido&dir={% if orden == 'apellido' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Apellido{% if orden == 'apellido' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-	<th>
-      <a href="?orden=documento&dir={% if orden == 'documento' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Documento{% if orden == 'documento' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=correo&dir={% if orden == 'correo' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Correo{% if orden == 'correo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=telefono&dir={% if orden == 'telefono' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Telefono{% if orden == 'telefono' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=tipo&dir={% if orden == 'tipo' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Tipo{% if orden == 'tipo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=facultad&dir={% if orden == 'facultad' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Facultad{% if orden == 'facultad' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-	<th>
-      <a href="?orden=fecha_registro&dir={% if orden == 'fecha_registro' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Fecha de Registro{% if orden == 'fecha_registro' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-  </tr>
+<div class="table-responsive">
+	<table>
+	  <tr>
+		<th>
+		  <a href="?orden=nombre&dir={% if orden == 'nombre' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Nombre{% if orden == 'nombre' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=apellido&dir={% if orden == 'apellido' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Apellido{% if orden == 'apellido' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=documento&dir={% if orden == 'documento' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Documento{% if orden == 'documento' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=correo&dir={% if orden == 'correo' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Correo{% if orden == 'correo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=telefono&dir={% if orden == 'telefono' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Telefono{% if orden == 'telefono' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=tipo&dir={% if orden == 'tipo' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Tipo{% if orden == 'tipo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=facultad&dir={% if orden == 'facultad' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Facultad{% if orden == 'facultad' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=fecha_registro&dir={% if orden == 'fecha_registro' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Fecha de Registro{% if orden == 'fecha_registro' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+	  </tr>
 
 
+	  {% for u in usuarios %}
+	  <tr>
+		<td>{{ u.nombre }}</td>
+		<td>{{ u.apellido }}</td>
+		<td>{{ u.documento }}</td>
+		<!--td>{{ u.fecha_nacimiento }}</td-->
+		<td>{{ u.correo }}</td>
+		<td>{{ u.telefono }}</td>
+		<!--td>{{ u.nro_licencia|default:"—" }}</td-->
+		<td>{{ u.tipo }}</td>
+		<td>{{ u.facultad|default:"—" }}</td>
+		<td>{{ u.fecha_registro }}</td>
+	  </tr>
+	  {% empty %}
+	  <tr><td colspan="10">No hay usuarios que coincidan con la búsqueda.</td></tr>
+	  {% endfor %}
+	</table>
+</div>
 
-  {% for u in usuarios %}
-  <tr>
-    <td>{{ u.nombre }}</td>
-    <td>{{ u.apellido }}</td>
-    <td>{{ u.documento }}</td>
-    <!--td>{{ u.fecha_nacimiento }}</td-->
-    <td>{{ u.correo }}</td>
-    <td>{{ u.telefono }}</td>
-    <!--td>{{ u.nro_licencia|default:"—" }}</td-->
-    <td>{{ u.tipo }}</td>
-    <td>{{ u.facultad|default:"—" }}</td>
-    <td>{{ u.fecha_registro }}</td>
-  </tr>
-  {% empty %}
-  <tr><td colspan="10">No hay usuarios que coincidan con la búsqueda.</td></tr>
-  {% endfor %}
-</table>
 {% include "_paginacion.html" %}
 {% endblock %}

@@ -13,44 +13,47 @@
   <button>Nuevo tipo</button>
 </a>
 
-<table>
-  <tr>
-    <th>
-      <a href="?orden=nombre&dir={% if orden == 'nombre' and dir == 'asc' %}desc{% else %}asc{% endif %}">
-        Nombre{% if orden == 'nombre' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=descripcion&dir={% if orden == 'descripcion' and dir == 'asc' %}desc{% else %}asc{% endif %}">
-        Descripción{% if orden == 'descripcion' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=rol&dir={% if orden == 'rol' and dir == 'asc' %}desc{% else %}asc{% endif %}">
-        Rol{% if orden == 'rol' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=usuarios&dir={% if orden == 'usuarios' and dir == 'asc' %}desc{% else %}asc{% endif %}">
-        Usuarios{% if orden == 'usuarios' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th></th>
-  </tr>
-  {% for t in tipos %}
-  <tr>
-    <td>{{ t.nombre }}{% if externo_defecto and t.pk == externo_defecto.pk %} <small>(por defecto)</small>{% endif %}</td>
-    <td>{{ t.descripcion|default:"—" }}</td>
-    <td>{{ t.get_rol_display }}</td>
-    <td>{{ t.cantidad_usuarios }}</td>
-    <td>
-      <a class="accion" href="{% url 'usuarios:tipo_editar' t.pk %}" title="Editar"><span class="material-symbols-outlined">edit_square</span></a>
-      <a class="accion" href="{% url 'usuarios:tipo_eliminar' t.pk %}" title="Eliminar"><span class="material-symbols-outlined">delete</span></a>
-    </td>
-  </tr>
-  {% empty %}
-  <tr><td colspan="5">Todavía no hay tipos de usuario.</td></tr>
-  {% endfor %}
-</table>
+<div class="table-responsive">
+	<table>
+	  <tr>
+		<th>
+		  <a href="?orden=nombre&dir={% if orden == 'nombre' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+			Nombre{% if orden == 'nombre' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=descripcion&dir={% if orden == 'descripcion' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+			Descripción{% if orden == 'descripcion' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=rol&dir={% if orden == 'rol' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+			Rol{% if orden == 'rol' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=usuarios&dir={% if orden == 'usuarios' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+			Usuarios{% if orden == 'usuarios' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th></th>
+	  </tr>
+	  {% for t in tipos %}
+	  <tr>
+		<td>{{ t.nombre }}{% if externo_defecto and t.pk == externo_defecto.pk %} <small>(por defecto)</small>{% endif %}</td>
+		<td>{{ t.descripcion|default:"—" }}</td>
+		<td>{{ t.get_rol_display }}</td>
+		<td>{{ t.cantidad_usuarios }}</td>
+		<td>
+		  <a class="accion" href="{% url 'usuarios:tipo_editar' t.pk %}" title="Editar"><span class="material-symbols-outlined">edit_square</span></a>
+		  <a class="accion" href="{% url 'usuarios:tipo_eliminar' t.pk %}" title="Eliminar"><span class="material-symbols-outlined">delete</span></a>
+		</td>
+	  </tr>
+	  {% empty %}
+	  <tr><td colspan="5">Todavía no hay tipos de usuario.</td></tr>
+	  {% endfor %}
+	</table>
+</div>
+
 {% include "_paginacion.html" %}
 {% endblock %}
