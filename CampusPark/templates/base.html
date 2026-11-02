@@ -628,7 +628,7 @@
                         <div class="submenu-divider"></div>
 
                         <!-- Formulario de Cerrar sesión -->
-                        <form method="post" action="{% url 'usuarios:logout' %}">
+                        <form method="post" action="{% url 'usuarios:logout' %}" data-logout>
                             {% csrf_token %}
                             <button type="submit" class="submenu-btn">
                                 <span class="material-symbols-outlined">logout</span> Cerrar sesión
@@ -764,6 +764,86 @@
 				}, 0);
 			});
 		});
+    </script>
+
+
+<script>
+    // Aviso al salir de un formulario (nuevo/edición) con datos modificados,
+    // y confirmación antes de cerrar sesión.
+    //
+    // - Se vigilan todos los <form method="post"> de la página, salvo el de
+    //   cerrar sesión (data-logout) y los que lleven el atributo data-sin-aviso.
+    // - Los formularios GET (búsquedas, filtros) no se vigilan.
+    // - Si SOLO_SI_MODIFICO es false, avisa siempre que haya un formulario
+    //   vigilado en la página, aunque no se haya tocado nada.
+    (function () {
+        var SOLO_SI_MODIFICO = true;
+        var MSG_SALIR = "¿Está seguro que desea salir de la página? Se perderán los datos del formulario.";
+        var MSG_LOGOUT = "¿Está seguro que desea cerrar sesión?";
+        var MSG_LOGOUT_CAMBIOS = "¿Está seguro que desea cerrar sesión? Se perderán los datos del formulario.";
+ 
+        var formularios = Array.prototype.slice.call(
+            document.querySelectorAll('form[method="post" i]:not([data-logout]):not([data-sin-aviso])')
+        );
+        var saliendo = false;   // ya se confirmó la salida: no volver a preguntar
+        var enviando = false;   // se está enviando un formulario vigilado
+ 
+        function foto(form) {
+            var datos = [];
+            new FormData(form).forEach(function (valor, clave) {
+                if (clave === "csrfmiddlewaretoken") { return; }
+                datos.push([clave, typeof valor === "string" ? valor : (valor && valor.name) || ""]);
+            });
+            return JSON.stringify(datos);
+        }
+ 
+        var iniciales = formularios.map(foto);
+ 
+        function hayCambios() {
+            if (!formularios.length) { return false; }
+            if (!SOLO_SI_MODIFICO) { return true; }
+            return formularios.some(function (f, i) { return foto(f) !== iniciales[i]; });
+        }
+ 
+        formularios.forEach(function (f) {
+            f.addEventListener("submit", function () { enviando = true; });
+        });
+ 
+        // Clic en cualquier enlace que saque de la página (menú, logo, "Atrás", etc.)
+        document.addEventListener("click", function (e) {
+            if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) { return; }
+            var a = e.target.closest ? e.target.closest("a[href]") : null;
+            if (!a) { return; }
+            if (a.target && a.target !== "_self") { return; }
+            var href = a.getAttribute("href");
+            if (!href || href.charAt(0) === "#" || href.indexOf("javascript:") === 0) { return; }
+            if (!hayCambios()) { return; }
+            if (confirm(MSG_SALIR)) { saliendo = true; } else { e.preventDefault(); }
+        }, true);
+ 
+        // Cerrar la pestaña, recargar, botón "atrás" del navegador, escribir otra URL.
+        // (El navegador muestra su propio texto genérico: no permite personalizarlo.)
+        window.addEventListener("beforeunload", function (e) {
+            if (saliendo || enviando || !hayCambios()) { return; }
+            e.preventDefault();
+            e.returnValue = "";
+        });
+ 
+        // Si se vuelve a la página desde el historial, rehabilitar los avisos.
+        window.addEventListener("pageshow", function () { saliendo = false; enviando = false; });
+ 
+        // Cerrar sesión: siempre pide confirmación.
+        var logout = document.querySelector("form[data-logout]");
+        if (logout) {
+            logout.addEventListener("submit", function (e) {
+                if (confirm(hayCambios() ? MSG_LOGOUT_CAMBIOS : MSG_LOGOUT)) {
+                    saliendo = true;
+                } else {
+                    e.preventDefault();
+                }
+            });
+        }
+    })();
     </script>
 
 </body>
