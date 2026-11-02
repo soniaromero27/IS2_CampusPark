@@ -17,7 +17,7 @@
 <div class="card">
 	<p><strong>Horario de apertura:</strong> {{ reglamento.hora_apertura|time:"H:i" }} hs</p>
 	<p><strong>Horario de cierre:</strong> {{ reglamento.hora_cierre|time:"H:i" }} hs</p>
-	<p><strong>Tolerancia para salir tras validar el ticket:</strong> {{ reglamento.tolerancia_validacion }} minutos</p>
+	<p><strong>Tolerancia para salida:</strong> {{ reglamento.tolerancia_validacion }} minutos</p>
 </div>
 <div class="card">
 	{% if reglamento.reglamento %}

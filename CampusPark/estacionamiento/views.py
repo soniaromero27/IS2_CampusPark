@@ -12,7 +12,8 @@ from django.db.models.functions import TruncDate, TruncHour, TruncMonth
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
-import datetime as dt 
+import datetime as dt
+from urllib.parse import urlencode 
 
 from reglas.models import Reglamento
 from campuspark.paginacion import paginar
@@ -901,12 +902,173 @@ def _rango_periodo(periodo, dia, mes, anio):
     return dt.date(y, 1, 1), dt.date(y + 1, 1, 1)
  
  
+MESES_ES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+]
+MESES_CORTO = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+DIAS_ES = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]  # índice: weekday()
+DIAS_CORTO_DOM = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]  # índice: (weekday() + 1) % 7
+
+
+def _abreviar_monto(n):
+    """1500000 -> '1,5 M'; 750000 -> '750 mil'; 0 -> '0'. Para las etiquetas del eje."""
+    n = float(n)
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:g} M".replace(".", ",")
+    if n >= 1_000:
+        return f"{n / 1_000:g} mil".replace(".", ",")
+    return f"{n:g}".replace(".", ",")
+
+
+def _escala_grafico(maximo):
+    """Tope 'redondo' del eje vertical (1, 1,5, 2, 3, 4, 5, 6, 8 o 10 x potencia de 10)."""
+    if maximo <= 0:
+        return 100000.0
+    base = 10 ** (len(str(int(maximo))) - 1)
+    for factor in (1, 1.5, 2, 3, 4, 5, 6, 8, 10):
+        if maximo <= base * factor:
+            return float(base * factor)
+    return float(base * 10)
+
+
+def _url_periodo(periodo, ref):
+    """Enlace al dashboard en 'periodo', tomando como referencia la fecha 'ref'."""
+    clave, valor = {
+        "dia": ("dia", ref.isoformat()),
+        "mes": ("mes", ref.strftime("%Y-%m")),
+        "anio": ("anio", str(ref.year)),
+    }[periodo]
+    return "?" + urlencode({"periodo": periodo, clave: valor})
+
+
+def _titulo_periodo(periodo, inicio_d):
+    if periodo == "dia":
+        return (
+            f"{DIAS_ES[inicio_d.weekday()].capitalize()} {inicio_d.day} de "
+            f"{MESES_ES[inicio_d.month - 1]} de {inicio_d.year}"
+        )
+    if periodo == "mes":
+        return f"{MESES_ES[inicio_d.month - 1].capitalize()} {inicio_d.year}"
+    return str(inicio_d.year)
+
+
+def _grafico_recaudacion(periodo, inicio_d, fin_d, hoy):
+    """
+    Datos del gráfico de barras de recaudación (estilo Samsung Health):
+      - año: una barra por mes (enero a diciembre);
+      - mes: una barra por cada día del mes;
+      - día: una barra por cada día de la semana (domingo a sábado) que
+        contiene el día elegido, con ese día resaltado.
+    Incluye los períodos sin cobros (barra en cero).
+    """
+    if periodo == "dia":
+        ini = inicio_d - dt.timedelta(days=(inicio_d.weekday() + 1) % 7)  # domingo
+        fin = ini + dt.timedelta(days=7)
+        ultimo = fin - dt.timedelta(days=1)
+        subtitulo = (
+            f"Semana del {ini.day} de {MESES_ES[ini.month - 1]} "
+            f"al {ultimo.day} de {MESES_ES[ultimo.month - 1]}"
+        )
+        texto_enlace = "Ver este día"
+    elif periodo == "mes":
+        ini, fin = inicio_d, fin_d
+        subtitulo = "Recaudación de cada día del mes"
+        texto_enlace = "Ver este día"
+    else:
+        ini, fin = inicio_d, fin_d
+        subtitulo = "Recaudación de cada mes del año"
+        texto_enlace = "Ver este mes"
+
+    desde = timezone.make_aware(dt.datetime.combine(ini, dt.time.min))
+    hasta = timezone.make_aware(dt.datetime.combine(fin, dt.time.min))
+    pagos = Pago.objects.filter(fecha_pago__gte=desde, fecha_pago__lt=hasta)
+
+    barras = []
+    if periodo == "anio":
+        filas = (
+            pagos.annotate(p=TruncMonth("fecha_pago"))
+            .values("p")
+            .annotate(total=Sum("monto"), cantidad=Count("id"))
+            .order_by()
+        )
+        datos = {(r["p"].year, r["p"].month): r for r in filas}
+        for m in range(1, 13):
+            r = datos.get((inicio_d.year, m), {})
+            primero = dt.date(inicio_d.year, m, 1)
+            barras.append(
+                {
+                    "eje": MESES_CORTO[m - 1],
+                    "mostrar_eje": True,
+                    "titulo": f"{MESES_ES[m - 1].capitalize()} {inicio_d.year}",
+                    "total": r.get("total") or 0,
+                    "cantidad": r.get("cantidad", 0),
+                    "href": _url_periodo("mes", primero),
+                    "actual": False,
+                    "hoy": (hoy.year, hoy.month) == (inicio_d.year, m),
+                    "futuro": primero > hoy,
+                }
+            )
+    else:
+        filas = (
+            pagos.annotate(p=TruncDate("fecha_pago"))
+            .values("p")
+            .annotate(total=Sum("monto"), cantidad=Count("id"))
+            .order_by()
+        )
+        datos = {r["p"]: r for r in filas}
+        d = ini
+        while d < fin:
+            r = datos.get(d, {})
+            if periodo == "dia":
+                eje = DIAS_CORTO_DOM[(d.weekday() + 1) % 7]
+                titulo = f"{DIAS_ES[d.weekday()].capitalize()} {d.day} de {MESES_ES[d.month - 1]}"
+                mostrar = True
+            else:
+                eje = str(d.day)
+                titulo = f"{d.day} de {MESES_ES[d.month - 1]}"
+                mostrar = d.day == 1 or d.day % 5 == 0
+            barras.append(
+                {
+                    "eje": eje,
+                    "mostrar_eje": mostrar,
+                    "titulo": titulo,
+                    "total": r.get("total") or 0,
+                    "cantidad": r.get("cantidad", 0),
+                    "href": _url_periodo("dia", d),
+                    "actual": periodo == "dia" and d == inicio_d,
+                    "hoy": d == hoy,
+                    "futuro": d > hoy,
+                }
+            )
+            d += dt.timedelta(days=1)
+
+    escala = _escala_grafico(max((float(b["total"]) for b in barras), default=0))
+    for b in barras:
+        b["pct"] = int(round(max(float(b["total"]) * 100 / escala, 3))) if b["total"] > 0 else 0
+
+    return {
+        "barras": barras,
+        "subtitulo": subtitulo,
+        "texto_enlace": texto_enlace,
+        "lineas": [
+            {"pos": 0, "etiqueta": _abreviar_monto(escala)},
+            {"pos": 50, "etiqueta": _abreviar_monto(escala / 2)},
+            {"pos": 100, "etiqueta": "0"},
+        ],
+    }
+
+
 @admin_requerido
 def dashboard_view(request):
     """
-    Resumen de recaudación (sólo Administrador). Cuenta los tickets PAGADOS
-    según su fecha de pago. Filtrable por día, mes o año:
+    Resumen de recaudación (sólo Administrador). Cuenta los pagos según su
+    fecha de pago. Filtrable por día, mes o año:
     ?periodo=dia&dia=AAAA-MM-DD | ?periodo=mes&mes=AAAA-MM | ?periodo=anio&anio=AAAA
+
+    Arriba muestra una barra con el total recaudado del período elegido y,
+    debajo, un gráfico de barras: por mes (año), por día (mes) o por día de
+    la semana, de domingo a sábado (día).
     """
     hoy = timezone.localdate()
     periodo = request.GET.get("periodo", "mes")
@@ -915,28 +1077,29 @@ def dashboard_view(request):
     dia = request.GET.get("dia") or hoy.isoformat()
     mes = request.GET.get("mes") or hoy.strftime("%Y-%m")
     anio = request.GET.get("anio") or str(hoy.year)
- 
+
     try:
         inicio_d, fin_d = _rango_periodo(periodo, dia, mes, anio)
     except ValueError:
         messages.error(request, "Fecha inválida: se muestra el mes actual.")
         periodo, dia, mes, anio = "mes", hoy.isoformat(), hoy.strftime("%Y-%m"), str(hoy.year)
         inicio_d, fin_d = _rango_periodo(periodo, dia, mes, anio)
- 
+
     inicio = timezone.make_aware(dt.datetime.combine(inicio_d, dt.time.min))
     fin = timezone.make_aware(dt.datetime.combine(fin_d, dt.time.min))
- 
+
     pagados = Pago.objects.filter(fecha_pago__gte=inicio, fecha_pago__lt=fin)
- 
+
     resumen = pagados.aggregate(total=Sum("monto"), cantidad=Count("id"))
     total = resumen["total"] or 0
- 
+    cantidad = resumen["cantidad"] or 0
+    promedio = total / cantidad if cantidad else 0
+
     # Por forma de pago (se muestran las tres aunque alguna esté en cero)
     agg = {
-       r["metodo"]: r
-       for r in pagados.values("metodo").annotate(total=Sum("monto"), cantidad=Count("id"))
+        r["metodo"]: r
+        for r in pagados.values("metodo").annotate(total=Sum("monto"), cantidad=Count("id"))
     }
-
     por_metodo = []
     for valor, etiqueta in Ticket.Metodo.choices:
         r = agg.get(valor, {})
@@ -949,28 +1112,30 @@ def dashboard_view(request):
                 "pct": round(t * 100 / total) if total else 0,
             }
         )
- 
-    # Evolución: por hora (día), por día (mes) o por mes (año)
-    trunc = {"dia": TruncHour, "mes": TruncDate, "anio": TruncMonth}[periodo]
-    serie = list(
-        pagados.annotate(p=trunc("fecha_pago"))
-        .values("p")
-        .annotate(total=Sum("monto"), cantidad=Count("id"))
-        .order_by("p")
-    )
-    maximo = max((s["total"] or 0 for s in serie), default=0)
-    for s in serie:
-        s["pct"] = round((s["total"] or 0) * 100 / maximo) if maximo else 0
- 
+
     # Lo emitido en el período que todavía no se cobró
     por_cobrar = Ticket.objects.filter(
-       estado=Ticket.Estado.PENDIENTE, fecha_emision__gte=inicio, fecha_emision__lt=fin
+        estado=Ticket.Estado.PENDIENTE, fecha_emision__gte=inicio, fecha_emision__lt=fin
     ).aggregate(total=Sum(F("monto") - F("monto_pagado_previo")), cantidad=Count("id"))
 
     sin_cargo = Ticket.objects.filter(
         estado=Ticket.Estado.SIN_CARGO, fecha_pago__gte=inicio, fecha_pago__lt=fin
     ).count()
-    
+
+    # ---- Barra de estadísticas: pestañas Día/Mes/Año y flechas anterior/siguiente ----
+    ref = hoy if inicio_d <= hoy < fin_d else inicio_d   # fecha que se conserva al cambiar de pestaña
+    tabs = [
+        {"clave": c, "etiqueta": e, "url": _url_periodo(c, ref), "activo": c == periodo}
+        for c, e in (("dia", "Día"), ("mes", "Mes"), ("anio", "Año"))
+    ]
+    if periodo == "dia":
+        anterior = inicio_d - dt.timedelta(days=1)
+    elif periodo == "mes":
+        anterior = (inicio_d - dt.timedelta(days=1)).replace(day=1)
+    else:
+        anterior = dt.date(inicio_d.year - 1, 1, 1)
+    siguiente = fin_d   # primer día del período siguiente
+
     return render(
         request,
         "estacionamiento/dashboard.html",
@@ -984,11 +1149,16 @@ def dashboard_view(request):
                 "mes": inicio_d.strftime("%m/%Y"),
                 "anio": str(inicio_d.year),
             }[periodo],
-            "formato_serie": {"dia": "H:i", "mes": "d/m/Y", "anio": "m/Y"}[periodo],
+            "titulo_periodo": _titulo_periodo(periodo, inicio_d),
+            "tabs": tabs,
+            "url_anterior": _url_periodo(periodo, anterior),
+            "url_siguiente": _url_periodo(periodo, siguiente),
+            "siguiente_ok": siguiente <= hoy,
             "total": total,
-            "cantidad": resumen["cantidad"],
+            "cantidad": cantidad,
+            "promedio": promedio,
             "por_metodo": por_metodo,
-            "serie": serie,
+            "grafico": _grafico_recaudacion(periodo, inicio_d, fin_d, hoy),
             "por_cobrar": por_cobrar,
             "sin_cargo": sin_cargo,
         },

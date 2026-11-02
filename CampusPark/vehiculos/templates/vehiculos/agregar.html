@@ -11,7 +11,11 @@
       {{ field.errors }}
     </div>
   {% endfor %}
-  <button type="submit">Guardar</button>
-  <p><a href="{% url 'vehiculos:lista' %}">Atrás</a></p>
+  
+  <!-- Contenedor para alinear los botones horizontalmente -->
+  <div style="display: flex; gap: 10px; align-items: center; margin-top: 20px;">
+    <button type="submit">Guardar</button>
+    <a href="{% url 'vehiculos:lista' %}" class="btn">Atrás</a>
+  </div>
 </form>
 {% endblock %}
