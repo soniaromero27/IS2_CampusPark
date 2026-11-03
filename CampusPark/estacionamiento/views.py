@@ -13,6 +13,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
 import datetime as dt
+import math
 from urllib.parse import urlencode 
 
 from reglas.models import Reglamento
@@ -932,14 +933,15 @@ def _escala_grafico(maximo):
     return float(base * 10)
 
 
-def _url_periodo(periodo, ref):
-    """Enlace al dashboard en 'periodo', tomando como referencia la fecha 'ref'."""
+def _url_periodo(periodo, ref, extra=None):
+    """Enlace al dashboard en 'periodo', tomando como referencia la fecha 'ref'.
+    'extra' agrega otros parámetros (por ejemplo tipo y vista) al enlace."""
     clave, valor = {
         "dia": ("dia", ref.isoformat()),
         "mes": ("mes", ref.strftime("%Y-%m")),
         "anio": ("anio", str(ref.year)),
     }[periodo]
-    return "?" + urlencode({"periodo": periodo, clave: valor})
+    return "?" + urlencode({"periodo": periodo, clave: valor, **(extra or {})})
 
 
 def _titulo_periodo(periodo, inicio_d):
@@ -1271,6 +1273,244 @@ def _leer_periodo(request):
     }
 
 
+COLOR_ENTRADAS = "#1d5fa7"
+COLOR_SALIDAS = "#f59e0b"
+COLORES_ZONA = [
+    "#1d5fa7", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed",
+    "#0891b2", "#db2777", "#65a30d", "#ea580c", "#475569",
+]
+
+
+def _plural(n, singular, plural):
+    return f"{n} {singular if n == 1 else plural}"
+
+
+def _escala_conteo(maximo):
+    """Tope del eje para cantidades: entero y par, para que la mitad también lo sea."""
+    if maximo <= 0:
+        return 4.0
+    return float(max(4, math.ceil(_escala_grafico(maximo) / 2) * 2))
+
+
+def _valor_texto(ent, sal, tipo):
+    if tipo == "entradas":
+        return _plural(ent, "entrada", "entradas")
+    if tipo == "salidas":
+        return _plural(sal, "salida", "salidas")
+    return f"{_plural(ent, 'entrada', 'entradas')} · {_plural(sal, 'salida', 'salidas')}"
+
+
+def _sub_zonas(por_tipo, tipo, nombres):
+    """Desglose por zona en texto. 'por_tipo' = {"entradas": {zona_id: n}, "salidas": {...}}."""
+    partes = []
+    for clave, etiqueta in (("entradas", "Entradas"), ("salidas", "Salidas")):
+        if clave not in por_tipo:
+            continue
+        items = ", ".join(
+            f"{nombres[z]} {n}"
+            for z, n in sorted(por_tipo[clave].items(), key=lambda kv: nombres[kv[0]])
+            if n
+        )
+        if tipo == "ambas":
+            partes.append(f"{etiqueta}: {items or '—'}")
+        else:
+            partes.append(items or "Sin movimientos")
+    return " | ".join(partes)
+
+
+def _barra_periodo(periodo, inicio_d, fin_d, hoy, extra):
+    """Pestañas Día/Mes/Año, flechas anterior/siguiente y título, conservando 'extra' en los enlaces."""
+    ref = hoy if inicio_d <= hoy < fin_d else inicio_d
+    if periodo == "dia":
+        anterior = inicio_d - dt.timedelta(days=1)
+    elif periodo == "mes":
+        anterior = (inicio_d - dt.timedelta(days=1)).replace(day=1)
+    else:
+        anterior = dt.date(inicio_d.year - 1, 1, 1)
+    siguiente = fin_d
+    return {
+        "titulo_periodo": _titulo_periodo(periodo, inicio_d),
+        "tabs": [
+            {"clave": c, "etiqueta": e, "url": _url_periodo(c, ref, extra), "activo": c == periodo}
+            for c, e in (("dia", "Día"), ("mes", "Mes"), ("anio", "Año"))
+        ],
+        "url_anterior": _url_periodo(periodo, anterior, extra),
+        "url_siguiente": _url_periodo(periodo, siguiente, extra),
+        "siguiente_ok": siguiente <= hoy,
+    }
+
+
+def _grafico_movimientos(periodo, inicio_d, fin_d, hoy, tipo, vista, extra, zona_id=None):
+    """
+    Gráfico de barras de movimientos (entradas y/o salidas):
+      - año: una barra por mes; mes: una por día; día: los 7 días de la
+        semana (domingo a sábado) que contiene el día elegido.
+      - tipo 'entradas' / 'salidas': una barra por período; 'ambas': dos
+        barras lado a lado (entradas y salidas).
+      - vista 'total': una sola pila; vista 'zona': la barra se apila por
+        zona, con un color por zona.
+      - zona_id: si se indica, sólo cuenta los movimientos de esa zona.
+    """
+    if periodo == "dia":
+        ini = inicio_d - dt.timedelta(days=(inicio_d.weekday() + 1) % 7)  # domingo
+        fin = ini + dt.timedelta(days=7)
+        ultimo = fin - dt.timedelta(days=1)
+        subtitulo = (
+            f"Semana del {ini.day} de {MESES_ES[ini.month - 1]} "
+            f"al {ultimo.day} de {MESES_ES[ultimo.month - 1]}"
+        )
+        texto_enlace = "Ver este día"
+    elif periodo == "mes":
+        ini, fin = inicio_d, fin_d
+        subtitulo = "Movimientos de cada día del mes"
+        texto_enlace = "Ver este día"
+    else:
+        ini, fin = inicio_d, fin_d
+        subtitulo = "Movimientos de cada mes del año"
+        texto_enlace = "Ver este mes"
+
+    desde = timezone.make_aware(dt.datetime.combine(ini, dt.time.min))
+    hasta = timezone.make_aware(dt.datetime.combine(fin, dt.time.min))
+
+    zonas = list(Zona.objects.order_by("nombre").values_list("id", "nombre"))
+    nombres = dict(zonas)
+    orden = {zid: i for i, (zid, _) in enumerate(zonas)}
+    colores = {zid: COLORES_ZONA[i % len(COLORES_ZONA)] for i, (zid, _) in enumerate(zonas)}
+
+    trunc = TruncMonth if periodo == "anio" else TruncDate
+
+    def contar(campo):
+        """{clave_del_período: {zona_id (o None si vista total): cantidad}}"""
+        qs = Movimiento.objects.filter(**{f"{campo}__gte": desde, f"{campo}__lt": hasta})
+        if zona_id:
+            qs = qs.filter(espacio__zona_id=zona_id)
+        valores = ["p"] + (["espacio__zona"] if vista == "zona" else [])
+        filas = qs.annotate(p=trunc(campo)).values(*valores).annotate(n=Count("id")).order_by()
+        salida = defaultdict(dict)
+        for r in filas:
+            p = r["p"]
+            clave = (p.year, p.month) if periodo == "anio" else p
+            salida[clave][r.get("espacio__zona")] = r["n"]
+        return salida
+
+    series = []
+    if tipo in ("entradas", "ambas"):
+        series.append(("entradas", contar("fecha_hora_ingreso")))
+    if tipo in ("salidas", "ambas"):
+        series.append(("salidas", contar("fecha_hora_salida")))
+
+    # Períodos (columnas) del gráfico
+    columnas = []
+    if periodo == "anio":
+        for m in range(1, 13):
+            primero = dt.date(inicio_d.year, m, 1)
+            columnas.append(
+                {
+                    "clave": (inicio_d.year, m),
+                    "eje": MESES_CORTO[m - 1],
+                    "mostrar_eje": True,
+                    "titulo": f"{MESES_ES[m - 1].capitalize()} {inicio_d.year}",
+                    "href": _url_periodo("mes", primero, extra),
+                    "actual": False,
+                    "hoy": (hoy.year, hoy.month) == (inicio_d.year, m),
+                    "futuro": primero > hoy,
+                }
+            )
+    else:
+        d = ini
+        while d < fin:
+            if periodo == "dia":
+                eje = DIAS_CORTO_DOM[(d.weekday() + 1) % 7]
+                titulo = f"{DIAS_ES[d.weekday()].capitalize()} {d.day} de {MESES_ES[d.month - 1]}"
+                mostrar = True
+            else:
+                eje = str(d.day)
+                titulo = f"{d.day} de {MESES_ES[d.month - 1]}"
+                mostrar = d.day == 1 or d.day % 5 == 0
+            columnas.append(
+                {
+                    "clave": d,
+                    "eje": eje,
+                    "mostrar_eje": mostrar,
+                    "titulo": titulo,
+                    "href": _url_periodo("dia", d, extra),
+                    "actual": periodo == "dia" and d == inicio_d,
+                    "hoy": d == hoy,
+                    "futuro": d > hoy,
+                }
+            )
+            d += dt.timedelta(days=1)
+
+    zonas_usadas = set()
+    maximo = 0
+    for col in columnas:
+        grupos = []
+        por_tipo = {}
+        totales_tipo = {"entradas": 0, "salidas": 0}
+        for nombre, datos in series:
+            zdict = datos.get(col["clave"], {})
+            total = sum(zdict.values())
+            totales_tipo[nombre] = total
+            por_tipo[nombre] = zdict
+            if vista == "zona":
+                segmentos = []
+                for z, n in sorted(zdict.items(), key=lambda kv: orden[kv[0]]):
+                    if n:
+                        zonas_usadas.add(z)
+                        segmentos.append({"n": n, "color": colores[z], "zona": nombres[z]})
+            else:
+                color = COLOR_ENTRADAS if nombre == "entradas" else COLOR_SALIDAS
+                segmentos = [{"n": total, "color": color, "zona": ""}] if total else []
+            maximo = max(maximo, total)
+            grupos.append(
+                {
+                    "clase": nombre,
+                    "total": total,
+                    "segmentos": segmentos,
+                    "rayado": vista == "zona" and tipo == "ambas" and nombre == "salidas",
+                }
+            )
+        col["grupos"] = grupos
+        col["vacio"] = all(g["total"] == 0 for g in grupos)
+        col["valor"] = _valor_texto(totales_tipo["entradas"], totales_tipo["salidas"], tipo)
+        col["sub"] = _sub_zonas(por_tipo, tipo, nombres) if vista == "zona" else ""
+
+    escala = _escala_conteo(maximo)
+    for col in columnas:
+        for g in col["grupos"]:
+            g["pct"] = f"{max(g['total'] * 100 / escala, 3):.1f}" if g["total"] else "0"
+
+    # Leyenda
+    leyenda = []
+    nota = ""
+    if vista == "zona":
+        leyenda = [
+            {"color": colores[z], "etiqueta": nombres[z]}
+            for z, _ in zonas
+            if z in zonas_usadas
+        ]
+        if tipo == "ambas":
+            nota = "En cada día o mes, la barra de la izquierda son las entradas y la de la derecha (rayada), las salidas."
+    elif tipo == "ambas":
+        leyenda = [
+            {"color": COLOR_ENTRADAS, "etiqueta": "Entradas"},
+            {"color": COLOR_SALIDAS, "etiqueta": "Salidas"},
+        ]
+
+    return {
+        "columnas": columnas,
+        "subtitulo": subtitulo,
+        "texto_enlace": texto_enlace,
+        "leyenda": leyenda,
+        "nota": nota,
+        "lineas": [
+            {"pos": 0, "etiqueta": _abreviar_monto(escala)},
+            {"pos": 50, "etiqueta": _abreviar_monto(escala / 2)},
+            {"pos": 100, "etiqueta": "0"},
+        ],
+    }
+
+
 @admin_requerido
 def dashboard_ocupacion_view(request):
     """
@@ -1279,11 +1519,25 @@ def dashboard_ocupacion_view(request):
 
     - Estado ACTUAL de los espacios (libres/ocupados/reservados/fuera de
       servicio) por zona y en total: es una foto de "ahora", no depende del filtro.
-    - Entradas y salidas registradas en el período elegido (día, mes o año),
-      en total, por zona y a lo largo del tiempo.
+    - Movimientos (entradas y salidas) del período elegido (día, mes o año):
+      barra de estadísticas arriba y gráfico de barras. Se puede ver
+      ?tipo=entradas|salidas|ambas, ?vista=total|zona y, para ver una sola
+      zona, ?zona=<id> (en ese caso la barra de estadísticas y el gráfico
+      sólo cuentan esa zona y la vista "por zona" no aplica).
     """
     f = _leer_periodo(request)
     inicio, fin, periodo = f["inicio"], f["fin"], f["periodo"]
+
+    tipo = request.GET.get("tipo", "ambas")
+    if tipo not in ("entradas", "salidas", "ambas"):
+        tipo = "ambas"
+    vista = request.GET.get("vista", "total")
+    if vista not in ("total", "zona"):
+        vista = "total"
+
+    hoy = timezone.localdate()
+    inicio_d = timezone.localtime(inicio).date()
+    fin_d = timezone.localtime(fin).date()
 
     entradas = Movimiento.objects.filter(fecha_hora_ingreso__gte=inicio, fecha_hora_ingreso__lt=fin)
     salidas = Movimiento.objects.filter(fecha_hora_salida__gte=inicio, fecha_hora_salida__lt=fin)
@@ -1316,35 +1570,86 @@ def dashboard_ocupacion_view(request):
         for campo in ("total", "libres", "ocupados", "reservados", "fuera", "entradas", "salidas")
     }
     totales["pct_ocupado"] = pct(totales["ocupados"], totales["total"] - totales["fuera"])
-    dentro_ahora = Movimiento.objects.filter(fecha_hora_salida__isnull=True).count()
+    dentro_total = Movimiento.objects.filter(fecha_hora_salida__isnull=True).count()
 
-    # ---- Evolución: por hora (día), por día (mes) o por mes (año) ----
-    trunc = {"dia": TruncHour, "mes": TruncDate, "anio": TruncMonth}[periodo]
-    ent = {
-        r["p"]: r["n"]
-        for r in entradas.annotate(p=trunc("fecha_hora_ingreso")).values("p").annotate(n=Count("id"))
+    # ---- Zona elegida (opcional) ----
+    zona_obj = None
+    zona_raw = request.GET.get("zona", "").strip()
+    if zona_raw.isdigit():
+        zona_obj = next((z for z in zonas if z.pk == int(zona_raw)), None)
+    zona_id = zona_obj.pk if zona_obj else None
+    zona_extra = {"zona": zona_id} if zona_id else {}
+    extra = {"tipo": tipo, "vista": vista, **zona_extra}
+    vista_grafico = "total" if zona_id else vista   # con una sola zona no hay nada que apilar
+
+    # ---- Números de la barra de estadísticas (de la zona elegida, o de todas) ----
+    if zona_obj:
+        stats = {
+            "entradas": zona_obj.entradas,
+            "salidas": zona_obj.salidas,
+            "dentro": Movimiento.objects.filter(
+                fecha_hora_salida__isnull=True, espacio__zona_id=zona_id
+            ).count(),
+            "pct_ocupado": zona_obj.pct_ocupado,
+        }
+    else:
+        stats = {
+            "entradas": totales["entradas"],
+            "salidas": totales["salidas"],
+            "dentro": dentro_total,
+            "pct_ocupado": totales["pct_ocupado"],
+        }
+
+    nombres = {z.pk: z.nombre for z in zonas}
+    por_tipo_total = {}
+    if tipo in ("entradas", "ambas"):
+        por_tipo_total["entradas"] = ent_zona
+    if tipo in ("salidas", "ambas"):
+        por_tipo_total["salidas"] = sal_zona
+    detalle_total = {
+        "valor": _valor_texto(stats["entradas"], stats["salidas"], tipo),
+        "sub": _sub_zonas(por_tipo_total, tipo, nombres) if vista_grafico == "zona" else "",
     }
-    sal = {
-        r["p"]: r["n"]
-        for r in salidas.annotate(p=trunc("fecha_hora_salida")).values("p").annotate(n=Count("id"))
-    }
-    serie = [
-        {"p": k, "entradas": ent.get(k, 0), "salidas": sal.get(k, 0)}
-        for k in sorted(set(ent) | set(sal))
+
+    # ---- Selectores (conservan período, tipo, vista y zona) ----
+    selector_tipo = [
+        {"etiqueta": e, "activo": c == tipo,
+         "url": _url_periodo(periodo, inicio_d, {"tipo": c, "vista": vista, **zona_extra})}
+        for c, e in (("entradas", "Entradas"), ("salidas", "Salidas"), ("ambas", "Ambas"))
     ]
-    maximo = max((max(s["entradas"], s["salidas"]) for s in serie), default=0)
-    for s in serie:
-        s["pct_entradas"] = pct(s["entradas"], maximo)
-        s["pct_salidas"] = pct(s["salidas"], maximo)
+    selector_vista = [
+        {"etiqueta": e, "activo": c == vista,
+         "url": _url_periodo(periodo, inicio_d, {"tipo": tipo, "vista": c, **zona_extra})}
+        for c, e in (("total", "Total"), ("zona", "Por zona"))
+    ]
+    selector_zona = [
+        {"etiqueta": "Todas las zonas", "activo": zona_id is None,
+         "url": _url_periodo(periodo, inicio_d, {"tipo": tipo, "vista": vista})}
+    ] + [
+        {"etiqueta": z.nombre, "activo": z.pk == zona_id,
+         "url": _url_periodo(periodo, inicio_d, {"tipo": tipo, "vista": vista, "zona": z.pk})}
+        for z in zonas
+    ]
 
     return render(
         request,
         "estacionamiento/dashboard_ocupacion.html",
         {
             **f,
+            **_barra_periodo(periodo, inicio_d, fin_d, hoy, extra),
+            "tipo": tipo,
+            "vista": vista,
+            "zona_sel": zona_obj,
+            "stats": stats,
+            "selector_tipo": selector_tipo,
+            "selector_vista": selector_vista,
+            "selector_zona": selector_zona,
             "zonas": zonas,
             "totales": totales,
-            "dentro_ahora": dentro_ahora,
-            "serie": serie,
+            "dentro_ahora": dentro_total,
+            "detalle_total": detalle_total,
+            "grafico": _grafico_movimientos(
+                periodo, inicio_d, fin_d, hoy, tipo, vista_grafico, extra, zona_id
+            ),
         },
     )

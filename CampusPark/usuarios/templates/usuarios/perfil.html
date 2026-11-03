@@ -11,13 +11,13 @@
 <div class="table-responsive">
 	<table>
 	  <tr><th>Nombre de usuario</th><td>{{ perfil.user.username }}</td></tr>
-	  <tr>
+	  <!--tr>
 		<th>Contraseña</th>
 		<td>
 		  <span title="Por seguridad la contraseña se guarda cifrada y no se puede mostrar">••••••••••</span>
 		  <a href="{% url 'usuarios:password_cambiar' %}" style="margin-left:12px;">Cambiar</a>
 		</td>
-	  </tr>
+	  </tr-->
 	  <tr><th>Último acceso</th><td>{{ perfil.user.last_login|default:"—" }}</td></tr>
 	</table>
 </div>
