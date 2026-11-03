@@ -45,7 +45,6 @@ CampusPark es un sistema web para gestionar usuarios, vehículos y espacios de e
 | **Dashboards, tickets y solicitudes** | El menú de la aplicación incluye un dashboard de cobros, un dashboard de ocupación, el pago de tickets, el historial «Mis movimientos», el listado de tickets (personal), las solicitudes de registro pendientes de aprobación y la gestión de tipos de usuario (Administrador). Ver la nota al final de esta sección. |
 | **Panel de administración** | Panel de Django en `/admin/` con todos los modelos registrados (usuarios, vehículos, zonas, espacios, reservas, movimientos, tarifas, reglamento, etc.). |
 
-> **Nota:** los últimos elementos del menú (dashboards, pago de tickets, mis movimientos, tickets, solicitudes y tipos de usuario) figuran en la plantilla `base.html`, pero las vistas y URLs correspondientes deben estar presentes en el código para que esas pantallas funcionen. Conviene completar o ajustar esta fila de la tabla según el estado real de esas funciones en cada entrega.
 
 ### Otras características técnicas
 
