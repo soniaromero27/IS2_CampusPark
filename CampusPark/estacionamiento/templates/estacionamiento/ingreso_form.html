@@ -64,8 +64,8 @@
 
 {% else %}
 
-  <p>Paso 2 de 2: elegí el espacio para <strong>{{ patente }}</strong>.
-     <a href="{% url 'estacionamiento:movimiento_ingreso' %}?vista={{ vista }}">Cambiar chapa</a></p>
+  <p>Paso 2 de 2:<br> Elegí el espacio para <strong>{{ patente }}  </strong>.
+     <a href="{% url 'estacionamiento:movimiento_ingreso' %}?vista={{ vista }}" class="btn">Volver al paso 1</a></p>
 
   <div class="card">
     {% if usuario %}

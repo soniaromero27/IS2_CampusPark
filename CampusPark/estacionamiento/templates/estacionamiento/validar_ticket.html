@@ -47,13 +47,21 @@
         {{ field.errors }}
       </div>
     {% endfor %}
-    <button type="submit">Pagar y validar</button>
+	<!-- Contenedor flex para alinear los botones horizontalmente -->
+    <div style="display: flex; gap: 10px; align-items: center; margin-top: 20px;">
+		<button type="submit">Pagar y validar</button>
+		<a href="{% url 'estacionamiento:mis_movimientos' %}" class="btn">Volver a mis movimientos</a>
+	</div>
   {% else %}
     {# Sin cargo: sólo el botón #}
-    <button type="submit">Validar</button>
+	<div style="display: flex; gap: 10px; align-items: center; margin-top: 20px;">
+		<button type="submit">Validar</button>
+		<a href="{% url 'estacionamiento:mis_movimientos' %}" class="btn">Volver a mis movimientos</a>
+	</div>
   {% endif %}
 </form>
 {% endif %}
-
-<p><a href="{% url 'estacionamiento:mis_movimientos' %}">Volver a mis movimientos</a></p>
+<div style="display: flex; gap: 10px; align-items: center; margin-top: 20px;">
+	
+</div>
 {% endblock %}
