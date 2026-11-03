@@ -147,8 +147,7 @@ IS2_CampusPark/
 │   ├── usuarios/
 │   ├── vehiculos/
 │   ├── universidad/
-│   ├── estacionamiento/       # Incluye cuadricula.py, fixtures/ y
-│   │   │                      # management/commands/
+│   ├── estacionamiento/       # Incluye cuadricula.py y fixtures/
 │   ├── reglas/
 │   ├── run.bat                # Atajo para iniciar el servidor en Windows
 │   └── manage.py
