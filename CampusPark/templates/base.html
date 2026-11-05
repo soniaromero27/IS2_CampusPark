@@ -578,6 +578,60 @@
             }
         }
 
+
+        /* ===== CAMPOS DE CONTRASEÑA: botón para mostrar u ocultar ===== */
+
+        .pw-wrap {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            vertical-align: top;
+        }
+
+        .pw-wrap input {
+            width: 100%;
+            padding-right: 48px;
+        }
+
+        .pw-wrap button.pw-toggle {
+            position: absolute;
+			//position: relative;
+            top: 50%;
+			//top: 20px;
+            //right: 6px;
+			//left: 6px;
+            transform: translateY(-50%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            background: transparent;
+            color: #64748b;
+            border: none;
+            border-radius: 50%;
+            box-shadow: none;
+        }
+
+        .pw-wrap button.pw-toggle:hover {
+            background: #edf4fb;
+            color: #163b68;
+            transform: translateY(-50%);
+            box-shadow: none;
+        }
+
+        .pw-wrap button.pw-toggle:focus-visible {
+            outline: 3px solid #93c5fd;
+        }
+
+        .pw-wrap button.pw-toggle .material-symbols-outlined {
+            font-size: 22px;
+        }
+
+        @media (max-width: 800px) {
+            .pw-wrap { width: 100%; }
+        }
     </style>
 </head>
 
@@ -781,7 +835,9 @@
     //
     // - Se vigilan todos los <form method="post"> de la página, salvo el de
     //   cerrar sesión (data-logout) y los que lleven el atributo data-sin-aviso.
-    // - Los formularios GET (búsquedas, filtros) no se vigilan.
+    // - Los formularios GET (búsquedas, filtros) no se vigilan, salvo los que lleven data-vigilar.
+    // - Un formulario con data-aviso-siempre avisa al salir aunque no se haya modificado nada
+    //   (por ejemplo, los pasos del registro de ingreso).
     // - Si SOLO_SI_MODIFICO es false, avisa siempre que haya un formulario
     //   vigilado en la página, aunque no se haya tocado nada.
     (function () {
@@ -791,7 +847,7 @@
         var MSG_LOGOUT_CAMBIOS = "¿Está seguro que desea cerrar sesión? Se perderán los datos del formulario.";
  
         var formularios = Array.prototype.slice.call(
-            document.querySelectorAll('form[method="post" i]:not([data-logout]):not([data-sin-aviso])')
+            document.querySelectorAll('form[method="post" i]:not([data-logout]):not([data-sin-aviso]), form[data-vigilar]:not([data-sin-aviso])')
         );
         var saliendo = false;   // ya se confirmó la salida: no volver a preguntar
         var enviando = false;   // se está enviando un formulario vigilado
@@ -810,23 +866,36 @@
         function hayCambios() {
             if (!formularios.length) { return false; }
             if (!SOLO_SI_MODIFICO) { return true; }
-            return formularios.some(function (f, i) { return foto(f) !== iniciales[i]; });
+            return formularios.some(function (f, i) { return f.hasAttribute("data-aviso-siempre") || foto(f) !== iniciales[i]; });
         }
  
         formularios.forEach(function (f) {
             f.addEventListener("submit", function () { enviando = true; });
         });
  
-        // Clic en cualquier enlace que saque de la página (menú, logo, "Atrás", etc.)
+        // Clic en cualquier enlace que saque de la página (menú, logo, "Atrás", etc.).
+        // También cubre los botones que llevan un enlace adentro, <button><a href>Atrás</a></button>:
+        // si se hace clic en el botón pero fuera del texto, el navegador enviaría el formulario
+        // en vez de ir al enlace, así que se lo reemplaza por una navegación con confirmación.
         document.addEventListener("click", function (e) {
             if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) { return; }
-            var a = e.target.closest ? e.target.closest("a[href]") : null;
+            if (!e.target.closest) { return; }
+            var a = e.target.closest("a[href]");
+            var viaBoton = false;
+            if (!a) {
+                var b = e.target.closest("button");
+                a = b ? b.querySelector("a[href]") : null;
+                viaBoton = !!a;
+            }
             if (!a) { return; }
             if (a.target && a.target !== "_self") { return; }
             var href = a.getAttribute("href");
             if (!href || href.charAt(0) === "#" || href.indexOf("javascript:") === 0) { return; }
-            if (!hayCambios()) { return; }
-            if (confirm(MSG_SALIR)) { saliendo = true; } else { e.preventDefault(); }
+            if (a.hasAttribute("data-sin-aviso")) { saliendo = true; return; }   // enlace exento del aviso
+            if (viaBoton) { e.preventDefault(); }   // no enviar el formulario
+            if (hayCambios() && !confirm(MSG_SALIR)) { e.preventDefault(); return; }
+            saliendo = true;
+            if (viaBoton) { window.location.href = a.href; }
         }, true);
  
         // Cerrar la pestaña, recargar, botón "atrás" del navegador, escribir otra URL.
@@ -851,6 +920,40 @@
                 }
             });
         }
+    })();
+    </script>
+
+<script>
+    // Botón "ojo" en todos los campos de contraseña: alterna entre texto oculto y texto plano.
+    (function () {
+        document.querySelectorAll('input[type="password"]').forEach(function (input) {
+            if (input.closest(".pw-wrap")) { return; }
+
+            var envoltorio = document.createElement("div");
+            envoltorio.className = "pw-wrap";
+            input.parentNode.insertBefore(envoltorio, input);
+            envoltorio.appendChild(input);
+
+            var boton = document.createElement("button");
+            boton.type = "button";   // no envía el formulario
+            boton.className = "pw-toggle";
+            boton.setAttribute("aria-label", "Mostrar contraseña");
+            boton.setAttribute("aria-pressed", "false");
+            boton.title = "Mostrar contraseña";
+            boton.innerHTML = '<span class="material-symbols-outlined">visibility</span>';
+            envoltorio.appendChild(boton);
+
+            boton.addEventListener("click", function () {
+                var visible = input.type === "text";
+                input.type = visible ? "password" : "text";
+                boton.setAttribute("aria-pressed", visible ? "false" : "true");
+                var texto = visible ? "Mostrar contraseña" : "Ocultar contraseña";
+                boton.setAttribute("aria-label", texto);
+                boton.title = texto;
+                boton.querySelector(".material-symbols-outlined").textContent = visible ? "visibility" : "visibility_off";
+                input.focus();
+            });
+        });
     })();
     </script>
 

@@ -470,9 +470,9 @@ def registrar_ingreso_view(request):
     (actualizando su espacio si hubo reasignación) y se avisa; en todos los
     casos el espacio final queda 'Ocupado'.
     """
-    vista = request.GET.get("vista") or request.POST.get("vista") or "lista"
+    vista = request.GET.get("vista") or request.POST.get("vista") or "cuadros"
     if vista not in ("lista", "cuadros"):
-        vista = "lista"
+        vista = "cuadros"
 
     form = None      # formulario del paso 2
     paso1 = None     # formulario del paso 1

@@ -45,7 +45,7 @@
 {% if paso == 1 %}
 
   <p>Paso 1 de 2: ingresá la chapa del vehículo.</p>
-  <form method="get">
+  <form method="get" data-vigilar data-aviso-siempre>
     {{ form.non_field_errors }}
     <div class="form-row">
       <label for="{{ form.patente.id_for_label }}">{{ form.patente.label }}</label>
@@ -84,11 +84,11 @@
   </div>
 
   <div class="toggle-vista">
-    <a href="?patente={{ patente|urlencode }}&vista=lista" class="{% if vista == 'lista' %}activo{% endif %}">Lista</a>
-    <a href="?patente={{ patente|urlencode }}&vista=cuadros" class="{% if vista == 'cuadros' %}activo{% endif %}">Cuadrícula</a>
+    <a data-sin-aviso href="?patente={{ patente|urlencode }}&vista=lista" class="{% if vista == 'lista' %}activo{% endif %}">Lista</a>
+    <a data-sin-aviso href="?patente={{ patente|urlencode }}&vista=cuadros" class="{% if vista == 'cuadros' %}activo{% endif %}">Cuadrícula</a>
   </div>
 
-  <form method="post">
+  <form method="post" data-aviso-siempre>
     {% csrf_token %}
     {{ form.patente }}
     <input type="hidden" name="vista" value="{{ vista }}">

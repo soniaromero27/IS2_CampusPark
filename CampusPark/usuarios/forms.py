@@ -35,6 +35,7 @@ class RegistroUsuarioForm(UserCreationForm):
     facultad = forms.ModelChoiceField(
         queryset=Facultad.objects.all(),
         required=False,
+        empty_label="Ninguna",
         label="Facultad",
         help_text="Obligatoria para los tipos con rol Ciudadano Universitario (Docente, Estudiante, etc.).",
     )
@@ -143,9 +144,10 @@ class UsuarioEditForm(forms.ModelForm):
     Tampoco incluye el username de login, que es un campo de User, no
     de Usuario, y esta vista no lo toca.
 
-    'facultad' sí es editable: como 'tipo' no está en este formulario,
-    la validación de "obligatoria para Docente/Estudiante" se hace
-    contra el tipo ya guardado en self.instance.
+    'facultad' es editable, salvo para los usuarios Externos, a quienes
+    ni siquiera se les muestra el campo. Como 'tipo' no está en este
+    formulario, la validación de "obligatoria para Docente/Estudiante" se
+    hace contra el tipo ya guardado en self.instance.
     """
 
     class Meta:
@@ -164,6 +166,15 @@ class UsuarioEditForm(forms.ModelForm):
             "fecha_nacimiento": forms.DateInput(attrs={"type": "date"}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk and self.instance.es_externo:
+            # Un Externo nunca pertenece a una facultad: no se le muestra el campo
+            # (y si alguien lo envía a mano, se ignora).
+            del self.fields["facultad"]
+        else:
+            self.fields["facultad"].empty_label = "Ninguna"
+
     def clean_documento(self):
         documento = self.cleaned_data["documento"]
         if Usuario.objects.filter(documento=documento).exclude(pk=self.instance.pk).exists():
@@ -178,7 +189,7 @@ class UsuarioEditForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        facultad = cleaned_data.get("facultad")
+        facultad = cleaned_data.get("facultad")   # None si el campo no se muestra (Externo)
         if self.instance.requiere_facultad and not facultad:
             self.add_error(
                 "facultad",

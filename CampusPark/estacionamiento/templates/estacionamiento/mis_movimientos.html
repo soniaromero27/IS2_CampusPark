@@ -62,7 +62,7 @@
 		<td>
 		  {% if m.ticket %}
 			<a href="{% url 'estacionamiento:ticket_detalle' m.ticket.pk %}">{{ m.ticket.numero }} · {{ m.ticket.get_estado_display }}</a>
-		  {% else %}N/A{% endif %}
+		  {% else %}—{% endif %}
 		</td>
 		<td>
 		  {% if not m.fecha_hora_salida %}
@@ -75,7 +75,7 @@
 				{% if m.validado_hasta %}<br><small>Validación vencida</small>{% endif %}
 			  {% endif %}
 			{% endwith %}
-		  {% else %}—{% endif %}
+		  {% else %}N/A{% endif %}
 		</td>
 	  </tr>
 	  {% empty %}
