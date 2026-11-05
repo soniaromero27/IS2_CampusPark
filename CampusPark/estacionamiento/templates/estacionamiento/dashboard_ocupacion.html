@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+{% load l10n %}
+{% block content %}
+<style>
+  /* ===== Barra de estadísticas (arriba) ===== */
+  .stats-bar {
+    background: linear-gradient(135deg, #0f2d52, #1d4f91);
+    color: white; border-radius: 18px; padding: 22px 26px 24px;
+    box-shadow: 0 10px 30px rgba(15, 45, 82, 0.22);
+    text-align: center; margin-bottom: 20px;
+  }
+  .seg { display: inline-flex; background: rgba(255,255,255,0.14); border-radius: 999px; padding: 4px; }
+  .seg a {
+    padding: 8px 24px; border-radius: 999px; color: white; text-decoration: none;
+    font-size: 14px; font-weight: 600; transition: background 0.15s ease;
+  }
+  .seg a:hover { background: rgba(255,255,255,0.18); }
+  .seg a.activo { background: white; color: #174a86; }
+
+  .stats-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 18px; }
+  .stats-titulo { font-size: 17px; font-weight: 600; min-width: 220px; }
+  .nav-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 50%;
+    color: white; background: rgba(255,255,255,0.14); text-decoration: none;
+    transition: background 0.15s ease;
+  }
+  a.nav-btn:hover { background: rgba(255,255,255,0.28); }
+  .nav-btn.off { opacity: 0.3; cursor: default; }
+
+  .stats-zona {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 12px;
+    padding: 5px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.35);
+  }
+  .stats-zona .material-symbols-outlined { font-size: 18px; }
+  .stats-duo { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 48px; margin-top: 14px; }
+  .stats-etq { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: #bcd4ee; }
+  .stats-total { font-size: 46px; font-weight: 800; line-height: 1.1; margin-top: 2px; }
+  .stats-sub { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 22px; margin-top: 12px; font-size: 14px; color: #dbe7f5; }
+
+  /* ===== Selectores del gráfico (versión clara) ===== */
+  .g-controles { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px 18px; margin: 14px 0 4px; }
+  .seg-claro { display: inline-flex; background: #edf4fb; border-radius: 999px; padding: 3px; }
+  .seg-claro a {
+    padding: 7px 18px; border-radius: 999px; color: #475569; text-decoration: none;
+    font-size: 13px; font-weight: 600; transition: background 0.15s ease;
+  }
+  .seg-claro a:hover { background: #dbe9f8; }
+  .seg-claro a.activo { background: #1d5fa7; color: white; }
+  .sel-zona { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #475569; }
+  .sel-zona select {
+    width: auto; max-width: 220px; padding: 7px 12px; font-size: 13px;
+    border-radius: 999px; background: #edf4fb; border-color: transparent;
+  }
+  .g-controles .grupo-sel { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  tr.fila-sel td { background: #fff8e1; }
+
+  /* ===== Gráfico de barras (estilo Samsung Health) ===== */
+  .grafico { padding: 22px 24px 18px; }
+  .g-cab h3 { margin-bottom: 2px; }
+  .g-cab .g-sub { color: #64748b; font-size: 14px; }
+
+  .g-detalle {
+    display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap;
+    gap: 6px 16px; margin: 14px 0 6px; min-height: 58px;
+  }
+  .g-d-tit { color: #64748b; font-size: 14px; }
+  .g-d-val { font-size: 26px; font-weight: 800; color: #163b68; line-height: 1.15; }
+  .g-d-der { text-align: right; font-size: 14px; color: #64748b; max-width: 60%; }
+  .g-d-der a { display: block; margin-top: 2px; color: #1d5fa7; font-weight: 700; text-decoration: none; }
+  .g-d-der a:hover { text-decoration: underline; }
+
+  .g-plot { position: relative; height: 260px; margin-top: 6px; }
+  .g-grid { position: absolute; left: 0; right: 0; top: 10px; bottom: 26px; pointer-events: none; }
+  .g-linea { position: absolute; left: 0; right: 0; border-top: 1px dashed #dbe3ee; }
+  .g-linea span {
+    position: absolute; right: 0; top: -9px; padding-left: 6px;
+    font-size: 12px; color: #94a3b8; background: white;
+  }
+  .g-barras {
+    position: absolute; left: 0; right: 56px; top: 10px; bottom: 0;
+    display: flex; gap: 3px;
+  }
+  .g-col {
+    flex: 1; min-width: 0; display: flex; flex-direction: column;
+    cursor: pointer; outline: none; border-radius: 8px;
+  }
+  .g-pista { flex: 1; position: relative; min-height: 0; }
+  .g-col:focus-visible { box-shadow: 0 0 0 3px #93c5fd; }
+
+  /* Una o dos barras por columna (entradas y salidas), cada una puede ir apilada por zona */
+  .g-pares { position: absolute; top: 0; bottom: 0; left: 0; right: 0; display: flex; justify-content: center; gap: 2px; }
+  .g-gw { position: relative; }
+  .g-gw.uno { width: min(70%, 28px); }
+  .g-gw.par { width: min(38%, 16px); }
+  .g-grupo {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    display: flex; flex-direction: column-reverse;
+    border-radius: 8px; overflow: hidden; min-height: 4px;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .g-col:hover .g-grupo { transform: scaleX(1.1); }
+  .g-seg { min-height: 0; }
+  .g-seg + .g-seg { box-shadow: inset 0 1px 0 rgba(255,255,255,0.8); }
+  .g-grupo.cero { height: 4px !important; background: #e2e8f0; }
+  .g-grupo.rayado .g-seg {
+    background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.5) 0 3px, transparent 3px 7px);
+  }
+
+  /* Con una columna elegida, las demás se atenúan */
+  .g-hay-sel .g-col:not(.sel) .g-grupo { opacity: 0.35; }
+  .g-col.futuro .g-grupo { opacity: 0.6; }
+
+  .g-eje { height: 26px; line-height: 26px; text-align: center; font-size: 12px; color: #64748b; white-space: nowrap; }
+  .g-col.hoy .g-eje { color: #1d5fa7; font-weight: 800; }
+  .g-col.sel .g-eje { color: #163b68; font-weight: 800; }
+  .g-col.sin-eje .g-eje { visibility: hidden; }
+
+  .g-leyenda { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; font-size: 13px; color: #475569; }
+  .g-leyenda span.item { display: inline-flex; align-items: center; gap: 6px; }
+  .g-leyenda i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+  .g-nota { margin-top: 6px; font-size: 12px; color: #64748b; }
+
+  @media (max-width: 800px) {
+    .stats-total { font-size: 36px; }
+    .stats-titulo { min-width: 0; font-size: 15px; }
+    .grafico { padding: 18px 14px 14px; }
+    .g-plot { height: 220px; }
+    .g-barras { right: 46px; gap: 2px; }
+    .g-d-der { max-width: 100%; text-align: left; }
+  }
+
+  /* ===== Resto del dashboard ===== */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 0 0 20px; }
+  .kpi { margin-bottom: 0; }
+  .kpi .valor { font-size: 28px; font-weight: 800; color: #163b68; }
+  .kpi .etiqueta { color: #64748b; font-size: 14px; }
+  .barra { background: #edf4fb; border-radius: 6px; height: 10px; min-width: 100px; }
+  .barra > div { background: #1d5fa7; height: 10px; border-radius: 6px; }
+  .filtros { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; margin-top: 14px; }
+  .filtros .form-row { margin-bottom: 0; }
+  .filtros input, .filtros select { width: auto; }
+  details.otra-fecha { margin-bottom: 24px; }
+  details.otra-fecha > summary { cursor: pointer; color: #1d5fa7; font-weight: 600; font-size: 14px; }
+  tr.fila-total td { font-weight: 700; background: #edf4fb; }
+  .tabla-scroll { overflow-x: auto; }
+</style>
+
+<h2>Dashboard de ocupación</h2>
+
+<!-- ===== BARRA DE ESTADÍSTICAS ===== -->
+<section class="stats-bar">
+  <div class="seg" role="tablist" aria-label="Ver por">
+    {% for t in tabs %}
+      <a href="{{ t.url }}" class="{% if t.activo %}activo{% endif %}" role="tab" aria-selected="{% if t.activo %}true{% else %}false{% endif %}">{{ t.etiqueta }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="stats-nav">
+    <a href="{{ url_anterior }}" class="nav-btn" aria-label="Período anterior"><span class="material-symbols-outlined">chevron_left</span></a>
+    <div class="stats-titulo">{{ titulo_periodo }}</div>
+    {% if siguiente_ok %}
+      <a href="{{ url_siguiente }}" class="nav-btn" aria-label="Período siguiente"><span class="material-symbols-outlined">chevron_right</span></a>
+    {% else %}
+      <span class="nav-btn off" aria-hidden="true"><span class="material-symbols-outlined">chevron_right</span></span>
+    {% endif %}
+  </div>
+  {% if zona_sel %}
+  <div class="stats-zona"><span class="material-symbols-outlined">map</span> Zona: {{ zona_sel.nombre }}</div>
+  {% endif %}
+
+  <div class="stats-duo">
+    {% if tipo != "salidas" %}
+    <div>
+      <div class="stats-etq">Entradas</div>
+      <div class="stats-total">{{ stats.entradas }}</div>
+    </div>
+    {% endif %}
+    {% if tipo != "entradas" %}
+    <div>
+      <div class="stats-etq">Salidas</div>
+      <div class="stats-total">{{ stats.salidas }}</div>
+    </div>
+    {% endif %}
+  </div>
+  <div class="stats-sub">
+    <span>Dentro {% if zona_sel %}de la zona{% else %}del campus{% endif %} ahora: {{ stats.dentro }}</span>
+    <span>Ocupación actual: {{ stats.pct_ocupado }}%</span>
+  </div>
+</section>
+
+<!-- ===== GRÁFICO ===== -->
+<section class="card grafico" id="grafico">
+  <div class="g-cab">
+    <h3>Movimientos {% if periodo == "anio" %}por mes{% else %}por día{% endif %}</h3>
+    <div class="g-sub">{{ grafico.subtitulo }}{% if zona_sel %} · {{ zona_sel.nombre }}{% endif %}</div>
+  </div>
+
+  <div class="g-controles">
+    <div class="seg-claro" role="tablist" aria-label="Tipo de movimiento">
+      {% for s in selector_tipo %}<a href="{{ s.url }}" class="{% if s.activo %}activo{% endif %}" role="tab" aria-selected="{% if s.activo %}true{% else %}false{% endif %}">{{ s.etiqueta }}</a>{% endfor %}
+    </div>
+    <div class="grupo-sel">
+      <label class="sel-zona" for="sel-zona">Zona
+        <select id="sel-zona" onchange="window.location.href = this.value;">
+          {% for z in selector_zona %}<option value="{{ z.url }}"{% if z.activo %} selected{% endif %}>{{ z.etiqueta }}</option>{% endfor %}
+        </select>
+      </label>
+      {% if not zona_sel %}
+      <div class="seg-claro" role="tablist" aria-label="Agrupación">
+        {% for s in selector_vista %}<a href="{{ s.url }}" class="{% if s.activo %}activo{% endif %}" role="tab" aria-selected="{% if s.activo %}true{% else %}false{% endif %}">{{ s.etiqueta }}</a>{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="g-detalle" id="g-detalle"
+       data-titulo="{{ titulo_periodo }}"
+       data-valor="{{ detalle_total.valor }}"
+       data-sub="{{ detalle_total.sub }}">
+    <div>
+      <div class="g-d-tit" id="g-d-tit"></div>
+      <div class="g-d-val" id="g-d-val"></div>
+    </div>
+    <div class="g-d-der">
+      <span id="g-d-sub"></span>
+      <a href="#" id="g-d-link" data-texto="{{ grafico.texto_enlace }}" style="display:none;">{{ grafico.texto_enlace }} →</a>
+    </div>
+  </div>
+
+  <div class="g-plot">
+    <div class="g-grid" aria-hidden="true">
+      {% for l in grafico.lineas %}
+        <div class="g-linea" style="top: {{ l.pos }}%;"><span>{{ l.etiqueta }}</span></div>
+      {% endfor %}
+    </div>
+
+    <div class="g-barras">
+      {% for b in grafico.columnas %}
+        <div class="g-col{% if b.actual %} sel{% endif %}{% if b.hoy %} hoy{% endif %}{% if b.futuro %} futuro{% endif %}{% if not b.mostrar_eje %} sin-eje{% endif %}"
+             role="button" tabindex="0"
+             title="{{ b.titulo }}: {{ b.valor }}"
+             aria-label="{{ b.titulo }}: {{ b.valor }}"
+             data-titulo="{{ b.titulo }}"
+             data-valor="{{ b.valor }}"
+             data-sub="{{ b.sub }}"
+             data-href="{{ b.href }}"
+             {% if b.actual %}data-actual="1"{% endif %}>
+          <div class="g-pista">
+            <div class="g-pares">
+              {% for g in b.grupos %}
+              <div class="g-gw {% if b.grupos|length == 1 %}uno{% else %}par{% endif %}">
+                <div class="g-grupo{% if not g.total %} cero{% endif %}{% if g.rayado %} rayado{% endif %}" style="height: {{ g.pct }}%;">
+                  {% for s in g.segmentos %}<div class="g-seg" style="flex: {{ s.n|unlocalize }} 1 0%; background-color: {{ s.color }};"{% if s.zona %} title="{{ s.zona }}: {{ s.n }}"{% endif %}></div>{% endfor %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="g-eje">{{ b.eje }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if grafico.leyenda %}
+  <div class="g-leyenda">
+    {% for l in grafico.leyenda %}<span class="item"><i style="background: {{ l.color }};"></i>{{ l.etiqueta }}</span>{% endfor %}
+  </div>
+  {% endif %}
+  {% if grafico.nota %}<div class="g-nota">{{ grafico.nota }}</div>{% endif %}
+</section>
+
+<details class="otra-fecha">
+  <summary>Elegir otra fecha</summary>
+  <form method="get" class="filtros">
+    <input type="hidden" name="tipo" value="{{ tipo }}">
+    <input type="hidden" name="vista" value="{{ vista }}">
+    {% if zona_sel %}<input type="hidden" name="zona" value="{{ zona_sel.pk }}">{% endif %}
+    <div class="form-row">
+      <label for="id_periodo">Ver por</label>
+      <select name="periodo" id="id_periodo">
+        <option value="dia" {% if periodo == "dia" %}selected{% endif %}>Día</option>
+        <option value="mes" {% if periodo == "mes" %}selected{% endif %}>Mes</option>
+        <option value="anio" {% if periodo == "anio" %}selected{% endif %}>Año</option>
+      </select>
+    </div>
+    <div class="form-row" id="campo-dia"><label for="id_dia">Día</label><input type="date" name="dia" id="id_dia" value="{{ dia }}"></div>
+    <div class="form-row" id="campo-mes"><label for="id_mes">Mes</label><input type="month" name="mes" id="id_mes" value="{{ mes }}"></div>
+    <div class="form-row" id="campo-anio"><label for="id_anio">Año</label><input type="number" name="anio" id="id_anio" value="{{ anio }}" min="2000" max="2100" style="width:110px;"></div>
+    <button type="submit">Aplicar</button>
+  </form>
+</details>
+
+<!-- ===== ESTADO ACTUAL DE LOS ESPACIOS ===== -->
+<div class="kpis">
+  <div class="card kpi">
+    <div class="etiqueta">Vehículos dentro del campus ahora</div>
+    <div class="valor">{{ dentro_ahora }}</div>
+  </div>
+  <div class="card kpi">
+    <div class="etiqueta">Ocupación actual</div>
+    <div class="valor">{{ totales.pct_ocupado }}%</div>
+    <div class="etiqueta">{{ totales.ocupados }} de {{ totales.total }} espacio{{ totales.total|pluralize }}</div>
+  </div>
+  <div class="card kpi">
+    <div class="etiqueta">Espacios libres</div>
+    <div class="valor">{{ totales.libres }}</div>
+  </div>
+  <div class="card kpi">
+    <div class="etiqueta">Reservados / Fuera de servicio</div>
+    <div class="valor">{{ totales.reservados }} / {{ totales.fuera }}</div>
+  </div>
+</div>
+
+<h3>Estado actual de los espacios por zona</h3>
+<div class="tabla-scroll">
+<table>
+  <tr>
+    <th>Zona</th><th>Facultad</th><th>Espacios</th><th>Libres</th><th>Ocupados</th>
+    <th>Reservados</th><th>Fuera de servicio</th><th>% ocupado</th><th></th>
+    <th>Entradas ({{ rango_texto }})</th><th>Salidas ({{ rango_texto }})</th>
+  </tr>
+  {% for z in zonas %}
+  <tr{% if zona_sel and z.pk == zona_sel.pk %} class="fila-sel"{% endif %}>
+    <td>{{ z.nombre }}</td>
+    <td>{{ z.facultad|default:"Ninguna" }}</td>
+    <td>{{ z.total }}</td>
+    <td>{{ z.libres }}</td>
+    <td>{{ z.ocupados }}</td>
+    <td>{{ z.reservados }}</td>
+    <td>{{ z.fuera }}</td>
+    <td>{{ z.pct_ocupado }}%</td>
+    <td><div class="barra"><div style="width:{{ z.pct_ocupado }}%"></div></div></td>
+    <td>{{ z.entradas }}</td>
+    <td>{{ z.salidas }}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="11">Todavía no hay zonas cargadas.</td></tr>
+  {% endfor %}
+  {% if zonas %}
+  <tr class="fila-total">
+    <td>Total</td><td></td>
+    <td>{{ totales.total }}</td>
+    <td>{{ totales.libres }}</td>
+    <td>{{ totales.ocupados }}</td>
+    <td>{{ totales.reservados }}</td>
+    <td>{{ totales.fuera }}</td>
+    <td>{{ totales.pct_ocupado }}%</td>
+    <td><div class="barra"><div style="width:{{ totales.pct_ocupado }}%"></div></div></td>
+    <td>{{ totales.entradas }}</td>
+    <td>{{ totales.salidas }}</td>
+  </tr>
+  {% endif %}
+</table>
+</div>
+
+<script>
+(function () {
+  // --- Selector del formulario "Elegir otra fecha" ---
+  var sel = document.getElementById("id_periodo");
+  function ver() {
+    ["dia", "mes", "anio"].forEach(function (p) {
+      document.getElementById("campo-" + p).style.display = (sel.value === p) ? "" : "none";
+    });
+  }
+  sel.addEventListener("change", ver);
+  ver();
+
+  // --- Gráfico: tocar una columna muestra sus valores arriba (como Samsung Health) ---
+  var graf = document.getElementById("grafico");
+  var cols = [].slice.call(graf.querySelectorAll(".g-col"));
+  var base = document.getElementById("g-detalle");
+  var tit = document.getElementById("g-d-tit");
+  var val = document.getElementById("g-d-val");
+  var sub = document.getElementById("g-d-sub");
+  var link = document.getElementById("g-d-link");
+
+  var inicial = graf.querySelector(".g-col[data-actual]");   // modo "día": el día elegido
+  var elegida = inicial;
+
+  function mostrar(datos, conEnlace) {
+    tit.textContent = datos.titulo;
+    val.textContent = datos.valor;
+    sub.textContent = datos.sub || "";
+    if (conEnlace) {
+      link.href = datos.href;
+      link.textContent = link.getAttribute("data-texto") + " →";
+      link.style.display = "";
+    } else {
+      link.style.display = "none";
+    }
+  }
+
+  function restaurar() {
+    elegida = inicial;
+    cols.forEach(function (c) { c.classList.remove("sel"); });
+    if (inicial) {
+      inicial.classList.add("sel");
+      graf.classList.add("g-hay-sel");
+      mostrar(inicial.dataset, false);
+    } else {
+      graf.classList.remove("g-hay-sel");
+      mostrar(base.dataset, false);
+    }
+  }
+
+  function elegir(col) {
+    if (col === elegida) { restaurar(); return; }   // tocar otra vez: deseleccionar
+    elegida = col;
+    cols.forEach(function (c) { c.classList.toggle("sel", c === col); });
+    graf.classList.add("g-hay-sel");
+    mostrar(col.dataset, !col.hasAttribute("data-actual"));
+  }
+
+  cols.forEach(function (c) {
+    c.addEventListener("click", function () { elegir(c); });
+    c.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); elegir(c); }
+    });
+  });
+  restaurar();
+})();
+</script>
+{% endblock %}

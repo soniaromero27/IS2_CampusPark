@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+{% url 'usuarios:login' as login_url %}
 <style>
   /* ===== Portada ===== */
   .hero {
@@ -38,20 +39,49 @@
   .seccion > h2 { text-align: center; margin-bottom: 8px; }
   .seccion > .lead { text-align: center; color: #64748b; margin: 0 auto 28px; max-width: 640px; }
 
+  .aviso-login {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin: 0 auto 24px; padding: 10px 16px; max-width: 560px;
+    background: #edf4fb; color: #163b68; border-radius: 10px; font-size: 14px;
+  }
+
+  /* ===== Tarjetas (todas son enlaces) ===== */
   .funciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-  .funcion {
+  a.funcion {
+    display: flex; flex-direction: column;
     background: white; border: 1px solid #e7edf5; border-radius: 14px; padding: 24px;
     box-shadow: 0 5px 20px rgba(15, 45, 82, 0.06);
+    text-decoration: none; color: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   }
+  a.funcion:hover {
+    transform: translateY(-3px);
+    border-color: #1d5fa7;
+    box-shadow: 0 10px 26px rgba(15, 45, 82, 0.14);
+  }
+  a.funcion:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
+  .funcion .cabecera { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .funcion .icono {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 48px; height: 48px; margin-bottom: 14px;
+    width: 48px; height: 48px;
     background: #edf4fb; color: #1d5fa7; border-radius: 12px;
   }
+  .funcion .nuevo {
+    background: #dcfce7; color: #14532d; border: 1px solid #16a34a;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 999px;
+  }
   .funcion h3 { margin-bottom: 8px; font-size: 18px; }
-  .funcion p { color: #475569; font-size: 15px; line-height: 1.55; }
+  .funcion p { color: #475569; font-size: 15px; line-height: 1.55; flex: 1; }
+  .funcion .ir {
+    display: inline-flex; align-items: center; gap: 4px; margin-top: 16px;
+    color: #1d5fa7; font-size: 14px; font-weight: 700;
+  }
+  .funcion .ir .material-symbols-outlined { font-size: 18px; transition: transform 0.15s ease; }
+  a.funcion:hover .ir .material-symbols-outlined { transform: translateX(4px); }
 
-  .pasos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+  /* ===== Cómo funciona ===== */
+  .pasos { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 20px; }
   .paso { background: white; border: 1px solid #e7edf5; border-radius: 14px; padding: 24px; }
   .paso .numero {
     display: flex; align-items: center; justify-content: center;
@@ -86,16 +116,16 @@
   <h1>Tu estacionamiento universitario, sin vueltas</h1>
   <p class="bajada">
     CampusPark es el sistema de gestión del estacionamiento del campus: reservá tu espacio,
-    consultá cuáles están libres y conocé las tarifas, todo en un solo lugar.
+    pagá tus tickets, consultá tus movimientos y conocé las tarifas, todo en un solo lugar.
   </p>
 
   <div class="hero-acciones">
     {% if user.is_authenticated %}
       <a href="{% url 'estacionamiento:reserva_crear' %}" class="hero-btn principal">Reservar un espacio</a>
-      <a href="{% url 'estacionamiento:espacios_lista' %}" class="hero-btn secundario">Ver espacios disponibles</a>
+      <a href="{% url 'estacionamiento:pagar_tickets' %}" class="hero-btn secundario">Pagar mis tickets</a>
     {% else %}
       <a href="{% url 'usuarios:registro' %}" class="hero-btn principal">Crear mi cuenta</a>
-      <a href="{% url 'usuarios:login' %}" class="hero-btn secundario">Ingresar</a>
+      <a href="{{ login_url }}" class="hero-btn secundario">Ingresar</a>
     {% endif %}
   </div>
 
@@ -107,66 +137,211 @@
   {% endif %}
 </section>
 
-<!-- FUNCIONALIDADES -->
+<!-- FUNCIONALIDADES PARA TODOS -->
 <section class="seccion">
   <h2>Todo lo que podés hacer con CampusPark</h2>
   <p class="lead">Pensado para quienes estacionan en el campus y para quienes lo administran.</p>
 
+  {% if not user.is_authenticated %}
+  <div class="aviso-login">
+    <span class="material-symbols-outlined">lock</span>
+    Tocá cualquier tarjeta: te pedimos que ingreses y te llevamos directo a esa función.
+  </div>
+  {% endif %}
+
   <div class="funciones">
-    <div class="funcion">
-      <div class="icono"><span class="material-symbols-outlined">event_available</span></div>
+
+    <a class="funcion" href="{% if user.is_authenticated %}{% url 'estacionamiento:reserva_crear' %}{% else %}{{ login_url }}?next={% url 'estacionamiento:reserva_crear' %}{% endif %}">
+      <div class="cabecera"><div class="icono"><span class="material-symbols-outlined">event_available</span></div></div>
       <h3>Reservá tu espacio</h3>
       <p>Elegí el día y el horario, y marcá tu lugar en un mapa de cuadros por zona. Ves al instante qué espacios están libres en ese horario.</p>
-    </div>
+      <span class="ir">Reservar <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
 
-    <div class="funcion">
-      <div class="icono"><span class="material-symbols-outlined">grid_view</span></div>
+    <a class="funcion" href="{% if user.is_authenticated %}{% url 'estacionamiento:pagar_tickets' %}{% else %}{{ login_url }}?next={% url 'estacionamiento:pagar_tickets' %}{% endif %}">
+      <div class="cabecera">
+        <div class="icono"><span class="material-symbols-outlined">receipt_long</span></div>
+        <!--span class="nuevo">Nuevo</span-->
+      </div>
+      <h3>Pagá tus tickets</h3>
+      <p>Al salir del campus se genera tu ticket. Consultá los que tenés pendientes y abonálos desde el sistema, sin hacer filas.</p>
+      <span class="ir">Pagar tickets <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
+    <a class="funcion" href="{% if user.is_authenticated %}{% url 'estacionamiento:mis_movimientos' %}{% else %}{{ login_url }}?next={% url 'estacionamiento:mis_movimientos' %}{% endif %}">
+      <div class="cabecera">
+        <div class="icono"><span class="material-symbols-outlined">history</span></div>
+        <!--span class="nuevo">Nuevo</span-->
+      </div>
+      <h3>Mis movimientos</h3>
+      <p>Revisá el historial de tus ingresos y salidas: cuándo entraste, cuándo saliste y cuánto tiempo estuviste estacionado.</p>
+      <span class="ir">Ver historial <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
+    <a class="funcion" href="{% if user.is_authenticated %}{% url 'estacionamiento:espacios_lista' %}{% else %}{{ login_url }}?next={% url 'estacionamiento:espacios_lista' %}{% endif %}">
+      <div class="cabecera"><div class="icono"><span class="material-symbols-outlined">grid_view</span></div></div>
       <h3>Mapa de espacios</h3>
       <p>Consultá todas las zonas y el estado de cada espacio —libre, ocupado, reservado o fuera de servicio—, en lista o en cuadrícula.</p>
-    </div>
+      <span class="ir">Ver espacios <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
 
-    <div class="funcion">
-      <div class="icono"><span class="material-symbols-outlined">school</span></div>
-      <h3>Zonas por facultad</h3>
-      <p>Cada zona puede pertenecer a una facultad y a ciertos tipos de usuario. Las zonas públicas están abiertas para todos.</p>
-    </div>
-
-    <div class="funcion">
-      <div class="icono"><span class="material-symbols-outlined">swap_horiz</span></div>
-      <h3>Ingreso y salida ágiles</h3>
-      <p>El personal registra tu ingreso con la patente. Si tenés una reserva vigente, el sistema te asigna tu espacio automáticamente.</p>
-    </div>
-
-    <div class="funcion">
-      <div class="icono"><span class="material-symbols-outlined">payments</span></div>
+    <a class="funcion" href="{% if user.is_authenticated %}{% url 'reglas:tarifas_lista' %}{% else %}{{ login_url }}?next={% url 'reglas:tarifas_lista' %}{% endif %}">
+      <div class="cabecera"><div class="icono"><span class="material-symbols-outlined">payments</span></div></div>
       <h3>Tarifas claras</h3>
       <p>El monto se calcula por hora de permanencia según tu tipo de usuario, y se informa al registrar la salida.</p>
-    </div>
+      <span class="ir">Ver tarifas <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
 
-    <div class="funcion">
-      <div class="icono"><span class="material-symbols-outlined">directions_car</span></div>
-      <h3>Tus vehículos y tu perfil</h3>
-      <p>Registrá tus vehículos con todos sus datos y mantené tu información personal siempre al día.</p>
-    </div>
+    <a class="funcion" href="{% if user.is_authenticated %}{% url 'vehiculos:lista' %}{% else %}{{ login_url }}?next={% url 'vehiculos:lista' %}{% endif %}">
+      <div class="cabecera"><div class="icono"><span class="material-symbols-outlined">directions_car</span></div></div>
+      <h3>Tus vehículos</h3>
+      <p>Registrá tus vehículos con todos sus datos para que el ingreso con la patente sea inmediato.</p>
+      <span class="ir">Mis vehículos <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
 
-    <div class="funcion">
-      <div class="icono"><span class="material-symbols-outlined">menu_book</span></div>
+    <a class="funcion" href="{% if user.is_authenticated %}{% url 'estacionamiento:reservas_lista' %}{% else %}{{ login_url }}?next={% url 'estacionamiento:reservas_lista' %}{% endif %}">
+      <div class="cabecera"><div class="icono"><span class="material-symbols-outlined">event_note</span></div></div>
+      <h3>Mis reservas</h3>
+      <p>Consultá, filtrá por fecha y cancelá tus reservas pendientes cuando lo necesites.</p>
+      <span class="ir">Ver reservas <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
+    <a class="funcion" href="{% if user.is_authenticated %}{% url 'reglas:reglamento' %}{% else %}{{ login_url }}?next={% url 'reglas:reglamento' %}{% endif %}">
+      <div class="cabecera"><div class="icono"><span class="material-symbols-outlined">menu_book</span></div></div>
       <h3>Reglamento y horarios</h3>
       <p>Consultá el reglamento del estacionamiento y su horario de apertura y cierre. Las reservas se hacen dentro de ese horario.</p>
-    </div>
+      <span class="ir">Leer reglamento <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
 
-    <div class="funcion">
-      <div class="icono"><span class="material-symbols-outlined">admin_panel_settings</span></div>
-      <h3>Gestión para el personal</h3>
-      <p>Herramientas para el personal y los administradores: ingresos y salidas, reservas, usuarios, vehículos, tarifas, zonas y facultades.</p>
-    </div>
+    <a class="funcion" href="{% if user.is_authenticated %}{% url 'usuarios:perfil' %}{% else %}{{ login_url }}?next={% url 'usuarios:perfil' %}{% endif %}">
+      <div class="cabecera"><div class="icono"><span class="material-symbols-outlined">account_circle</span></div></div>
+      <h3>Tu perfil</h3>
+      <p>Mantené tus datos personales, de contacto y tu facultad siempre al día.</p>
+      <span class="ir">Mi perfil <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
   </div>
 </section>
 
-<!-- CÓMO FUNCIONA -->
+<!-- GESTIÓN: SÓLO PERSONAL Y ADMINISTRADORES -->
+{% if user.perfil.es_personal %}
+<section class="seccion">
+  <h2>Gestión del estacionamiento</h2>
+  <p class="lead">Herramientas del personal de estacionamiento.</p>
+
+  <div class="funciones">
+
+    <a class="funcion" href="{% url 'estacionamiento:movimientos_lista' %}">
+      <div class="cabecera"><div class="icono"><span class="material-symbols-outlined">swap_horiz</span></div></div>
+      <h3>Ingresos y salidas</h3>
+      <p>Registrá el ingreso con la patente (con asignación automática del espacio reservado) y la salida con su cobro.</p>
+      <span class="ir">Ir a movimientos <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
+    <a class="funcion" href="{% url 'estacionamiento:tickets_lista' %}">
+      <div class="cabecera">
+        <div class="icono"><span class="material-symbols-outlined">parking_meter</span></div>
+        <!--span class="nuevo">Nuevo</span-->
+      </div>
+      <h3>Tickets</h3>
+      <p>Consultá todos los tickets emitidos y controlá cuáles están pagos y cuáles pendientes.</p>
+      <span class="ir">Ver tickets <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
+    <a class="funcion" href="{% url 'estacionamiento:reservas_lista_todas' %}">
+      <div class="cabecera"><div class="icono"><span class="material-symbols-outlined">event_available</span></div></div>
+      <h3>Todas las reservas</h3>
+      <p>Visualizá las reservas de todos los usuarios, con búsqueda, orden y filtro por rango de fechas.</p>
+      <span class="ir">Ver reservas <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
+    <a class="funcion" href="{% url 'usuarios:lista' %}">
+      <div class="cabecera"><div class="icono"><span class="material-symbols-outlined">person</span></div></div>
+      <h3>Usuarios</h3>
+      <p>Listado de usuarios registrados con su tipo, facultad y fecha de alta.</p>
+      <span class="ir">Ver usuarios <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
+    <a class="funcion" href="{% url 'vehiculos:lista_todos' %}">
+      <div class="cabecera"><div class="icono"><span class="material-symbols-outlined">directions_car</span></div></div>
+      <h3>Vehículos registrados</h3>
+      <p>Consultá todos los vehículos del sistema junto con el dueño de cada uno.</p>
+      <span class="ir">Ver vehículos <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
+  </div>
+</section>
+{% endif %}
+
+{% if user.perfil.es_administrador %}
+<section class="seccion">
+  <h2>Administración</h2>
+  <p class="lead">Control total del sistema para los administradores.</p>
+
+  <div class="funciones">
+
+    <a class="funcion" href="{% url 'estacionamiento:dashboard' %}">
+      <div class="cabecera">
+        <div class="icono"><span class="material-symbols-outlined">monitoring</span></div>
+        <!--span class="nuevo">Nuevo</span-->
+      </div>
+      <h3>Dashboard de cobros</h3>
+      <p>Seguí la recaudación del estacionamiento con indicadores y gráficos de los cobros realizados.</p>
+      <span class="ir">Abrir dashboard <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
+    <a class="funcion" href="{% url 'estacionamiento:dashboard_ocupacion' %}">
+      <div class="cabecera">
+        <div class="icono"><span class="material-symbols-outlined">local_parking</span></div>
+        <!--span class="nuevo">Nuevo</span-->
+      </div>
+      <h3>Dashboard de ocupación</h3>
+      <p>Mirá cómo se ocupan las zonas y los espacios del campus para tomar mejores decisiones.</p>
+      <span class="ir">Abrir dashboard <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
+    <a class="funcion" href="{% url 'usuarios:solicitudes' %}">
+      <div class="cabecera">
+        <div class="icono"><span class="material-symbols-outlined">how_to_reg</span></div>
+        <!--span class="nuevo">Nuevo</span-->
+      </div>
+      <h3>Solicitudes de registro</h3>
+      <p>Revisá las solicitudes de nuevos usuarios y decidí cuáles aprobar.{% if solicitudes_pendientes %} Hay <strong>{{ solicitudes_pendientes }}</strong> pendiente{{ solicitudes_pendientes|pluralize }}.{% endif %}</p>
+      <span class="ir">Ver solicitudes <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
+    <a class="funcion" href="{% url 'usuarios:tipos_lista' %}">
+      <div class="cabecera">
+        <div class="icono"><span class="material-symbols-outlined">badge</span></div>
+        <!--span class="nuevo">Nuevo</span-->
+      </div>
+      <h3>Tipos de usuario</h3>
+      <p>Creá, editá y eliminá los tipos de usuario que usa el sistema para zonas, tarifas y permisos.</p>
+      <span class="ir">Gestionar tipos <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
+    <a class="funcion" href="{% url 'estacionamiento:zonas_lista' %}">
+      <div class="cabecera"><div class="icono"><span class="material-symbols-outlined">map</span></div></div>
+      <h3>Zonas y espacios</h3>
+      <p>Creá zonas por facultad y tipo de usuario, y agregá espacios de forma masiva con numeración automática.</p>
+      <span class="ir">Gestionar zonas <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
+    <a class="funcion" href="{% url 'universidad:facultades_lista' %}">
+      <div class="cabecera"><div class="icono"><span class="material-symbols-outlined">school</span></div></div>
+      <h3>Facultades</h3>
+      <p>Administrá las facultades de la universidad y mirá cuántas zonas y usuarios tiene cada una.</p>
+      <span class="ir">Gestionar facultades <span class="material-symbols-outlined">arrow_forward</span></span>
+    </a>
+
+  </div>
+</section>
+{% endif %}
+
+<!-- CÓMO FUNCIONA>
 <section class="seccion">
   <h2>Cómo funciona</h2>
-  <p class="lead">Tres pasos para tener tu lugar asegurado.</p>
+  <p class="lead">Cuatro pasos desde que llegás hasta que te vas.</p>
 
   <div class="pasos">
     <div class="paso">
@@ -182,10 +357,15 @@
     <div class="paso">
       <div class="numero">3</div>
       <h3>Estacioná</h3>
-      <p>Al llegar se registra tu patente y se te asigna tu espacio reservado. Al salir, ves el monto a abonar.</p>
+      <p>Al llegar se registra tu patente y se te asigna tu espacio reservado.</p>
+    </div>
+    <div class="paso">
+      <div class="numero">4</div>
+      <h3>Pagá y salí</h3>
+      <p>Al salir se calcula el monto según tu tarifa. Pagá tu ticket y consultá el historial en “Mis movimientos”.</p>
     </div>
   </div>
-</section>
+</section-->
 
 <!-- PARA QUIÉN -->
 <section class="seccion">
@@ -204,9 +384,10 @@
 <section class="cta-final">
   {% if user.is_authenticated %}
     <h2>¿Listo para estacionar?</h2>
-    <p>Reservá tu espacio o consultá tus reservas cuando quieras.</p>
+    <p>Reservá tu espacio, pagá tus tickets o consultá tus reservas cuando quieras.</p>
     <div class="acciones">
       <a href="{% url 'estacionamiento:reserva_crear' %}" class="btn">Reservar un espacio</a>
+      <a href="{% url 'estacionamiento:pagar_tickets' %}" class="btn">Pagar tickets</a>
       <a href="{% url 'estacionamiento:reservas_lista' %}" class="btn">Mis reservas</a>
     </div>
   {% else %}
@@ -214,7 +395,7 @@
     <p>Registrate en un minuto y reservá tu espacio.</p>
     <div class="acciones">
       <a href="{% url 'usuarios:registro' %}" class="btn">Crear mi cuenta</a>
-      <a href="{% url 'usuarios:login' %}" class="btn">Ya tengo cuenta</a>
+      <a href="{{ login_url }}" class="btn">Ya tengo cuenta</a>
     </div>
   {% endif %}
 </section>

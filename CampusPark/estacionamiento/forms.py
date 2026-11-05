@@ -5,9 +5,11 @@ from django.utils import timezone
 
 from reglas.models import Reglamento
 from vehiculos.models import Vehiculo
+from .ingreso import analizar_patente
 
-from .models import Espacio, Movimiento, Reserva, Zona
+from .models import Espacio, Movimiento, Reserva, Zona, Ticket
 from datetime import datetime
+
 
 
 class ReservaForm(forms.ModelForm):
@@ -150,182 +152,124 @@ class ReservaForm(forms.ModelForm):
         return cleaned_data
 
 
-class IngresoForm(forms.Form):
-    """
-    Registrar ingreso de vehículo. Sólo la usan Personal de Estacionamiento
-    o Administrador (ver estacionamiento.decorators.personal_requerido).
+def _normalizar_patente(valor):
+    patente = (valor or "").strip().upper()
+    if not patente:
+        raise forms.ValidationError("Ingresá una patente válida.")
+    if Movimiento.objects.filter(patente=patente, fecha_hora_salida__isnull=True).exists():
+        raise forms.ValidationError("Esa patente ya tiene un ingreso registrado sin salida.")
+    return patente
 
-    El personal ingresa únicamente la patente; la vista se encarga de
-    buscar si corresponde a un Vehiculo/Usuario ya registrado. No hace
-    falta que el vehículo exista de antemano: si la patente no está
-    registrada, el movimiento igual se crea, quedando asociado a un
-    usuario "No registrado" (sin crear ningún Vehiculo ni Usuario nuevo).
 
-    Si el dueño del vehículo tiene una reserva vigente AHORA MISMO
-    (Pendiente, dentro de su franja horaria), se ignora el espacio
-    elegido y se usa el de esa reserva -- queda guardada en
-    self.reserva_activa para que la vista la marque 'Confirmada'. Si
-    ese espacio ya está ocupado por otro vehículo (por ejemplo porque
-    el anterior no salió a tiempo):
-      1. Se busca otro espacio libre en la MISMA zona y se reasigna
-         ahí automáticamente (self.reasignado = True,
-         self.espacio_original guarda el que tenía reservado).
-      2. Si no hay NINGÚN otro libre en esa zona, se expulsa al
-         vehículo que está ocupando el espacio reservado: su
-         Movimiento se cierra con la salida en este mismo momento
-         (self.expulsa_movimiento queda con ese Movimiento, para que
-         la vista lo cierre y libere la reserva que tuviera), y el
-         espacio reservado queda para el dueño de la reserva.
-    Si no hay reserva vigente, el espacio pasa a ser obligatorio y se
-    elige a mano.
-    """
+class PatenteForm(forms.Form):
+    """Paso 1 del ingreso: sólo la chapa."""
 
     patente = forms.CharField(
         max_length=15,
         label="Chapa / Patente",
-        widget=forms.TextInput(attrs={"list": "patentes-datalist", "autocomplete": "off"}),
+        widget=forms.TextInput(
+            attrs={"list": "patentes-datalist", "autocomplete": "off", "autofocus": True}
+        ),
     )
+
+    def clean_patente(self):
+        return _normalizar_patente(self.cleaned_data["patente"])
+
+
+class IngresoForm(forms.Form):
+    """
+    Paso 2 del ingreso (sólo Personal o Administrador): elegir el espacio
+    para una chapa ya ingresada. Todo se vuelve a validar acá, en el
+    servidor, con ingreso.analizar_patente (no se confía en lo que mostró
+    la pantalla):
+
+    - Si la chapa tiene reservas vigentes ahora, el espacio tiene que ser
+      uno de los reservados; esa reserva queda en self.reserva_activa para
+      que la vista la marque 'Confirmada'. Si el espacio elegido está
+      Ocupado o Fuera de servicio, se reasigna a otro Libre de la MISMA
+      zona (self.reasignado / self.espacio_original); si no hay ninguno,
+      es un error.
+    - Si no tiene reservas, el espacio tiene que estar Libre y en una zona
+      a la que el usuario tenga acceso (una chapa no registrada sólo
+      accede a zonas sin facultad).
+    """
+
+    patente = forms.CharField(max_length=15, widget=forms.HiddenInput)
     espacio = forms.ModelChoiceField(
-        queryset=Espacio.objects.none(),
+        queryset=Espacio.objects.select_related("zona", "tipo_estado"),
         label="Espacio",
-        required=False,
-        help_text="No hace falta elegirlo si el vehículo tiene una reserva vigente ahora: "
-        "se usa el espacio reservado automáticamente.",
+        error_messages={"required": "Elegí un espacio."},
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["espacio"].queryset = Espacio.objects.filter(
-            tipo_estado__nombre_estado="Libre"
-        ).select_related("zona").order_by('id')
         self.reserva_activa = None
         self.reasignado = False
-        self.cambio_de_zona = False
+        self.cambio_de_zona = False  # se mantiene por compatibilidad: ya no hay cambio de zona
         self.espacio_original = None
 
     def clean_patente(self):
-        patente = self.cleaned_data["patente"].strip().upper()
-        if not patente:
-            raise forms.ValidationError("Ingresá una patente válida.")
-        return patente
+        return _normalizar_patente(self.cleaned_data["patente"])
 
     def clean(self):
         cleaned_data = super().clean()
         patente = cleaned_data.get("patente")
         espacio = cleaned_data.get("espacio")
-
-        if patente and Movimiento.objects.filter(
-            patente=patente, fecha_hora_salida__isnull=True
-        ).exists():
-            raise forms.ValidationError(
-                "Esa patente ya tiene un ingreso registrado sin salida."
-            )
-
-        if not patente:
+        if not patente or not espacio:
             return cleaned_data
 
-        vehiculo = (
-            Vehiculo.objects.filter(matricula=patente)
-            .select_related("usuario", "usuario__tipo")
-            .first()
-        )
-        usuario = vehiculo.usuario if vehiculo else None
+        analisis = analizar_patente(patente)
+        usuario = analisis["usuario"]
 
-        if usuario is not None:
-            ahora = timezone.now()
-            self.reserva_activa = (
-                Reserva.objects.filter(
-                    usuario=usuario,
-                    fecha_inicio__lte=ahora,
-                    fecha_fin__gte=ahora,
-                )
-                .exclude(
-                    tipo_estado_reserva__nombre_estado_reserva__in=[
-                        "Cancelada",
-                        "Confirmada",
-                        "Finalizada",
-                    ]
-                )
-                .select_related("espacio", "espacio__zona", "espacio__tipo_estado")
-                .order_by("fecha_inicio")
-                .first()
-            )
+        if espacio.pk not in {e.pk for e in analisis["espacios"]}:
+            self.add_error("espacio", "Ese espacio no está disponible para esta chapa.")
+            return cleaned_data
 
-        if self.reserva_activa:
-            espacio_reservado = self.reserva_activa.espacio
-            espacio_elegido_a_mano = espacio  # lo que vino del campo, antes de pisarlo
-
-            if espacio_reservado.tipo_estado.nombre_estado == "Ocupado":
-                # Otro vehículo está en el espacio reservado (por ejemplo,
-                # el anterior no salió a tiempo): reasignar a otro espacio
-                # libre de la MISMA zona, para no bloquear el ingreso.
+        if analisis["con_reserva"]:
+            self.reserva_activa = analisis["por_espacio"][espacio.pk]
+            estado = espacio.tipo_estado.nombre_estado
+            if estado not in ("Libre", "Reservado"):
                 alternativo = (
-                    Espacio.objects.filter(
-                        zona=espacio_reservado.zona,
-                        tipo_estado__nombre_estado="Libre",
-                    )
-                    .exclude(pk=espacio_reservado.pk)
+                    Espacio.objects.filter(zona=espacio.zona, tipo_estado__nombre_estado="Libre")
+                    .exclude(pk=espacio.pk)
+                    .select_related("zona", "tipo_estado")
                     .order_by("numero")
                     .first()
                 )
-                if alternativo:
-                    espacio = alternativo
-                    self.reasignado = True
-                    self.espacio_original = espacio_reservado
-                elif espacio_elegido_a_mano:
-                    # No hay lugar en la zona reservada, pero el personal
-                    # ya eligió otro espacio a mano (puede ser de otra
-                    # zona): se usa ese, sujeto igual al chequeo de
-                    # facultad de más abajo.
-                    espacio = espacio_elegido_a_mano
-                    self.reasignado = True
-                    self.cambio_de_zona = True
-                    self.espacio_original = espacio_reservado
-                else:
-                    self.espacio_original = espacio_reservado
+                if alternativo is None:
                     self.add_error(
                         "espacio",
-                        f"El espacio reservado (N°{espacio_reservado.numero}) de la zona "
-                        f"'{espacio_reservado.zona}' está ocupado y no hay otro libre ahí. "
-                        f"Elegí otro espacio de la lista (puede ser de otra zona) para "
-                        f"continuar, o no registres el ingreso si el vehículo se retira "
-                        f"del campus.",
+                        f"El espacio reservado (N°{espacio.numero}) de la zona '{espacio.zona}' "
+                        f"está {estado.lower()} y no hay otro libre en esa zona.",
                     )
-                    espacio = None
+                    return cleaned_data
+                self.reasignado = True
+                self.espacio_original = espacio
+                espacio = alternativo
+                cleaned_data["espacio"] = espacio
+
+        zona = espacio.zona
+        if not zona.permite_a(usuario):
+            if usuario is None:
+                msg = (
+                    f"La patente {patente} no está registrada, por lo que sólo puede "
+                    f"estacionar en zonas sin facultad. La zona '{zona}' pertenece a "
+                    f"la facultad {zona.facultad}."
+                )
+            elif usuario.es_externo:
+                msg = (
+                    f"{usuario.nombre} {usuario.apellido} es usuario Externo: sólo puede "
+                    f"estacionar en zonas sin facultad. La zona '{zona}' pertenece a "
+                    f"la facultad {zona.facultad}."
+                )
             else:
-                espacio = espacio_reservado
-
-            cleaned_data["espacio"] = espacio
-        elif not espacio:
-            self.add_error(
-                "espacio",
-                "Elegí un espacio (este vehículo no tiene una reserva vigente ahora mismo).",
-            )
-
-        if espacio:
-            zona = espacio.zona
-            if not zona.permite_a(usuario):
-                if usuario is None:
-                    msg = (
-                        f"La patente {patente} no está registrada, por lo que sólo puede "
-                        f"estacionar en zonas sin facultad. La zona '{zona}' pertenece a "
-                        f"la facultad {zona.facultad}."
-                    )
-                elif usuario.es_externo:
-                    msg = (
-                        f"{usuario.nombre} {usuario.apellido} es usuario Externo: sólo puede "
-                        f"estacionar en zonas sin facultad. La zona '{zona}' pertenece a "
-                        f"la facultad {zona.facultad}."
-                    )
-                else:
-                    msg = (
-                        f"{usuario.nombre} {usuario.apellido} no puede estacionar en la zona "
-                        f"'{zona}': pertenece a la facultad {zona.facultad}."
-                    )
-                self.add_error("espacio", msg)
+                msg = (
+                    f"{usuario.nombre} {usuario.apellido} no puede estacionar en la zona "
+                    f"'{zona}': pertenece a la facultad {zona.facultad}."
+                )
+            self.add_error("espacio", msg)
 
         return cleaned_data
-
 
 class ZonaForm(forms.ModelForm):
     """
@@ -458,3 +402,10 @@ class EspacioForm(forms.ModelForm):
                 )
 
         return cleaned_data
+
+# AGREGAR a estacionamiento/forms.py (y importar Ticket en el from .models import ...)
+
+class TicketPagoForm(forms.Form):
+    metodo = forms.ChoiceField(choices=Ticket.Metodo.choices, label="Método de pago")
+    
+    

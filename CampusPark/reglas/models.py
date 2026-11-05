@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from usuarios.models import TipoUsuario
@@ -82,6 +83,13 @@ class Reglamento(models.Model):
     hora_apertura = models.TimeField()
     hora_cierre = models.TimeField()
 
+    tolerancia_validacion = models.PositiveIntegerField(
+        default=30,
+        validators=[MinValueValidator(1)],
+        help_text="Minutos que tiene un vehículo para salir después de validar su ticket, "
+        "sin que se recalcule el cobro.",
+    )
+ 
     class Meta:
         verbose_name = "Reglamento"
         verbose_name_plural = "Reglamentos"
@@ -95,3 +103,10 @@ class Reglamento(models.Model):
                 "Ya existe un reglamento. Sólo puede haber uno: editá el existente."
             )
         super().save(*args, **kwargs)
+        
+    @classmethod
+    def tolerancia_actual(cls):
+        """Tolerancia (minutos) vigente; 30 si todavía no se cargó el reglamento."""
+        r = cls.objects.first()
+        return r.tolerancia_validacion if r else 30
+ 

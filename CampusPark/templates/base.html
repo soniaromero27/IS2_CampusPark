@@ -22,11 +22,24 @@
             background: #f4f7fb;
             color: #1e293b;
             min-height: 100vh;
-
             display: flex;
             flex-direction: column;
         }
 
+        .badge {
+            display: inline-block;
+            min-width: 20px;
+            padding: 2px 7px;
+            margin-left: 6px;
+            border-radius: 999px;
+            background: #dc2626;
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: center;
+            vertical-align: middle;
+        }
+		
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
             vertical-align: middle;
@@ -37,14 +50,19 @@
         header {
             background: linear-gradient(135deg, #0f2d52, #1d4f91);
             color: white;
-            padding: 0 40px;
-            height: 72px;
+            padding: 0 30px;
+            min-height: 72px;
 
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
 
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
         .logo {
@@ -68,6 +86,7 @@
 
             font-size: 22px;
             font-weight: bold;
+            flex-shrink: 0;
         }
 
         .logo-text {
@@ -80,38 +99,49 @@
         .top-acciones {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            flex-wrap: wrap;
+            position: relative; /* Permite posicionar correctamente los elementos flotantes internos */
         }
 
         .top-acciones a.top-link,
-        .top-acciones button,
         .menu-cuenta summary {
-            display: inline-block;
-            padding: 10px 18px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
 
             color: white;
             background: rgba(255, 255, 255, 0.12);
             border: 1px solid rgba(255, 255, 255, 0.35);
             border-radius: 8px;
 
-            font-size: 14px;
+            font-size: 13.5px;
             font-weight: 600;
             text-decoration: none;
             cursor: pointer;
+            white-space: nowrap;
 
             transition: all 0.2s ease;
         }
 
         .top-acciones a.top-link:hover,
-        .top-acciones button:hover,
         .menu-cuenta summary:hover,
         .menu-cuenta[open] summary {
             background: rgba(255, 255, 255, 0.25);
             transform: none;
             box-shadow: none;
         }
+		
+		/* ===== ESTILO "PRENDIDO" (ACTIVO) PARA BOTONES DE LA BARRA SUPERIOR ===== */
+        .top-acciones a.top-link.activo,
+        .menu-cuenta.activo summary {
+            background: #2874c6;
+            border-color: #559ee7;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+        }
 
-        /* Submenú "Mi cuenta" (desplegable nativo del navegador, no necesita JavaScript para abrirse) */
+        /* Submenú "Mi cuenta" */
 
         .menu-cuenta {
             position: relative;
@@ -127,7 +157,7 @@
 
         .menu-cuenta summary::after {
             content: "▾";
-            margin-left: 8px;
+            margin-left: 6px;
             font-size: 12px;
         }
 
@@ -135,9 +165,9 @@
             position: absolute;
             right: 0;
             top: calc(100% + 8px);
-            z-index: 50;
+            z-index: 999;
 
-            min-width: 200px;
+            min-width: 220px;
             padding: 6px;
 
             background: white;
@@ -146,19 +176,38 @@
             box-shadow: 0 8px 24px rgba(15, 45, 82, 0.18);
         }
 
-        .submenu a {
-            display: block;
+        .submenu a,
+        .submenu button.submenu-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
             padding: 10px 14px;
             border-radius: 8px;
 
             color: #1e293b;
             font-size: 14px;
+            font-weight: 500;
             text-decoration: none;
+            background: transparent;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            font-family: inherit;
         }
 
-        .submenu a:hover {
+        .submenu a:hover,
+        .submenu button.submenu-btn:hover {
             background: #edf4fb;
             color: #163b68;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .submenu-divider {
+            height: 1px;
+            background: #e5eaf0;
+            margin: 4px 6px;
         }
 
         /* ===== DISPOSICIÓN: menú lateral + contenido ===== */
@@ -167,6 +216,7 @@
             flex: 1;
             display: flex;
             align-items: stretch;
+            width: 100%;
         }
 
         .sidebar {
@@ -179,9 +229,11 @@
         }
 
         .sidebar a {
-            display: block;
-            padding: 11px 14px;
-            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            margin-bottom: 3px;
             border-radius: 8px;
 
             color: #334155;
@@ -217,22 +269,26 @@
         main {
             flex: 1;
             min-width: 0;
+            width: 100%;
             max-width: 1200px;
             margin: 0 auto;
-            padding: 40px 25px;
+            padding: 30px 25px;
         }
 
         /* ===== TÍTULOS ===== */
 
         h1, h2, h3 {
             color: #163b68;
+            word-break: break-word;
         }
 
         h1 {
+            font-size: 1.8rem;
             margin-bottom: 10px;
         }
 
         h2 {
+            font-size: 1.4rem;
             margin-bottom: 20px;
         }
 
@@ -247,12 +303,15 @@
 
             border: 1px solid #e7edf5;
             margin-bottom: 25px;
+            width: 100%;
+            overflow-x: auto;
         }
 
-        /* ===== FORMULARIOS ===== */
+        /* ===== FORMULARIOS RESPONSIVOS ===== */
 
         .form-row {
             margin-bottom: 18px;
+            width: 100%;
         }
 
         label {
@@ -265,7 +324,8 @@
         input,
         select,
         textarea {
-            width: 30%;
+            width: 100%;
+            max-width: 500px;
             padding: 12px 14px;
 
             border: 1px solid #cbd5e1;
@@ -279,9 +339,12 @@
             transition: border-color 0.2s, box-shadow 0.2s;
         }
 		
-		input[type="checkbox"] {
-			width: 5%;
-		}
+        input[type="checkbox"] {
+            width: auto;
+            min-width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
 	
         input:focus,
         select:focus,
@@ -292,11 +355,14 @@
             box-shadow: 0 0 0 3px rgba(40, 116, 198, 0.12);
         }
 
-        /* ===== BOTONES ===== */
+        /* ===== BOTONES GENERALES ===== */
 
         button,
         .btn {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
 
             padding: 11px 20px;
 
@@ -322,20 +388,25 @@
             box-shadow: 0 4px 10px rgba(21, 75, 134, 0.25);
         }
 
-        /* ===== TABLAS ===== */
+        /* ===== TABLAS RESPONSIVAS CON SCROLL ===== */
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(15, 45, 82, 0.07);
+        }
 
         table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
 
-            margin-top: 20px;
-
             background: white;
-            border-radius: 12px;
             overflow: hidden;
-
-            box-shadow: 0 4px 15px rgba(15, 45, 82, 0.07);
+            min-width: 600px;
         }
 
         th {
@@ -350,6 +421,7 @@
         td {
             padding: 14px 16px;
             border-bottom: 1px solid #e5eaf0;
+            white-space: nowrap;
         }
 
         tr:last-child td {
@@ -375,77 +447,191 @@
             padding: 25px;
             color: #64748b;
             font-size: 13px;
+            margin-top: auto;
+        }
+		
+        /* ===== MENÚ LATERAL: secciones desplegables ===== */
+ 
+        .menu-seccion {
+            margin-top: 8px;
+        }
+ 
+        .menu-seccion > summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: 8px;
+ 
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #64748b;
+ 
+            cursor: pointer;
+            list-style: none;
+            user-select: none;
+        }
+ 
+        .menu-seccion > summary::-webkit-details-marker {
+            display: none;
+        }
+ 
+        .menu-seccion > summary::after {
+            content: "▸";
+            font-size: 14px;
+            transition: transform 0.15s ease;
+        }
+ 
+        .menu-seccion[open] > summary::after {
+            transform: rotate(90deg);
+        }
+ 
+        .menu-seccion > summary:hover {
+            background: #edf4fb;
+            color: #163b68;
+        }
+ 
+        .menu-seccion > a {
+            margin-left: 6px;
         }
 
-        /* ===== RESPONSIVE ===== */
+        /* ===== MEDIA QUERIES PARA PANTALLAS PEQUEÑAS (MÓVILES Y TABLETS) ===== */
 
-        @media (max-width: 800px) {
+        @media (max-width: 850px) {
 
             header {
-                height: auto;
-                padding: 18px 20px;
+                padding: 12px 16px;
+                justify-content: space-between;
+            }
 
-                flex-direction: column;
-                gap: 15px;
+            .logo-text {
+                font-size: 20px;
             }
 
             .top-acciones {
-                flex-wrap: wrap;
-                justify-content: center;
+                width: 100%;
+                justify-content: flex-start;
+                gap: 6px;
             }
 
-            /* En pantallas angostas el menú lateral pasa arriba del contenido */
             .layout {
                 flex-direction: column;
             }
-			
-			input,
-			select,
-			textarea {
-				width: 100%;
-				padding: 12px 14px;
-
-				border: 1px solid #cbd5e1;
-				border-radius: 8px;
-
-				font-size: 15px;
-				font-family: inherit;
-
-				background: white;
-
-				transition: border-color 0.2s, box-shadow 0.2s;
-			}
-		
 
             .sidebar {
-                width: auto;
-                padding: 10px 12px;
-
-                display: flex;
-                flex-wrap: wrap;
-                gap: 6px;
-
+                width: 100%;
+                padding: 10px;
                 border-right: none;
                 border-bottom: 1px solid #e7edf5;
             }
 
-            .sidebar a {
-                margin-bottom: 0;
+            .menu-seccion {
+                margin-top: 4px;
             }
 
-            .sidebar-titulo {
-                display: none;
+            .menu-seccion > a {
+                margin-left: 0;
             }
 
             main {
-                padding: 25px 15px;
+                padding: 20px 15px;
             }
 
-            .logo-text {
-                font-size: 21px;
+            input,
+            select,
+            textarea {
+                max-width: 100%;
+            }
+
+            /* Aseguramos que el submenú se alinee correctamente sin salirse de la pantalla en móvil */
+            .submenu {
+                right: 0;
+                left: auto;
             }
         }
 
+        @media (max-width: 480px) {
+            .logo-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
+            }
+
+            .logo-text {
+                font-size: 18px;
+            }
+
+            .top-acciones a.top-link, 
+            .menu-cuenta summary {
+                padding: 7px 10px;
+                font-size: 12px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .card {
+                padding: 16px;
+            }
+        }
+
+
+        /* ===== CAMPOS DE CONTRASEÑA: botón para mostrar u ocultar ===== */
+
+        .pw-wrap {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            vertical-align: top;
+        }
+
+        .pw-wrap input {
+            width: 100%;
+            padding-right: 48px;
+        }
+
+        .pw-wrap button.pw-toggle {
+            position: absolute;
+			//position: relative;
+            top: 50%;
+			//top: 20px;
+            //right: 6px;
+			//left: 6px;
+            transform: translateY(-50%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            background: transparent;
+            color: #64748b;
+            border: none;
+            border-radius: 50%;
+            box-shadow: none;
+        }
+
+        .pw-wrap button.pw-toggle:hover {
+            background: #edf4fb;
+            color: #163b68;
+            transform: translateY(-50%);
+            box-shadow: none;
+        }
+
+        .pw-wrap button.pw-toggle:focus-visible {
+            outline: 3px solid #93c5fd;
+        }
+
+        .pw-wrap button.pw-toggle .material-symbols-outlined {
+            font-size: 22px;
+        }
+
+        @media (max-width: 800px) {
+            .pw-wrap { width: 100%; }
+        }
     </style>
 </head>
 
@@ -466,34 +652,60 @@
             </span>
 
         </a>
-
-        <div class="top-acciones">
-
+<div class="top-acciones">
+			{% with vn=request.resolver_match.view_name %}
+			{% if user.perfil.es_administrador %}
+				<a href="{% url 'estacionamiento:dashboard' %}" class="top-link {% if vn == 'estacionamiento:dashboard' %}activo{% endif %}">
+					<span class="material-symbols-outlined">monitoring</span> Dashboard de Cobros
+				</a>
+				<a href="{% url 'estacionamiento:dashboard_ocupacion' %}" class="top-link {% if vn == 'estacionamiento:dashboard_ocupacion' %}activo{% endif %}">
+					<span class="material-symbols-outlined">local_parking</span> Dashboard de Ocupación
+				</a>
+				
+				{% if solicitudes_pendientes %}				
+					<a href="{% url 'usuarios:solicitudes' %}" class="top-link {% if vn == 'usuarios:solicitudes' %}activo{% endif %}" title="Solicitudes de registro">
+						<span class="material-symbols-outlined">notifications</span>
+						<span class="badge">{{ solicitudes_pendientes }}</span>
+					</a>
+				{% endif %}
+			{% endif %}
+			
             {% if user.is_authenticated %}
-
-                <details class="menu-cuenta">
+				<a href="{% url 'estacionamiento:pagar_tickets' %}" class="top-link {% if vn == 'estacionamiento:pagar_tickets' %}activo{% endif %}">
+					<span class="material-symbols-outlined">receipt_long</span> Pagar Tickets
+				</a>
+				
+                <details class="menu-cuenta {% if vn == 'usuarios:perfil' or vn == 'vehiculos:lista' or vn == 'estacionamiento:reservas_lista' or vn == 'estacionamiento:mis_movimientos' %}activo{% endif %}">
                     <summary>
-					<span class="material-symbols-outlined">account_circle</span>Mi cuenta</summary>
+                        <span class="material-symbols-outlined">account_circle</span>Mi cuenta
+                    </summary>
 					
                     <div class="submenu">
                         <a href="{% url 'usuarios:perfil' %}">Mi perfil</a>
                         <a href="{% url 'vehiculos:lista' %}">Mis vehículos</a>
                         <a href="{% url 'estacionamiento:reservas_lista' %}">Mis reservas</a>
+                        <a href="{% url 'estacionamiento:mis_movimientos' %}">Mis movimientos</a>
+                        
+                        <!-- Línea separadora -->
+                        <div class="submenu-divider"></div>
+
+                        <!-- Formulario de Cerrar sesión -->
+                        <form method="post" action="{% url 'usuarios:logout' %}" data-logout>
+                            {% csrf_token %}
+                            <button type="submit" class="submenu-btn">
+                                <span class="material-symbols-outlined">logout</span> Cerrar sesión
+                            </button>
+                        </form>
                     </div>
                 </details>
 
-                <form method="post" action="{% url 'usuarios:logout' %}">
-                    {% csrf_token %}
-                    <button type="submit">Cerrar sesión <span class="material-symbols-outlined">logout</span></button>
-                </form>
-
             {% else %}
 
-                <a href="{% url 'usuarios:login' %}" class="top-link">Ingresar</a>
-                <a href="{% url 'usuarios:registro' %}" class="top-link">Registrarme</a>
+                <a href="{% url 'usuarios:login' %}" class="top-link {% if vn == 'usuarios:login' %}activo{% endif %}">Ingresar</a>
+                <a href="{% url 'usuarios:registro' %}" class="top-link {% if vn == 'usuarios:registro' %}activo{% endif %}">Registrarme</a>
 
             {% endif %}
-
+			{% endwith %}
         </div>
 
     </header>
@@ -501,51 +713,71 @@
 
     <div class="layout">
 
-        <!-- MENÚ LATERAL (sólo con la sesión iniciada) -->
+	<!-- MENÚ LATERAL (sólo con la sesión iniciada) -->
 
-        {% if user.is_authenticated %}
-        <nav class="sidebar" aria-label="Menú principal">
-            {% with vn=request.resolver_match.view_name %}
+	{% if user.is_authenticated %}
+	<nav class="sidebar" aria-label="Menú principal">
+		{% with vn=request.resolver_match.view_name %}
+	 
+		<details class="menu-seccion" data-seccion="principal">
+			<summary><span>Principal</span></summary>
+			
+			<a href="{% url 'reglas:reglamento' %}"{% if vn == 'reglas:reglamento' or vn == 'reglas:reglamento_editar' or vn == 'reglas:reglamento_horarios' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">menu_book</span> Reglas</a>
+		 
+			<a href="{% url 'estacionamiento:espacios_lista' %}"{% if vn == 'estacionamiento:espacios_lista' or vn == 'estacionamiento:espacio_editar' or vn == 'estacionamiento:espacios_crear' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">grid_view</span> Espacios</a>
+		 
+			<a href="{% url 'reglas:tarifas_lista' %}"{% if vn == 'reglas:tarifas_lista' or vn == 'reglas:tarifa_crear' or vn == 'reglas:tarifa_editar' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">payments</span> Tarifas</a>
+		</details>
 
-            <a href="{% url 'reglas:reglamento' %}"{% if vn == 'reglas:reglamento' or vn == 'reglas:reglamento_editar' or vn == 'reglas:reglamento_horarios' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">menu_book</span> Reglas</a>
-			
-            <a href="{% url 'estacionamiento:espacios_lista' %}"{% if vn == 'estacionamiento:espacios_lista' or vn == 'estacionamiento:espacio_editar' or vn == 'estacionamiento:espacios_crear' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">grid_view</span> Espacios</a>
-
-            <a href="{% url 'reglas:tarifas_lista' %}"{% if vn == 'reglas:tarifas_lista' or vn == 'reglas:tarifa_crear' or vn == 'reglas:tarifa_editar' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">payments</span> Tarifas</a>
-			
-            {% if user.perfil.es_personal %}
-            <p class="sidebar-titulo">Gestión</p>
-			
-            <a href="{% url 'estacionamiento:movimientos_lista' %}"{% if vn == 'estacionamiento:movimientos_lista' or vn == 'estacionamiento:movimiento_ingreso' or vn == 'estacionamiento:movimiento_salida' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">swap_horiz</span> Ingresos y salidas</a>
-			
-            <a href="{% url 'estacionamiento:reservas_lista_todas' %}"{% if vn == 'estacionamiento:reservas_lista_todas' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">event_available</span> Reservas</a>
-			
-            <a href="{% url 'usuarios:lista' %}"{% if vn == 'usuarios:lista' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">person</span> Usuarios</a>
-			
-            <a href="{% url 'vehiculos:lista_todos' %}"{% if vn == 'vehiculos:lista_todos' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">directions_car</span> Vehículos</a>
-			
-            {% endif %}
-
-            {% if user.perfil.es_administrador %}
-            <p class="sidebar-titulo">Administración</p>
-            <a href="{% url 'estacionamiento:zonas_lista' %}"{% if vn == 'estacionamiento:zonas_lista' or vn == 'estacionamiento:zona_crear' or vn == 'estacionamiento:zona_editar' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">map</span> Zonas</a>
-			
-            <a href="{% url 'universidad:facultades_lista' %}"{% if vn == 'universidad:facultades_lista' or vn == 'universidad:facultad_crear' or vn == 'universidad:facultad_editar' %} class="activo"{% endif %}>
-			<span class="material-symbols-outlined">school</span> Facultades</a>
-            {% endif %}
-
-            {% endwith %}
-        </nav>
-        {% endif %}
-
+		{% if user.perfil.es_personal %}
+		<details class="menu-seccion" data-seccion="gestion">
+			<summary><span>Gestión</span></summary>
+	 
+			<a href="{% url 'estacionamiento:movimientos_lista' %}"{% if vn == 'estacionamiento:movimientos_lista' or vn == 'estacionamiento:movimiento_ingreso' or vn == 'estacionamiento:movimiento_salida' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">swap_horiz</span> Ingresos y salidas</a>
+	 
+			<a href="{% url 'estacionamiento:reservas_lista_todas' %}"{% if vn == 'estacionamiento:reservas_lista_todas' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">event_available</span> Reservas</a>
+	 
+			<a href="{% url 'usuarios:lista' %}"{% if vn == 'usuarios:lista' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">person</span> Usuarios</a>
+	 
+			<a href="{% url 'vehiculos:lista_todos' %}"{% if vn == 'vehiculos:lista_todos' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">directions_car</span> Vehículos</a>
+	 
+			<a href="{% url 'estacionamiento:tickets_lista' %}"{% if vn == 'estacionamiento:tickets_lista' or vn == 'estacionamiento:ticket_detalle' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">parking_meter</span> Tickets</a>
+		</details>
+		{% endif %}
+	 
+		{% if user.perfil.es_administrador %}
+		<details class="menu-seccion" data-seccion="administracion">
+			<summary>
+				<span>Administración{% if solicitudes_pendientes %} <span class="badge">{{ solicitudes_pendientes }}</span>{% endif %}</span>
+			</summary>
+	 
+			<a href="{% url 'estacionamiento:zonas_lista' %}"{% if vn == 'estacionamiento:zonas_lista' or vn == 'estacionamiento:zona_crear' or vn == 'estacionamiento:zona_editar' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">map</span> Zonas</a>
+	 
+			<a href="{% url 'universidad:facultades_lista' %}"{% if vn == 'universidad:facultades_lista' or vn == 'universidad:facultad_crear' or vn == 'universidad:facultad_editar' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">school</span> Facultades</a>
+	 
+			<a href="{% url 'usuarios:solicitudes' %}"{% if vn == 'usuarios:solicitudes' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">how_to_reg</span> Solicitudes
+				{% if solicitudes_pendientes %}<span class="badge">{{ solicitudes_pendientes }}</span>{% endif %}</a>
+	 
+			<a href="{% url 'usuarios:tipos_lista' %}"{% if vn == 'usuarios:tipos_lista' or vn == 'usuarios:tipo_crear' or vn == 'usuarios:tipo_editar' or vn == 'usuarios:tipo_eliminar' %} class="activo"{% endif %}>
+				<span class="material-symbols-outlined">badge</span> Tipos de usuario</a>
+		</details>
+		{% endif %}
+	 
+		{% endwith %}
+	</nav>
+	{% endif %}
+	 
 
         <!-- CONTENIDO DE CADA PÁGINA -->
 
@@ -553,9 +785,7 @@
 
             {% if messages %}
                 {% for message in messages %}
-                    <div class="card" style="border-left: 4px solid {% if message.tags == 'error' %}#b91c1c{% else %}#1d5fa7{% endif %};">
-                        {{ message }}
-                    </div>
+					<div class="card">{{ message }}</div>
                 {% endfor %}
             {% endif %}
 
@@ -581,6 +811,150 @@
                 if (!d.contains(e.target)) { d.removeAttribute("open"); }
             });
         });
+		
+		// Menú lateral: abre la sección activa y guarda su estado
+		document.querySelectorAll("details.menu-seccion").forEach(function (d) {
+			var clave = "menu-" + d.dataset.seccion;
+			var guardado = null;
+			try { guardado = sessionStorage.getItem(clave); } catch (e) {}
+	 
+			if (d.querySelector("a.activo") || guardado === "1") { d.open = true; }
+	 
+			d.querySelector("summary").addEventListener("click", function () {
+				setTimeout(function () {
+					try { sessionStorage.setItem(clave, d.open ? "1" : "0"); } catch (e) {}
+				}, 0);
+			});
+		});
+    </script>
+
+
+<script>
+    // Aviso al salir de un formulario (nuevo/edición) con datos modificados,
+    // y confirmación antes de cerrar sesión.
+    //
+    // - Se vigilan todos los <form method="post"> de la página, salvo el de
+    //   cerrar sesión (data-logout) y los que lleven el atributo data-sin-aviso.
+    // - Los formularios GET (búsquedas, filtros) no se vigilan, salvo los que lleven data-vigilar.
+    // - Un formulario con data-aviso-siempre avisa al salir aunque no se haya modificado nada
+    //   (por ejemplo, los pasos del registro de ingreso).
+    // - Si SOLO_SI_MODIFICO es false, avisa siempre que haya un formulario
+    //   vigilado en la página, aunque no se haya tocado nada.
+    (function () {
+        var SOLO_SI_MODIFICO = true;
+        var MSG_SALIR = "¿Está seguro que desea salir de la página? Se perderán los datos del formulario.";
+        var MSG_LOGOUT = "¿Está seguro que desea cerrar sesión?";
+        var MSG_LOGOUT_CAMBIOS = "¿Está seguro que desea cerrar sesión? Se perderán los datos del formulario.";
+ 
+        var formularios = Array.prototype.slice.call(
+            document.querySelectorAll('form[method="post" i]:not([data-logout]):not([data-sin-aviso]), form[data-vigilar]:not([data-sin-aviso])')
+        );
+        var saliendo = false;   // ya se confirmó la salida: no volver a preguntar
+        var enviando = false;   // se está enviando un formulario vigilado
+ 
+        function foto(form) {
+            var datos = [];
+            new FormData(form).forEach(function (valor, clave) {
+                if (clave === "csrfmiddlewaretoken") { return; }
+                datos.push([clave, typeof valor === "string" ? valor : (valor && valor.name) || ""]);
+            });
+            return JSON.stringify(datos);
+        }
+ 
+        var iniciales = formularios.map(foto);
+ 
+        function hayCambios() {
+            if (!formularios.length) { return false; }
+            if (!SOLO_SI_MODIFICO) { return true; }
+            return formularios.some(function (f, i) { return f.hasAttribute("data-aviso-siempre") || foto(f) !== iniciales[i]; });
+        }
+ 
+        formularios.forEach(function (f) {
+            f.addEventListener("submit", function () { enviando = true; });
+        });
+ 
+        // Clic en cualquier enlace que saque de la página (menú, logo, "Atrás", etc.).
+        // También cubre los botones que llevan un enlace adentro, <button><a href>Atrás</a></button>:
+        // si se hace clic en el botón pero fuera del texto, el navegador enviaría el formulario
+        // en vez de ir al enlace, así que se lo reemplaza por una navegación con confirmación.
+        document.addEventListener("click", function (e) {
+            if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) { return; }
+            if (!e.target.closest) { return; }
+            var a = e.target.closest("a[href]");
+            var viaBoton = false;
+            if (!a) {
+                var b = e.target.closest("button");
+                a = b ? b.querySelector("a[href]") : null;
+                viaBoton = !!a;
+            }
+            if (!a) { return; }
+            if (a.target && a.target !== "_self") { return; }
+            var href = a.getAttribute("href");
+            if (!href || href.charAt(0) === "#" || href.indexOf("javascript:") === 0) { return; }
+            if (a.hasAttribute("data-sin-aviso")) { saliendo = true; return; }   // enlace exento del aviso
+            if (viaBoton) { e.preventDefault(); }   // no enviar el formulario
+            if (hayCambios() && !confirm(MSG_SALIR)) { e.preventDefault(); return; }
+            saliendo = true;
+            if (viaBoton) { window.location.href = a.href; }
+        }, true);
+ 
+        // Cerrar la pestaña, recargar, botón "atrás" del navegador, escribir otra URL.
+        // (El navegador muestra su propio texto genérico: no permite personalizarlo.)
+        window.addEventListener("beforeunload", function (e) {
+            if (saliendo || enviando || !hayCambios()) { return; }
+            e.preventDefault();
+            e.returnValue = "";
+        });
+ 
+        // Si se vuelve a la página desde el historial, rehabilitar los avisos.
+        window.addEventListener("pageshow", function () { saliendo = false; enviando = false; });
+ 
+        // Cerrar sesión: siempre pide confirmación.
+        var logout = document.querySelector("form[data-logout]");
+        if (logout) {
+            logout.addEventListener("submit", function (e) {
+                if (confirm(hayCambios() ? MSG_LOGOUT_CAMBIOS : MSG_LOGOUT)) {
+                    saliendo = true;
+                } else {
+                    e.preventDefault();
+                }
+            });
+        }
+    })();
+    </script>
+
+<script>
+    // Botón "ojo" en todos los campos de contraseña: alterna entre texto oculto y texto plano.
+    (function () {
+        document.querySelectorAll('input[type="password"]').forEach(function (input) {
+            if (input.closest(".pw-wrap")) { return; }
+
+            var envoltorio = document.createElement("div");
+            envoltorio.className = "pw-wrap";
+            input.parentNode.insertBefore(envoltorio, input);
+            envoltorio.appendChild(input);
+
+            var boton = document.createElement("button");
+            boton.type = "button";   // no envía el formulario
+            boton.className = "pw-toggle";
+            boton.setAttribute("aria-label", "Mostrar contraseña");
+            boton.setAttribute("aria-pressed", "false");
+            boton.title = "Mostrar contraseña";
+            boton.innerHTML = '<span class="material-symbols-outlined">visibility</span>';
+            envoltorio.appendChild(boton);
+
+            boton.addEventListener("click", function () {
+                var visible = input.type === "text";
+                input.type = visible ? "password" : "text";
+                boton.setAttribute("aria-pressed", visible ? "false" : "true");
+                var texto = visible ? "Mostrar contraseña" : "Ocultar contraseña";
+                boton.setAttribute("aria-label", texto);
+                boton.title = texto;
+                boton.querySelector(".material-symbols-outlined").textContent = visible ? "visibility" : "visibility_off";
+                input.focus();
+            });
+        });
+    })();
     </script>
 
 </body>

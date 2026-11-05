@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Solicitudes de registro</h2>
+<p style="color:#64748b;">
+  Perfiles nuevos que pidieron crearse y esperan tu aprobación. Al <strong>rechazar</strong> una solicitud
+  se borran todos sus datos; al <strong>aprobar</strong>, el usuario ya puede ingresar.
+</p>
+
+<div class="table-responsive">
+	<table>
+	  <tr>
+		<th>Solicitud</th><th>Nombre</th><th>Documento</th><th>Correo</th><th>Teléfono</th>
+		<th>Tipo</th><th>Facultad</th><th>Usuario</th><th>Aprobar/Rechazar</th>
+	  </tr>
+	  {% for s in solicitudes %}
+	  <tr>
+		<td>{{ s.fecha_solicitud }}</td>
+		<td>{{ s.nombre }} {{ s.apellido }}</td>
+		<td>{{ s.documento }}</td>
+		<td>{{ s.correo }}</td>
+		<td>{{ s.telefono|default:"—" }}</td>
+		<td>{{ s.tipo }}</td>
+		<td>{{ s.facultad|default:"—" }}</td>
+		<td>{{ s.username }}</td>
+		<td>
+		  <div style="display:flex; gap:8px;">
+			<form method="post" action="{% url 'usuarios:solicitud_aprobar' s.pk %}">
+			  {% csrf_token %}
+			  <button type="submit" style="background:green;">
+				<span class="material-symbols-outlined">check_circle</span>
+			  </button>
+			</form>
+			<form method="post" action="{% url 'usuarios:solicitud_rechazar' s.pk %}"
+				  onsubmit="return confirm('¿Rechazar la solicitud de {{ s.nombre|escapejs }} {{ s.apellido|escapejs }}? Se borrarán todos sus datos.');">
+			  {% csrf_token %}
+			  <button type="submit" style="background:#b91c1c;">
+				<span class="material-symbols-outlined">delete_forever</span>
+			  </button>
+			</form>
+		  </div>
+		</td>
+	  </tr>
+	  {% empty %}
+	  <tr><td colspan="9">No hay solicitudes pendientes.</td></tr>
+	  {% endfor %}
+	</table>
+</div>
+
+{% include "_paginacion.html" %}
+{% endblock %}

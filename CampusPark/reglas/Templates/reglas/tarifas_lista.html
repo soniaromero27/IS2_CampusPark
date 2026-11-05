@@ -28,46 +28,45 @@
   {% if tipo_id %}<a href="{% url 'reglas:tarifas_lista' %}" class="btn">Limpiar</a>{% endif %}
 </form>
 
-<table>
-	<tr>
-    <th>
-      <a href="?orden=descripcion&dir={% if orden == 'descripcion' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Descripción{% if orden == 'descripcion' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=tipo&dir={% if orden == 'tipo' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Tipo de usuario{% if orden == 'tipo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-	<th>
-      <a href="?orden=valor_hora&dir={% if orden == 'valor_hora' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Valor por hora{% if orden == 'valor_hora' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    </th>
-    <th>
-      <a href="?orden=vigencia&dir={% if orden == 'vigencia' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-        Vigencia{% if orden == 'vigencia' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-      </a>
-    <th></th>
-  </tr>
-  
-  <!--tr>
-    <th>Descripción</th><th>Tipo de usuario</th><th>Valor por hora</th><th>Vigencia</th><th></th>
-  </tr-->
-  {% for t in tarifas %}
-  <tr>
-    <td>{{ t.descripcion }}</td>
-    <td>{{ t.tipo }}</td>
-    <td>Gs. {{ t.valor_por_hora|floatformat:0 }}</td>
-    <td>{{ t.vigencia }}</td>
-	{% if user.perfil.es_personal %}
-    <td><a href="{% url 'reglas:tarifa_editar' t.pk %}"><span class="material-symbols-outlined">edit_square</span></a></td>
-	{% endif %}
-  </tr>
-  {% empty %}
-  <tr><td colspan="5">No hay tarifas que coincidan con el filtro.</td></tr>
-  {% endfor %}
-</table>
+<div class="table-responsive">
+	<table>
+		<tr>
+		<th>
+		  <a href="?orden=descripcion&dir={% if orden == 'descripcion' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Descripción{% if orden == 'descripcion' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=tipo&dir={% if orden == 'tipo' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Tipo de usuario{% if orden == 'tipo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=valor_hora&dir={% if orden == 'valor_hora' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Valor por hora{% if orden == 'valor_hora' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		</th>
+		<th>
+		  <a href="?orden=vigencia&dir={% if orden == 'vigencia' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
+			Vigencia{% if orden == 'vigencia' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+		  </a>
+		<th></th>
+	  </tr>
+	  
+	  {% for t in tarifas %}
+	  <tr>
+		<td>{{ t.descripcion }}</td>
+		<td>{{ t.tipo }}</td>
+		<td>Gs. {{ t.valor_por_hora|floatformat:0 }}</td>
+		<td>{{ t.vigencia }}</td>
+		{% if user.perfil.es_personal %}
+		<td><a href="{% url 'reglas:tarifa_editar' t.pk %}"><span class="material-symbols-outlined">edit_square</span></a></td>
+		{% endif %}
+	  </tr>
+	  {% empty %}
+	  <tr><td colspan="5">No hay tarifas que coincidan con el filtro.</td></tr>
+	  {% endfor %}
+	</table>
+</div>
 {% include "_paginacion.html" %}
 {% endblock %}

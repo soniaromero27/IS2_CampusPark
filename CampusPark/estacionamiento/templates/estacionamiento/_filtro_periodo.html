@@ -1,0 +1,27 @@
+{# Filtro día / mes / año compartido por los dashboards. Necesita: periodo, dia, mes, anio #}
+<form method="get" class="filtros">
+  <div class="form-row">
+    <label for="id_periodo">Ver por</label>
+    <select name="periodo" id="id_periodo">
+      <option value="dia" {% if periodo == "dia" %}selected{% endif %}>Día</option>
+      <option value="mes" {% if periodo == "mes" %}selected{% endif %}>Mes</option>
+      <option value="anio" {% if periodo == "anio" %}selected{% endif %}>Año</option>
+    </select>
+  </div>
+  <div class="form-row" id="campo-dia"><label for="id_dia">Día</label><input type="date" name="dia" id="id_dia" value="{{ dia }}"></div>
+  <div class="form-row" id="campo-mes"><label for="id_mes">Mes</label><input type="month" name="mes" id="id_mes" value="{{ mes }}"></div>
+  <div class="form-row" id="campo-anio"><label for="id_anio">Año</label><input type="number" name="anio" id="id_anio" value="{{ anio }}" min="2000" max="2100" style="width:110px;"></div>
+  <button type="submit">Aplicar</button>
+</form>
+<script>
+(function () {
+  var sel = document.getElementById("id_periodo");
+  function ver() {
+    ["dia", "mes", "anio"].forEach(function (p) {
+      document.getElementById("campo-" + p).style.display = (sel.value === p) ? "" : "none";
+    });
+  }
+  sel.addEventListener("change", ver);
+  ver();
+})();
+</script>

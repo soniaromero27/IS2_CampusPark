@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Solicitud enviada</h2>
+<div class="card">
+  <p>Recibimos tu solicitud de registro. Como tu tipo de usuario requiere aprobación,
+     <strong>todavía no podés ingresar</strong>: un Administrador debe revisarla y aprobarla.</p>
+  <p>Cuando la apruebe, vas a poder iniciar sesión con el nombre de usuario y la contraseña que elegiste.</p>
+  <p><a href="{% url 'inicio' %}" class="btn">Volver al inicio</a></p>
+</div>
+{% endblock %}

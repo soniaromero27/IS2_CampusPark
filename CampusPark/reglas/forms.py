@@ -28,11 +28,12 @@ class HorariosForm(forms.ModelForm):
 
     class Meta:
         model = Reglamento
-        fields = ["hora_apertura", "hora_cierre"]
+        fields = ["hora_apertura", "hora_cierre", "tolerancia_validacion"]
         widgets = {
             "hora_apertura": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
             "hora_cierre": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
         }
+        labels = {"tolerancia_validacion": "Tolerancia para salir tras validar el ticket (minutos)"}
 
     def clean(self):
         cleaned_data = super().clean()

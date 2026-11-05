@@ -9,16 +9,29 @@ urlpatterns = [
     path("reservas/nueva/", views.crear_reserva_view, name="reserva_crear"),
     path("reservas/<int:pk>/cancelar/", views.cancelar_reserva_view, name="reserva_cancelar"),
     path("reservas/todas/", views.lista_todas_reservas_view, name="reservas_lista_todas"),
-
+    path("reservas/actualizar/", views.actualizar_reservas_view, name="reservas_actualizar"),
+    
     path("espacios/", views.lista_espacios_view, name="espacios_lista"),
     path("espacios/<int:pk>/editar/", views.editar_espacio_view, name="espacio_editar"),
 
     path("movimientos/", views.lista_movimientos_view, name="movimientos_lista"),
     path("movimientos/ingreso/", views.registrar_ingreso_view, name="movimiento_ingreso"),
     path("movimientos/<int:pk>/salida/", views.registrar_salida_view, name="movimiento_salida"),
+    path("movimientos/<int:pk>/validar/", views.validar_ticket_view, name="ticket_validar"),
 
+    path("mis-movimientos/", views.mis_movimientos_view, name="mis_movimientos"),
+    
     path("zonas/", views.lista_zonas_view, name="zonas_lista"),
     path("zonas/nueva/", views.crear_zona_view, name="zona_crear"),
     path("zonas/<int:pk>/editar/", views.editar_zona_view, name="zona_editar"),
     path("zonas/espacios/nuevos/", views.crear_espacios_view, name="espacios_crear"),
+        
+    path("tickets/", views.lista_tickets_view, name="tickets_lista"),
+    path("tickets/<int:pk>/", views.detalle_ticket_view, name="ticket_detalle"),
+    path("tickets/<int:pk>/pagar/", views.pagar_ticket_view, name="ticket_pagar"),
+    
+    path("pagar-tickets/", views.pagar_tickets_view, name="pagar_tickets"),
+    
+    path("dashboard/", views.dashboard_view, name="dashboard"),
+    path("dashboard/ocupacion/", views.dashboard_ocupacion_view, name="dashboard_ocupacion"),
 ]

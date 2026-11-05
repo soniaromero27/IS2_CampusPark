@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Validar ticket — {{ movimiento.patente }}</h2>
+
+<div class="card">
+  <p><strong>Espacio:</strong> {{ movimiento.espacio.zona }} - N°{{ movimiento.espacio.numero }}</p>
+  <p><strong>Ingreso:</strong> {{ movimiento.fecha_hora_ingreso }}</p>
+
+  {% if cuenta.tarifa is None %}
+    <p>No hay una tarifa configurada para tu tipo de usuario. Consultá con el personal del estacionamiento.</p>
+
+  {% elif cuenta.validado %}
+    <h3>Ticket validado</h3>
+    <p>Podés salir hasta las <strong>{{ movimiento.validado_hasta|time:"H:i" }} hs</strong> sin que se recalcule el cobro.
+       Si pasa ese horario, se vuelve a acumular el tiempo y sólo se cobra el excedente de lo que ya pagaste.</p>
+
+  {% elif cuenta.a_pagar %}
+    <p>{{ cuenta.horas }} hora{{ cuenta.horas|pluralize }} × Gs. {{ cuenta.tarifa.valor_por_hora|floatformat:"0g" }}/h
+       = Gs. {{ cuenta.monto|floatformat:"0g" }}</p>
+    <p>Ya pagado: Gs. {{ cuenta.pagado|floatformat:"0g" }}</p>
+    <h3>A pagar ahora: Gs. {{ cuenta.a_pagar|floatformat:"0g" }}</h3>
+    {% if movimiento.validado_hasta %}<p>Tu validación anterior venció.</p>{% endif %}
+    <p>Después de validar tenés {{ tolerancia }} minutos para salir sin recargo.</p>
+
+  {% else %}
+    <h3>No tenés nada para pagar</h3>
+    {% if cuenta.pagado %}
+      <p>Lo que ya pagaste (Gs. {{ cuenta.pagado|floatformat:"0g" }}) cubre toda tu estadía hasta ahora.</p>
+    {% else %}
+      <p>Tu ticket no tiene cargo (Gs. 0).</p>
+    {% endif %}
+    {% if movimiento.validado_hasta %}<p>Tu validación anterior venció.</p>{% endif %}
+    <p>Validalo y tenés {{ tolerancia }} minutos para salir sin recargo.</p>
+  {% endif %}
+</div>
+
+{% if cuenta.tarifa is not None and not cuenta.validado %}
+<form method="post">
+  {% csrf_token %}
+  {% if cuenta.a_pagar %}
+    {# Hay algo para pagar: se elige la forma de pago #}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      <div class="form-row">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+	<!-- Contenedor flex para alinear los botones horizontalmente -->
+    <div style="display: flex; gap: 10px; align-items: center; margin-top: 20px;">
+		<button type="submit">Pagar y validar</button>
+		<a href="{% url 'estacionamiento:mis_movimientos' %}" class="btn">Volver a mis movimientos</a>
+	</div>
+  {% else %}
+    {# Sin cargo: sólo el botón #}
+	<div style="display: flex; gap: 10px; align-items: center; margin-top: 20px;">
+		<button type="submit">Validar</button>
+		<a href="{% url 'estacionamiento:mis_movimientos' %}" class="btn">Volver a mis movimientos</a>
+	</div>
+  {% endif %}
+</form>
+{% endif %}
+<div style="display: flex; gap: 10px; align-items: center; margin-top: 20px;">
+	
+</div>
+{% endblock %}
