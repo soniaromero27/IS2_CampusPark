@@ -30,22 +30,25 @@
 
 {% if ticket.estado == "pendiente" and user.perfil.es_personal %}
 <form method="post" action="{% url 'estacionamiento:ticket_pagar' ticket.pk %}">
-  {% csrf_token %}
-  {% for field in form %}
-    <div class="form-row">
-      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-      {{ field }}
-    </div>
-  {% endfor %}
-  <button type="submit">Registrar pago</button>
+	{% csrf_token %}
+	{% for field in form %}
+	<div class="form-row">
+	  <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+	  {{ field }}
+	</div>
+	{% endfor %}
+	<!-- Contenedor flex para alinear los botones horizontalmente -->
+	<div style="display: flex; gap: 10px; align-items: center; margin-top: 20px;">
+		<button type="submit">Registrar pago</button>
+	</div>
 </form>
 {% endif %}
 
-<p>
-  {% if user.perfil.es_personal %}
-    <a href="{% url 'estacionamiento:tickets_lista' %}" class="btn">Volver a tickets</a>
-  {% else %}
-    <a href="{% url 'estacionamiento:mis_movimientos' %}" class="btn">Volver a mis movimientos</a>
-  {% endif %}
-</p>
+{% if user.perfil.es_personal %}
+	<a href="{% url 'estacionamiento:tickets_lista' %}" class="btn">Volver a tickets</a>
+{% else %}
+	<a href="{% url 'estacionamiento:mis_movimientos' %}" class="btn">Volver a mis movimientos</a>
+{% endif %}
+
+
 {% endblock %}

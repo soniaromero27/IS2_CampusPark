@@ -322,7 +322,7 @@ class Ticket(models.Model):
     class Estado(models.TextChoices):
         PENDIENTE = "pendiente", "Pendiente de pago"
         PAGADO = "pagado", "Pagado"
-        SIN_CARGO = "sin_cargo", "Sin cargo (validado)"
+        SIN_CARGO = "sin_cargo", "Validado"
         SIN_TARIFA = "sin_tarifa", "Sin tarifa configurada"
 
     class Metodo(models.TextChoices):

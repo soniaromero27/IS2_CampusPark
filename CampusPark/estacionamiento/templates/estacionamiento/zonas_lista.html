@@ -69,7 +69,7 @@ search
 		  {% else %}
 			{% with tipos=z.tipos_usuario_permitidos.all %}
 			  {% if tipos %}
-				{% for t in tipos %}{{ t.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+				{% for t in tipos %}-{{ t.nombre }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
 			  {% else %}
 				Todos
 			  {% endif %}
