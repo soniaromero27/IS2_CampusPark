@@ -9,4 +9,5 @@ urlpatterns = [
     path("agregar/", views.agregar_vehiculo_view, name="agregar"),
     path("todos/", views.lista_todos_vehiculos_view, name="lista_todos"),
     path("<int:pk>/editar/", views.editar_vehiculo_view, name="editar"),
+    path("<int:pk>/", views.detalle_vehiculo_view, name="detalle"),
 ]

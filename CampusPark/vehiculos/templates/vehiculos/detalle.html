@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  td a { color: #1d5fa7; }
+</style>
+
+<h2>Vehículo {{ v.matricula }}</h2>
+
+<table>
+  <tr><th>Matrícula</th><td>{{ v.matricula }}</td></tr>
+  <tr><th>Tipo de vehículo</th><td>{{ v.tipo_vehiculo }}</td></tr>
+  <tr><th>Cédula verde</th><td>{{ v.cedula_verde }}</td></tr>
+  <tr><th>Marca</th><td>{{ v.marca }}</td></tr>
+  <tr><th>Modelo</th><td>{{ v.modelo }}</td></tr>
+  <tr><th>Color</th><td>{{ v.color }}</td></tr>
+  <tr><th>Año</th><td>{{ v.anho }}</td></tr>
+  <tr><th>Chassis</th><td>{{ v.chassis }}</td></tr>
+  <tr>
+    <th>Dueño</th>
+    <td>
+      <a href="{% url 'usuarios:detalle' v.usuario.pk %}">
+        {{ v.usuario.nombre }} {{ v.usuario.apellido }}
+      </a> ({{ v.usuario.tipo }})
+    </td>
+  </tr>
+  <tr><th>Fecha de registro</th><td>{{ v.fecha_registro }}</td></tr>
+</table>
+
+<p style="margin-top:20px;"><a href="{% url 'vehiculos:lista_todos' %}" class="btn">Atrás</a></p>
+{% endblock %}

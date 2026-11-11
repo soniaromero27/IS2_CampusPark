@@ -102,3 +102,11 @@ def lista_todos_vehiculos_view(request):
     vehiculos = vehiculos.order_by(*campos)
     
     return render(request, "vehiculos/lista_todos.html", {**paginar(request, vehiculos, "vehiculos"), "orden": orden, "dir": direccion, "q": q})
+
+@personal_requerido
+def detalle_vehiculo_view(request, pk):
+    """Ver todos los datos de un vehículo y de su dueño: sólo personal."""
+    vehiculo = get_object_or_404(
+        Vehiculo.objects.select_related("usuario", "usuario__tipo"), pk=pk
+    )
+    return render(request, "vehiculos/detalle.html", {"v": vehiculo})

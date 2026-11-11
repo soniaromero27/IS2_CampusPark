@@ -291,4 +291,15 @@ def eliminar_tipo_view(request, pk):
             "externo": TipoUsuario.externo_por_defecto(),
         },
     )
- 
+
+@personal_requerido
+def detalle_usuario_view(request, pk):
+    """Ver el perfil completo de cualquier usuario: sólo personal."""
+    perfil = get_object_or_404(
+        Usuario.objects.select_related("user", "tipo", "facultad"), pk=pk
+    )
+    return render(
+        request,
+        "usuarios/perfil.html",
+        {"perfil": perfil, "solo_lectura": True},
+    )

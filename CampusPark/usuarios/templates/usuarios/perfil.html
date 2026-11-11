@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Mi perfil</h2>
+<h2>{% if solo_lectura %}Perfil de {{ perfil.nombre }} {{ perfil.apellido }}{% else %}Mi perfil{% endif %}</h2>
 
-<div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-  <a href="{% url 'usuarios:perfil_editar' %}" class="btn">Editar mi perfil</a>
-  <a href="{% url 'usuarios:password_cambiar' %}" class="btn">Cambiar contraseña</a>
-</div>
+{% if not solo_lectura %}
+	<div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+		<a href="{% url 'usuarios:perfil_editar' %}" class="btn">Editar mi perfil</a>
+		<a href="{% url 'usuarios:password_cambiar' %}" class="btn">Cambiar contraseña</a>
+	</div>
+{% endif %}
+
 
 <h3 style="margin-top:24px;">Mi cuenta</h3>
 <div class="table-responsive">
@@ -36,5 +39,10 @@
 	  <tr><th>Facultad</th><td>{{ perfil.facultad|default:"—" }}</td></tr>
 	  <tr><th>Fecha de registro</th><td>{{ perfil.fecha_registro }}</td></tr>
 	</table>
+	{% if solo_lectura %}
+	<p style="margin-top:20px;">
+		<a href="{% url 'usuarios:lista' %}" class="btn">Atrás</a>
+	</p>
+	{% endif %}
 </div>
 {% endblock %}
