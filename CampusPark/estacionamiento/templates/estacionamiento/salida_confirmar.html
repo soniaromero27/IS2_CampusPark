@@ -3,34 +3,49 @@
 
 <h2>Registrar salida</h2>
 <p>
-  ¿Confirmás la salida del vehículo {{ movimiento.patente }} del espacio
-  N°{{ movimiento.espacio.numero }} ({{ movimiento.espacio.zona }})?
+  Vehículo <strong>{{ movimiento.patente }}</strong> — espacio
+  N°{{ movimiento.espacio.numero }} ({{ movimiento.espacio.zona }}).
   Ingresó el {{ movimiento.fecha_hora_ingreso }}.
 </p>
-
 
 <div class="card">
   {% if cuenta.tarifa is None %}
     <p>No hay una tarifa configurada para el tipo de usuario "{{ cuenta.tipo|default:"Externo" }}",
-       así que no se puede estimar el monto todavía.</p>
+       así que no hay un monto para cobrar. La salida se registra igual.</p>
+
   {% elif cuenta.validado %}
     <p><strong>Ticket validado y dentro de la tolerancia:</strong> no se recalcula el cobro.</p>
     <p>Ya abonado: Gs. {{ cuenta.pagado|floatformat:"0g" }} — A cobrar ahora: <strong>Gs. 0</strong></p>
+
   {% else %}
     <p>{{ cuenta.horas }} hora{{ cuenta.horas|pluralize }} × Gs. {{ cuenta.tarifa.valor_por_hora|floatformat:"0g" }}/h
        = Gs. {{ cuenta.monto|floatformat:"0g" }} (tarifa "{{ cuenta.tarifa.descripcion }}" — {{ cuenta.tipo }})</p>
     {% if movimiento.validado_hasta %}<p>La validación anterior venció: se acumuló nuevamente todo el tiempo.</p>{% endif %}
     <p>Ya abonado: Gs. {{ cuenta.pagado|floatformat:"0g" }}</p>
-    <p>A cobrar ahora: <strong>Gs. {{ cuenta.a_pagar|floatformat:"0g" }}</strong></p>
+    <h3>A cobrar ahora: Gs. {{ cuenta.a_pagar|floatformat:"0g" }}</h3>
   {% endif %}
 </div>
 
-<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px;">
 <form method="post">
   {% csrf_token %}
-  <button type=" ">Sí, registrar salida</button>
+  <input type="hidden" name="monto_esperado" value="{{ monto_esperado }}">
+
+  {% if cuenta.a_pagar %}
+    {# Hay algo para cobrar: se elige la forma de pago acá, antes de registrar la salida #}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      <div class="form-row">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px;">
+    <button type="submit">{% if cuenta.a_pagar %}Cobrar y registrar salida{% else %}Registrar salida{% endif %}</button>
+    <a href="{% url 'estacionamiento:movimientos_lista' %}" class="btn">Atrás</a>
+  </div>
 </form>
-<a href="{% url 'estacionamiento:movimientos_lista' %}" class="btn">Atrás</a>
-</div>
 
 {% endblock %}

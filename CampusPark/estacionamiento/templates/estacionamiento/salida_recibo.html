@@ -22,12 +22,14 @@
  
 </div>
 {% if ticket %}
-  <p><strong>Ticket:</strong> <a href="{% url 'estacionamiento:ticket_detalle' ticket.pk %}">{{ ticket.numero }}</a> ({{ ticket.get_estado_display }})</p>
+	<p><strong>Ticket:</strong> {{ ticket.numero }} <a href="{% url 'estacionamiento:ticket_detalle' ticket.pk %}">
+		<span class="material-symbols-outlined">description</span></a>
+		({{ ticket.get_estado_display }})</p>
 {% endif %}
 
 {% if ticket.estado == "sin_cargo" %}
   <p><strong>No hay monto a cobrar: el ticket fue validado automáticamente.</strong></p>
 {% endif %}
 
-<p><a href="{% url 'estacionamiento:movimientos_lista' %}">Volver a la lista</a></p>
+<p><a href="{% url 'estacionamiento:movimientos_lista' %}" class="btn">Volver a la lista</a></p>
 {% endblock %}

@@ -558,56 +558,93 @@ def registrar_ingreso_view(request):
         {"paso": 1, "form": paso1 or PatenteForm(), "vista": vista, "patentes": patentes},
     )
 
+def _monto_txt(valor):
+    """Monto como texto estable ('1500.00') para compararlo entre la pantalla y el POST."""
+    return "" if valor is None else f"{valor:.2f}"
+ 
+ 
 @personal_requerido
 def registrar_salida_view(request, pk):
     """
-    Registrar salida: sólo Personal o Administrador. Si el ticket está
-    validado y dentro de la tolerancia, no se recalcula nada. Si no, se
-    cobra sólo el excedente de lo que el usuario ya pagó (ver
-    Movimiento.cobro_vigente). Emite el ticket de salida.
+    Registrar salida (sólo Personal o Administrador), con el cobro en la misma
+    pantalla: se elige la forma de pago y, recién al confirmar, se registra la
+    salida, se emite el ticket y se registra el pago, todo junto. Si no se
+    confirma, no se registra nada.
+ 
+    - Si no hay nada que cobrar (0 Gs. o ya pagado/validado) no se pide forma de pago.
+    - Si entre que se abrió la pantalla y se confirmó el monto cambió (por
+      ejemplo pasó a la siguiente hora), no se registra nada: se muestra el monto
+      nuevo y hay que confirmar de nuevo.
     """
     movimiento = get_object_or_404(Movimiento, pk=pk, fecha_hora_salida__isnull=True)
+    form = TicketPagoForm()
+ 
     if request.method == "POST":
+        form = TicketPagoForm(request.POST)
+        metodo = form.cleaned_data["metodo"] if form.is_valid() else None
+ 
         with transaction.atomic():
             # bloqueo: evita que el usuario valide/pague a la vez que se registra la salida
             movimiento = get_object_or_404(
-                Movimiento.objects.select_for_update(of=("self",)),
+                Movimiento.objects.select_for_update(),
                 pk=pk, fecha_hora_salida__isnull=True,
             )
-            movimiento.fecha_hora_salida = timezone.now()
-            movimiento.save()
+            ahora = timezone.now()
+            cuenta = movimiento.cobro_vigente(momento=ahora)
+            a_pagar = cuenta["a_pagar"]
  
-            estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
-            espacio = movimiento.espacio
-            espacio.tipo_estado = estado_libre
-            espacio.save()
+            if _monto_txt(a_pagar) != request.POST.get("monto_esperado", ""):
+                messages.warning(
+                    request,
+                    "El monto a cobrar cambió desde que abriste esta pantalla. "
+                    "Revisalo y confirmá de nuevo.",
+                )
+                form = TicketPagoForm()
+            elif a_pagar and not metodo:
+                pass  # el formulario ya trae el error "elegí una forma de pago"
+            else:
+                movimiento.fecha_hora_salida = ahora
+                movimiento.save()
  
-            if movimiento.vehiculo_id and movimiento.vehiculo.usuario_id:
-                reserva_en_curso = Reserva.objects.filter(
-                    espacio=espacio,
-                    usuario=movimiento.vehiculo.usuario,
-                    tipo_estado_reserva__nombre_estado_reserva="Confirmada",
-                ).first()
-                if reserva_en_curso:
-                    estado_finalizada, _ = TipoEstadoReserva.objects.get_or_create(
-                        nombre_estado_reserva="Finalizada"
-                    )
-                    reserva_en_curso.tipo_estado_reserva = estado_finalizada
-                    reserva_en_curso.save()
+                estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
+                espacio = movimiento.espacio
+                espacio.tipo_estado = estado_libre
+                espacio.save()
  
-            cuenta = movimiento.cobro_vigente()
-            ticket = Ticket.emitir(movimiento, cuenta, validado_por=request.user.perfil)
+                if movimiento.vehiculo_id and movimiento.vehiculo.usuario_id:
+                    reserva_en_curso = Reserva.objects.filter(
+                        espacio=espacio,
+                        usuario=movimiento.vehiculo.usuario,
+                        tipo_estado_reserva__nombre_estado_reserva="Confirmada",
+                    ).first()
+                    if reserva_en_curso:
+                        estado_finalizada, _ = TipoEstadoReserva.objects.get_or_create(
+                            nombre_estado_reserva="Finalizada"
+                        )
+                        reserva_en_curso.tipo_estado_reserva = estado_finalizada
+                        reserva_en_curso.save()
  
-        return render(
-            request,
-            "estacionamiento/salida_recibo.html",
-            {"movimiento": movimiento, "cuenta": cuenta, "ticket": ticket},
-        )
+                perfil = request.user.perfil
+                ticket = Ticket.emitir(movimiento, cuenta, validado_por=perfil)
+                if ticket.estado == Ticket.Estado.PENDIENTE:
+                    ticket.registrar_pago(metodo, perfil)  # crea el Pago y deja el ticket 'Pagado'
  
+                return render(
+                    request,
+                    "estacionamiento/salida_recibo.html",
+                    {"movimiento": movimiento, "cuenta": cuenta, "ticket": ticket},
+                )
+ 
+    cuenta = movimiento.cobro_vigente()
     return render(
         request,
         "estacionamiento/salida_confirmar.html",
-        {"movimiento": movimiento, "cuenta": movimiento.cobro_vigente()},
+        {
+            "movimiento": movimiento,
+            "cuenta": cuenta,
+            "form": form,
+            "monto_esperado": _monto_txt(cuenta["a_pagar"]),
+        },
     )
  
 
