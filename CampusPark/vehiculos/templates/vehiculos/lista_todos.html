@@ -26,11 +26,11 @@ search
 			Matrícula{% if orden == 'matricula' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
 		  </a>
 		</th>
-		<th>
+		<!--th>
 		  <a href="?orden=tipo&dir={% if orden == 'tipo' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
 			Tipo{% if orden == 'tipo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
 		  </a>
-		</th>
+		</th-->
 		<th>
 		  <a href="?orden=marca&dir={% if orden == 'marca' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
 			Marca{% if orden == 'marca' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
@@ -41,7 +41,7 @@ search
 			Modelo{% if orden == 'modelo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
 		  </a>
 		</th>
-		<th>
+		<!--th>
 		  <a href="?orden=color&dir={% if orden == 'color' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
 			Color{% if orden == 'color' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
 		  </a>
@@ -50,7 +50,7 @@ search
 		  <a href="?orden=anho&dir={% if orden == 'anho' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
 			Año{% if orden == 'anho' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
 		  </a>
-		</th>
+		</th-->
 		<th>
 		  <a href="?orden=usuario&dir={% if orden == 'usuario' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
 			Dueño{% if orden == 'usuario' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
@@ -68,11 +68,11 @@ search
 	  {% for v in vehiculos %}
 	  <tr>
 		<td>{{ v.matricula }}</td>
-		<td>{{ v.tipo_vehiculo }}</td>
+		<!--td>{{ v.tipo_vehiculo }}</td>
 		<!--td>{{ v.cedula_verde }}</td-->
 		<td>{{ v.marca }}</td>
 		<td>{{ v.modelo }}</td>
-		<td>{{ v.color }}</td>
+		<!--td>{{ v.color }}</td>
 		<td>{{ v.anho }}</td>
 		<!--td>{{ v.chassis }}</td-->
 		<td>{{ v.usuario.nombre }} {{ v.usuario.apellido }}</td>
