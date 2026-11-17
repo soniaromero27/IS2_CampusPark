@@ -18,9 +18,10 @@
   <tr>
     <th>Dueño</th>
     <td>
-      <a href="{% url 'usuarios:detalle' v.usuario.pk %}">
-        {{ v.usuario.nombre }} {{ v.usuario.apellido }}
-      </a> ({{ v.usuario.tipo }})
+		{{ v.usuario.nombre }} {{ v.usuario.apellido }}
+		<a href="{% url 'usuarios:detalle' v.usuario.pk %}">
+			<span class="material-symbols-outlined">description</span>
+		</a>
     </td>
   </tr>
   <tr><th>Fecha de registro</th><td>{{ v.fecha_registro }}</td></tr>
