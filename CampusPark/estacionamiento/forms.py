@@ -221,8 +221,16 @@ class IngresoForm(forms.Form):
         analisis = analizar_patente(patente)
         usuario = analisis["usuario"]
 
-        if espacio.pk not in {e.pk for e in analisis["espacios"]}:
+        elegido = {e.pk: e for e in analisis["espacios"]}.get(espacio.pk)
+        if elegido is None:
             self.add_error("espacio", "Ese espacio no está disponible para esta chapa.")
+            return cleaned_data
+        if not elegido.seleccionable:
+            self.add_error(
+                "espacio",
+                f"El espacio N°{espacio.numero} de la zona '{espacio.zona}' no está libre "
+                f"({espacio.tipo_estado}).",
+            )
             return cleaned_data
 
         if analisis["con_reserva"]:

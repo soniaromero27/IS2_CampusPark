@@ -6,6 +6,10 @@
   .toggle-vista a.activo { background: #1d5fa7; color: white; }
   .acciones { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
 
+  /* Leyenda */
+  .leyenda { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0 6px; }
+  .leyenda .caja { min-height: 0; padding: 4px 12px; font-size: 13px; flex-direction: row; }
+
   /* Cuadrícula: una zona desplegable, un cuadro por espacio (radio escondido) */
   .sala { margin-top: 12px; }
   .sala > summary {
@@ -38,6 +42,13 @@
   .cuadro-espacio:hover .caja { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(15, 45, 82, 0.2); }
   .cuadro-espacio input:checked + .caja { background: #1d5fa7; border-color: #154b86; color: white; }
   .cuadro-espacio input:focus-visible + .caja { outline: 3px solid #93c5fd; outline-offset: 2px; }
+
+  /* Espacios que se ven pero no se pueden elegir (sin mostrar la patente) */
+  .cuadro-espacio:has(input:disabled) { cursor: not-allowed; }
+  .cuadro-espacio:has(input:disabled):hover .caja { transform: none; box-shadow: none; }
+  .caja.estado-ocupado { background: #fee2e2; border-color: #dc2626; color: #7f1d1d; }
+  .caja.estado-reservado { background: #fef3c7; border-color: #d97706; color: #78350f; }
+  .caja.estado-fuera-de-servicio { background: #e2e8f0; border-color: #64748b; color: #334155; }
 </style>
 
 <h2>Registrar ingreso</h2>
@@ -64,7 +75,7 @@
 
 {% else %}
 
-  <p>Paso 2 de 2:<br> Elegí el espacio para <strong>{{ patente }}  </strong>.
+  <p>Paso 2 de 2:<br> Elegí el espacio para <strong>{{ patente }}  </strong>
      <a href="{% url 'estacionamiento:movimiento_ingreso' %}?vista={{ vista }}" class="btn">Volver al paso 1</a></p>
 
   <div class="card">
@@ -79,7 +90,8 @@
          Elegí uno de los espacios reservados.</p>
       <p><small>Si el espacio reservado está ocupado, se asigna automáticamente otro libre de la misma zona.</small></p>
     {% else %}
-      <p>No tiene reservas vigentes: se muestran los espacios libres de las zonas a las que tiene acceso.</p>
+      <p>No tiene reservas vigentes: se muestran todos los espacios de las zonas a las que tiene acceso.
+         Sólo se pueden elegir los <strong>libres</strong>.</p>
     {% endif %}
   </div>
 
@@ -96,54 +108,77 @@
     {{ form.patente.errors }}
 
     {% if not espacios %}
-      <p>No hay espacios disponibles para esta chapa en este momento.</p>
-
-    {% elif vista == 'cuadros' %}
-      {% for g in grupos %}
-      <details class="sala" open>
-        <summary>
-          <span class="sala-nombre">{{ g.zona }}</span>
-          <span class="sala-info">{% if g.zona.facultad %}Facultad: {{ g.zona.facultad }}{% else %}Zona pública{% endif %}</span>
-        </summary>
-        <div class="asientos">
-          {% for e in g.espacios %}
-          <label class="cuadro-espacio" title="{{ e.zona }} - N°{{ e.numero }}">
-            <input type="radio" name="espacio" value="{{ e.pk }}" required
-                   {% if form.espacio.value|stringformat:"s" == e.pk|stringformat:"s" %}checked{% endif %}>
-            <span class="caja{% if e.conflicto %} conflicto{% elif e.reserva %} reservado{% endif %}">
-              <span class="num">{{ e.numero }}</span>
-              <span class="sub">
-                {% if e.conflicto %}{{ e.tipo_estado }}
-                {% elif e.reserva %}Reserva {{ e.reserva.fecha_inicio|time:"H:i" }}–{{ e.reserva.fecha_fin|time:"H:i" }}
-                {% else %}Libre{% endif %}
-              </span>
-            </span>
-          </label>
-          {% endfor %}
-        </div>
-      </details>
-      {% endfor %}
+      <p>No hay espacios para esta chapa en este momento.</p>
 
     {% else %}
-      <div class="form-row">
-        <label for="id_espacio">Espacio</label>
-        <select name="espacio" id="id_espacio" required>
-          <option value="">---------</option>
-          {% for e in espacios %}
-          <option value="{{ e.pk }}" {% if form.espacio.value|stringformat:"s" == e.pk|stringformat:"s" %}selected{% endif %}>
-            {{ e.zona }} - N°{{ e.numero }}
-            {% if e.reserva %}· Reserva {{ e.reserva.fecha_inicio|time:"H:i" }}–{{ e.reserva.fecha_fin|time:"H:i" }}{% endif %}
-            {% if e.conflicto %}· {{ e.tipo_estado }} (se reasigna){% endif %}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
+      {% if not hay_seleccionables %}
+        <p><strong>No hay espacios libres para esta chapa en este momento.</strong></p>
+      {% endif %}
+
+      {% if vista == 'cuadros' %}
+        {% if not con_reserva %}
+        <div class="leyenda">
+          <span class="caja">Libre</span>
+          <span class="caja" style="background:#1d5fa7; border-color:#154b86; color:white;">Elegido</span>
+          <span class="caja estado-ocupado">Ocupado</span>
+          <span class="caja estado-reservado">Reservado</span>
+          <span class="caja estado-fuera-de-servicio">Fuera de servicio</span>
+        </div>
+        {% endif %}
+
+        {% for g in grupos %}
+        <details class="sala" open>
+          <summary>
+            <span class="sala-nombre">{{ g.zona }}</span>
+            <span class="sala-info">
+              {% if g.zona.facultad %}Facultad: {{ g.zona.facultad }}{% else %}Zona pública{% endif %}
+              {% if not con_reserva %}· {{ g.libres }} libre{{ g.libres|pluralize }} de {{ g.espacios|length }}{% endif %}
+            </span>
+          </summary>
+          <div class="asientos">
+            {% for e in g.espacios %}
+            <label class="cuadro-espacio" title="{{ e.zona }} - N°{{ e.numero }} - {{ e.tipo_estado }}">
+              <input type="radio" name="espacio" value="{{ e.pk }}" required
+                     {% if not e.seleccionable %}disabled{% endif %}
+                     {% if form.espacio.value|stringformat:"s" == e.pk|stringformat:"s" %}checked{% endif %}>
+              <span class="caja{% if not e.seleccionable %} estado-{{ e.tipo_estado.nombre_estado|slugify }}{% elif e.conflicto %} conflicto{% elif e.reserva %} reservado{% endif %}">
+                <span class="num">{{ e.numero }}</span>
+                <span class="sub">
+                  {% if not e.seleccionable %}{{ e.tipo_estado }}
+                  {% elif e.conflicto %}{{ e.tipo_estado }}
+                  {% elif e.reserva %}Reserva {{ e.reserva.fecha_inicio|time:"H:i" }}–{{ e.reserva.fecha_fin|time:"H:i" }}
+                  {% else %}Libre{% endif %}
+                </span>
+              </span>
+            </label>
+            {% endfor %}
+          </div>
+        </details>
+        {% endfor %}
+
+      {% else %}
+        <div class="form-row">
+          <label for="id_espacio">Espacio</label>
+          <select name="espacio" id="id_espacio" required>
+            <option value="">---------</option>
+            {% for e in espacios %}
+            <option value="{{ e.pk }}"
+                    {% if not e.seleccionable %}disabled{% endif %}
+                    {% if form.espacio.value|stringformat:"s" == e.pk|stringformat:"s" %}selected{% endif %}>
+              {{ e.zona }} - N°{{ e.numero }}
+              {% if e.reserva %}· Reserva {{ e.reserva.fecha_inicio|time:"H:i" }}–{{ e.reserva.fecha_fin|time:"H:i" }}{% endif %}
+              {% if e.conflicto %}· {{ e.tipo_estado }} (se reasigna){% elif not e.seleccionable %}· {{ e.tipo_estado }}{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      {% endif %}
     {% endif %}
 
     {{ form.espacio.errors }}
 
     <div class="acciones">
-      {% if espacios %}<button type="submit">Ingresar vehículo</button>{% endif %}
+      {% if hay_seleccionables %}<button type="submit">Ingresar vehículo</button>{% endif %}
       <a href="{% url 'estacionamiento:movimientos_lista' %}" class="btn">Atrás</a>
     </div>
   </form>

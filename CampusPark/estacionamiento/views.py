@@ -399,14 +399,17 @@ def editar_espacio_view(request, pk):
     )
 
 
+# ======================= estacionamiento/views.py: REEMPLAZAR lista_movimientos_view =======================
+# IMPORT:  from django.utils.dateparse import parse_date
+
 @personal_requerido
 def lista_movimientos_view(request):
     """
     Consultar ingresos y salidas: sólo Personal de Estacionamiento o
     Administrador. Muestra TODOS los movimientos, de cualquier usuario.
-    Se puede ordenar por cualquier columna, ascendente o descendente,
-    con los parámetros GET ?orden=<campo>&dir=<asc|desc>, y buscar con
-    ?q=... sobre patente, usuario dueño y zona.
+    Se puede ordenar por cualquier columna con ?orden=<campo>&dir=<asc|desc>,
+    buscar con ?q=... sobre patente, usuario dueño y zona, y filtrar por rango
+    de fechas (sobre el día de INGRESO) con ?desde=AAAA-MM-DD y/o ?hasta=AAAA-MM-DD.
     """
     campos_orden = {
         "vehiculo": ["patente"],
@@ -430,6 +433,8 @@ def lista_movimientos_view(request):
         campos = [f"-{c}" for c in campos]
 
     q = request.GET.get("q", "").strip()
+    desde = request.GET.get("desde", "").strip()
+    hasta = request.GET.get("hasta", "").strip()
 
     movimientos = Movimiento.objects.select_related(
         "vehiculo", "vehiculo__usuario", "espacio", "espacio__zona"
@@ -441,18 +446,29 @@ def lista_movimientos_view(request):
             | Q(vehiculo__usuario__apellido__icontains=q)
             | Q(espacio__zona__nombre__icontains=q)
         )
+
+    # parse_date devuelve None si el texto no es una fecha válida: en ese caso se ignora
+    # el filtro (en vez de dar error).
+    fecha_desde = parse_date(desde) if desde else None
+    fecha_hasta = parse_date(hasta) if hasta else None
+    if fecha_desde:
+        movimientos = movimientos.filter(fecha_hora_ingreso__date__gte=fecha_desde)
+    if fecha_hasta:
+        movimientos = movimientos.filter(fecha_hora_ingreso__date__lte=fecha_hasta)
     movimientos = movimientos.order_by(*campos)
 
     return render(
         request,
-        "estacionamiento/movimientos_lista.html",{
-        **paginar(request, movimientos, "movimientos"),
-        "orden": orden,
-        "dir": direccion,
-        "q": q
+        "estacionamiento/movimientos_lista.html",
+        {
+            **paginar(request, movimientos, "movimientos"),
+            "orden": orden,
+            "dir": direccion,
+            "q": q,
+            "desde": desde if fecha_desde else "",
+            "hasta": hasta if fecha_hasta else "",
         },
     )
-
 @personal_requerido
 def registrar_ingreso_view(request):
     """
@@ -548,6 +564,7 @@ def registrar_ingreso_view(request):
                 "con_reserva": analisis["con_reserva"],
                 "espacios": analisis["espacios"],
                 "grupos": agrupar_por_zona(analisis["espacios"]),
+                "hay_seleccionables": any(e.seleccionable for e in analisis["espacios"]),
             },
         )
 

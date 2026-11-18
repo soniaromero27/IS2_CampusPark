@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
 
-
 <style>
   th a, th a:visited, th a:hover, th a:active {
     color: inherit;
@@ -15,80 +14,78 @@
 	<button>Registrar ingreso</button>
 </a>
 
-<form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; max-width:500px; margin-top:1em;">
-  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por vehículo, usuario o zona..." style="width:100%;">
+<form method="get" class="form-row" style="display:flex; gap:0.5em; align-items:center; flex-wrap:wrap; margin-top:1em;">
+  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por vehículo, usuario o zona..." style="width:260px;">
+  <label style="white-space:nowrap;">Desde: <input style="width:140px;" type="date" name="desde" value="{{ desde }}"></label>
+  <label style="white-space:nowrap;">Hasta: <input style="width:140px;" type="date" name="hasta" value="{{ hasta }}"></label>
   <input type="hidden" name="orden" value="{{ orden }}">
   <input type="hidden" name="dir" value="{{ dir }}">
   <button type="submit">
-  <span class="material-symbols-outlined">
-search
-</span>
-</button>
-  {% if q %}<a href="?orden={{ orden }}&dir={{ dir }}" class="btn">Limpiar</a>{% endif %}
+    <span class="material-symbols-outlined">filter_alt</span>
+  </button>
+  {% if q or desde or hasta %}<a href="?orden={{ orden }}&dir={{ dir }}" class="btn">Limpiar</a>{% endif %}
 </form>
+<p style="color:#64748b; font-size:14px; margin-top:6px;">Las fechas filtran por el día de ingreso.</p>
 
-<div class="table-responsive">
-	<table>
+<table>
 
-	  <tr>
-		<th>
-		  <a href="?orden=usuario&dir={% if orden == 'usuario' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-			Usuario{% if orden == 'usuario' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-		  </a>
-		</th>
-		<th>
-		  <a href="?orden=vehiculo&dir={% if orden == 'vehiculo' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-			Vehículo{% if orden == 'vehiculo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-		  </a>
-		</th>
-		<th>
-		  <a href="?orden=zona&dir={% if orden == 'zona' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-			Zona{% if orden == 'zona' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-		  </a>
-		</th>
-		<th>
-		  <a href="?orden=espacio&dir={% if orden == 'espacio' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-			Espacio{% if orden == 'espacio' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-		  </a>
-		</th>
-		<th>
-		  <a href="?orden=ingreso&dir={% if orden == 'ingreso' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-			Ingreso{% if orden == 'ingreso' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-		  </a>
-		</th>
-		<th>
-		  <a href="?orden=salida&dir={% if orden == 'salida' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}">
-			Salida{% if orden == 'salida' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
-		  </a>
-		</th>
-		<th></th>
-	  </tr>
-	  
-	  {% for m in movimientos %}
-	  <tr>
-		<td>{{ m.usuario_nombre }}</td>
-		<td>{{ m.patente }}</td>
-		<td>{{ m.espacio.zona }}</td>
-		<td>N°{{ m.espacio.numero }}</td>
-		<td>{{ m.fecha_hora_ingreso }}</td>
-		<td>
-		  {% if m.fecha_hora_salida %}
-			{{ m.fecha_hora_salida }}
-		  {% else %}
-			En curso
-		  {% endif %}
-		</td>
-		<td>
-		  {% if not m.fecha_hora_salida %}
-			<a href="{% url 'estacionamiento:movimiento_salida' m.pk %}" class="btn">Registrar salida</a>
-		  {% endif %}
-		</td>
-	  </tr>
-	  {% empty %}
-	  <tr><td colspan="7">No hay movimientos que coincidan con la búsqueda.</td></tr>
-	  {% endfor %}
-	</table>
-</div>
+  <tr>
+    <th>
+      <a href="?orden=usuario&dir={% if orden == 'usuario' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
+        Usuario{% if orden == 'usuario' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=vehiculo&dir={% if orden == 'vehiculo' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
+        Vehículo{% if orden == 'vehiculo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=zona&dir={% if orden == 'zona' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
+        Zona{% if orden == 'zona' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=espacio&dir={% if orden == 'espacio' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
+        Espacio{% if orden == 'espacio' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=ingreso&dir={% if orden == 'ingreso' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
+        Ingreso{% if orden == 'ingreso' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th>
+      <a href="?orden=salida&dir={% if orden == 'salida' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q|urlencode }}&desde={{ desde }}&hasta={{ hasta }}">
+        Salida{% if orden == 'salida' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
+      </a>
+    </th>
+    <th></th>
+  </tr>
 
+  {% for m in movimientos %}
+  <tr>
+    <td>{{ m.usuario_nombre }}</td>
+    <td>{{ m.patente }}</td>
+    <td>{{ m.espacio.zona }}</td>
+    <td>N°{{ m.espacio.numero }}</td>
+    <td>{{ m.fecha_hora_ingreso }}</td>
+    <td>
+      {% if m.fecha_hora_salida %}
+        {{ m.fecha_hora_salida }}
+      {% else %}
+        En curso
+      {% endif %}
+    </td>
+    <td>
+      {% if not m.fecha_hora_salida %}
+        <a href="{% url 'estacionamiento:movimiento_salida' m.pk %}" class="btn">Registrar salida</a>
+      {% endif %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="7">No hay movimientos que coincidan con la búsqueda.</td></tr>
+  {% endfor %}
+</table>
 {% include "_paginacion.html" %}
 {% endblock %}
