@@ -11,6 +11,7 @@ from django.db import transaction
 from django.db.models.functions import TruncDate, TruncHour, TruncMonth
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.utils.dateparse import parse_date
 
 import datetime as dt
 import math
@@ -398,9 +399,6 @@ def editar_espacio_view(request, pk):
         {"form": form, "titulo_espacio": titulo_espacio, "volver": volver},
     )
 
-
-# ======================= estacionamiento/views.py: REEMPLAZAR lista_movimientos_view =======================
-# IMPORT:  from django.utils.dateparse import parse_date
 
 @personal_requerido
 def lista_movimientos_view(request):
