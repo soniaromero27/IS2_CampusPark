@@ -32,6 +32,12 @@ class Zona(models.Model):
         "dentro de los que pertenecen a la facultad de arriba. Vacío = cualquier tipo de "
         "esa facultad puede entrar. Sin sentido (y no permitido) en una zona sin facultad.",
     )
+    
+    solo_motos = models.BooleanField(
+        default=False,
+        help_text="Zona exclusiva para motocicletas. Sólo entran vehículos de tipo moto/motocicleta "
+        "y sus espacios NO se pueden reservar.",
+    )
 
     class Meta:
         verbose_name = "Zona"
@@ -98,6 +104,11 @@ class Espacio(models.Model):
     zona = models.ForeignKey(Zona, on_delete=models.CASCADE, related_name="espacios")
     tipo_estado = models.ForeignKey(
         TipoEstado, on_delete=models.PROTECT, related_name="espacios"
+    )
+    
+    para_discapacitados = models.BooleanField(
+        default=False,
+        help_text="Espacio para personas con discapacidad. El control lo hace el personal al registrar el ingreso.",
     )
 
     class Meta:

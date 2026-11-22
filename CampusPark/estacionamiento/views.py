@@ -755,6 +755,7 @@ def crear_espacios_view(request):
     a crear. Sólo Administrador. Vuelve a la lista de espacios si se
     entró desde ahí (?desde=espacios), y a la de zonas en otro caso.
     """
+
     destino = (
         "estacionamiento:espacios_lista"
         if request.GET.get("desde") == "espacios"
@@ -769,7 +770,12 @@ def crear_espacios_view(request):
 
             estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
             nuevos = [
-                Espacio(zona=zona, numero=numero_inicial + i, tipo_estado=estado_libre)
+                Espacio(
+                    zona=zona,
+                    numero=numero_inicial + i,
+                    tipo_estado=estado_libre,
+                    para_discapacitados=form.cleaned_data["para_discapacitados"],
+                )
                 for i in range(cantidad)
             ]
             Espacio.objects.bulk_create(nuevos)

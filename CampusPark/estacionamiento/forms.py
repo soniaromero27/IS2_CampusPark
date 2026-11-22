@@ -53,6 +53,10 @@ class ReservaForm(forms.ModelForm):
 
     def __init__(self, *args, usuario=None, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        self.fields["espacio"].queryset = self.fields["espacio"].queryset.filter(
+            zona__solo_motos=False
+        )
         self.usuario = usuario
         if usuario is not None:
             self.fields["espacio"].queryset = (
@@ -256,6 +260,18 @@ class IngresoForm(forms.Form):
                 espacio = alternativo
                 cleaned_data["espacio"] = espacio
 
+        if espacio and espacio.zona.solo_motos:
+            if not (vehiculo and vehiculo.es_moto):
+                if vehiculo is None:
+                    quien = "la patente no está registrada, así que no se puede verificar el tipo de vehículo"
+                else:
+                    quien = "este vehículo no está registrado como moto/motocicleta"
+                self.add_error(
+                    "espacio",
+                    f"La zona '{espacio.zona}' es exclusiva para motocicletas y {quien}.",
+                )
+                espacio = None
+                
         zona = espacio.zona
         if not zona.permite_a(usuario):
             if usuario is None:
@@ -304,7 +320,7 @@ class ZonaForm(forms.ModelForm):
 
     class Meta:
         model = Zona
-        fields = ["nombre", "descripcion", "facultad", "tipos_usuario_permitidos"]
+        fields = ["nombre", "descripcion", "facultad", "tipos_usuario_permitidos", "solo_motos"]
         widgets = {
             "tipos_usuario_permitidos": forms.CheckboxSelectMultiple,
         }
@@ -345,6 +361,7 @@ class EspaciosForm(forms.Form):
         label="Número inicial (opcional)",
         help_text="Si lo dejás vacío, se continúa después del último número usado en la zona.",
     )
+    para_discapacitados = forms.BooleanField(required=False, label="Para discapacitados")
 
     def clean(self):
         cleaned_data = super().clean()
@@ -384,7 +401,8 @@ class EspacioForm(forms.ModelForm):
 
     class Meta:
         model = Espacio
-        fields = ["zona", "numero", "tipo_estado"]
+        fields = ["zona", "numero", "tipo_estado", "para_discapacitados"]
+        labels = {"para_discapacitados": "Para discapacitados"}
         error_messages = {
             NON_FIELD_ERRORS: {
                 "unique_together": "Ya existe un espacio con ese número en esa zona.",

@@ -53,6 +53,7 @@ search
 			Cantidad de Espacios{% if orden == 'espacios' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
 		  </a>
 		</th>
+		<th>Sólo motos</th>
 		<th></th>
 	  </tr>
 
@@ -78,10 +79,11 @@ search
 		</td>
 		<td>{{ z.descripcion }}</td>
 		<td>{{ z.cantidad_espacios }}</td>
+		<td>{{ z.solo_motos|yesno:"Sí,No" }}</td>
 		<td><a href="{% url 'estacionamiento:zona_editar' z.pk %}"><span class="material-symbols-outlined">edit_square</span></a></td>
 	  </tr>
 	  {% empty %}
-	  <tr><td colspan="5">No hay zonas que coincidan con la búsqueda.</td></tr>
+	  <tr><td colspan="6">No hay zonas que coincidan con la búsqueda.</td></tr>
 	  {% endfor %}
 	</table>
 </div>

@@ -34,3 +34,6 @@ class VehiculoForm(forms.ModelForm):
         if otros.exists():
             raise forms.ValidationError("Ya existe un vehículo registrado con esa matrícula.")
         return matricula
+        
+    def clean_tipo_vehiculo(self):
+        return self.cleaned_data["tipo_vehiculo"].strip()

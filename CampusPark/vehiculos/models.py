@@ -2,6 +2,7 @@ from django.db import models
 
 from usuarios.models import Usuario
 
+TIPOS_MOTO = ("moto", "motocicleta")
 
 class Vehiculo(models.Model):
     """Corresponde a la entidad 'vehiculo' del DER."""
@@ -24,3 +25,6 @@ class Vehiculo(models.Model):
 
     def __str__(self):
         return f"{self.matricula} - {self.marca} {self.modelo}"
+    @property
+    def es_moto(self):
+        return self.tipo_vehiculo.strip().lower() in TIPOS_MOTO

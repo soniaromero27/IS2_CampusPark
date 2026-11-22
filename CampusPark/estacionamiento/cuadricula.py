@@ -40,6 +40,7 @@ def armar_grupos(espacios):
                 "id": e.id,
                 "numero": e.numero,
                 "fuera": e.tipo_estado.nombre_estado == "Fuera de servicio",
+                "discapacitados": e.para_discapacitados,
             }
         )
     return grupos

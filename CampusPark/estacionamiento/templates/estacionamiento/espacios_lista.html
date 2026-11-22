@@ -52,6 +52,8 @@
   .estado-ocupado { background: #fee2e2; border-color: #dc2626; color: #7f1d1d; }
   .estado-reservado { background: #fef3c7; border-color: #d97706; color: #78350f; }
   .estado-fuera-de-servicio { background: #e2e8f0; border-color: #64748b; color: #334155; }
+  .estado-libre.para-discapacitados { background: #dbeafe; border-color: #2563eb; color: #1e3a8a; }
+  }
 </style>
 
 <h2>Espacios</h2>
@@ -85,6 +87,7 @@ search
     <span class="cuadro estado-ocupado">Ocupado{% if user.perfil.es_personal %} (con patente){% endif %}</span>
     <span class="cuadro estado-reservado">Reservado</span>
     <span class="cuadro estado-fuera-de-servicio">Fuera de servicio</span>
+	<span class="cuadro estado-libre para-discapacitados">Libre (accesible)</span>
   </div>
 
   {% for g in grupos %}
@@ -92,6 +95,7 @@ search
     <summary>
       <span class="sala-nombre">{{ g.zona }}</span>
       <span class="sala-info">
+		{% if g.zona.solo_motos %}· <span class="material-symbols-outlined" style="font-size:18px">two_wheeler</span> Sólo motos{% endif %}
         {% if g.zona.facultad %}Facultad: {{ g.zona.facultad }}{% else %}Zona pública{% endif %}
         · {{ g.libres }} libres de {{ g.total }}
       </span>
@@ -101,8 +105,9 @@ search
       {% for e in g.espacios %}
         {% with m=e.movimiento_actual %}
         {% if user.perfil.es_administrador %}<a class="cuadro-link" href="{% url 'estacionamiento:espacio_editar' e.pk %}?{% if querystring %}{{ querystring }}&{% endif %}abrir={{ g.zona.id }}">{% endif %}
-          <div class="cuadro estado-{{ e.tipo_estado.nombre_estado|slugify }}" title="{{ e.zona }} - N°{{ e.numero }} - {{ e.tipo_estado }}{% if m and user.perfil.es_personal %} - {{ m.patente }}{% endif %}">
+          <div class="cuadro estado-{{ e.tipo_estado.nombre_estado|slugify }}{% if e.para_discapacitados %} para-discapacitados{% endif %}" title="{{ e.zona }} - N°{{ e.numero }} - {{ e.tipo_estado }}{% if m and user.perfil.es_personal %} - {{ m.patente }}{% endif %}">
             <span class="num">{{ e.numero }}</span>
+            {% if e.para_discapacitados %}<span class="material-symbols-outlined" style="font-size:18px">accessible</span>{% endif %}
             <span class="sub">{% if m and user.perfil.es_personal %}{{ m.patente }}{% else %}{{ e.tipo_estado }}{% endif %}</span>
           </div>
         {% if user.perfil.es_administrador %}</a>{% endif %}
@@ -142,6 +147,7 @@ search
 			Estado{% if orden == 'estado' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
 		  </a>
 		</th>
+		<th>Tipo</th>
 		{% if user.perfil.es_personal %}<th>Vehículo</th>{% endif %}
 		{% if user.perfil.es_administrador %}<th></th>{% endif %}
 	  </tr>
@@ -151,13 +157,18 @@ search
 		<td>N°{{ e.numero }}</td>
 		<td>{{ e.zona.facultad|default:"Ninguna" }}</td>
 		<td>{{ e.tipo_estado }}</td>
+		<td>
+		  {% if e.zona.solo_motos %}<span class="material-symbols-outlined" title="Zona de motos">two_wheeler</span>{% endif %}
+		  {% if e.para_discapacitados %}<span class="material-symbols-outlined" title="Para discapacitados">accessible</span>{% endif %}
+		  {% if not e.zona.solo_motos and not e.para_discapacitados %}Automóvil{% endif %}
+		</td>
 		{% if user.perfil.es_personal %}<td>{{ e.movimiento_actual.patente|default:"—" }}</td>{% endif %}
 		{% if user.perfil.es_administrador %}
 		<td><a href="{% url 'estacionamiento:espacio_editar' e.pk %}{% if querystring %}?{{ querystring }}{% endif %}"><span class="material-symbols-outlined">edit_square</span></a></td>
 		{% endif %}
 	  </tr>
 	  {% empty %}
-	  <tr><td colspan="6">No hay espacios que coincidan con la búsqueda.</td></tr>
+	  <tr><td colspan="7">No hay espacios que coincidan con la búsqueda.</td></tr>
 	  {% endfor %}
 	</table>
 </div>

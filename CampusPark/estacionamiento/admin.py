@@ -5,7 +5,7 @@ from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva,
 
 @admin.register(Zona)
 class ZonaAdmin(admin.ModelAdmin):
-    list_display = ("id", "nombre", "descripcion")
+    list_display = ("id", "nombre", "descripcion", "solo_motos")
 
 
 @admin.register(TipoEstado)
@@ -15,8 +15,8 @@ class TipoEstadoAdmin(admin.ModelAdmin):
 
 @admin.register(Espacio)
 class EspacioAdmin(admin.ModelAdmin):
-    list_display = ("id", "zona", "numero", "tipo_estado")
-    list_filter = ("zona", "tipo_estado")
+    list_display = ("id", "zona", "numero", "tipo_estado", "para_discapacitados")
+    list_filter = ("zona", "tipo_estado", "para_discapacitados")
 
 
 @admin.register(TipoEstadoReserva)

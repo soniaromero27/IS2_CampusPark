@@ -37,6 +37,7 @@
   }
   .caja .num { font-weight: 700; font-size: 17px; }
   .caja .sub { font-size: 12px; }
+  .caja.discap { background: #dbeafe; border-color: #2563eb; color: #1e3a8a; }
   .caja.reservado { background: #fef3c7; border-color: #d97706; color: #78350f; }
   .caja.conflicto { background: #fee2e2; border-color: #dc2626; color: #7f1d1d; }
   .cuadro-espacio:hover .caja { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(15, 45, 82, 0.2); }
@@ -123,6 +124,7 @@
           <span class="caja estado-ocupado">Ocupado</span>
           <span class="caja estado-reservado">Reservado</span>
           <span class="caja estado-fuera-de-servicio">Fuera de servicio</span>
+          <span class="caja discap">Libre (discapacitados)</span>
         </div>
         {% endif %}
 
@@ -141,7 +143,7 @@
               <input type="radio" name="espacio" value="{{ e.pk }}" required
                      {% if not e.seleccionable %}disabled{% endif %}
                      {% if form.espacio.value|stringformat:"s" == e.pk|stringformat:"s" %}checked{% endif %}>
-              <span class="caja{% if not e.seleccionable %} estado-{{ e.tipo_estado.nombre_estado|slugify }}{% elif e.conflicto %} conflicto{% elif e.reserva %} reservado{% endif %}">
+              <span class="caja{% if not e.seleccionable %} estado-{{ e.tipo_estado.nombre_estado|slugify }}{% elif e.conflicto %} conflicto{% elif e.reserva %} reservado{% endif %}{% if e.para_discapacitados %} discap{% endif %}">
                 <span class="num">{{ e.numero }}</span>
                 <span class="sub">
                   {% if not e.seleccionable %}{{ e.tipo_estado }}

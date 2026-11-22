@@ -49,6 +49,7 @@
   }
   .caja .num { font-weight: 700; font-size: 17px; }
   .caja .sub { font-size: 12px; }
+  .caja.discap { background: #dbeafe; border-color: #2563eb; color: #1e3a8a; }
   .cuadro-espacio:hover .caja { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(15, 45, 82, 0.2); }
   .cuadro-espacio input:checked + .caja { background: #1d5fa7; border-color: #154b86; color: white; }
   .cuadro-espacio input:focus-visible + .caja { outline: 3px solid #93c5fd; outline-offset: 2px; }
@@ -85,6 +86,7 @@
       <span class="caja" style="background:#1d5fa7; border-color:#154b86; color:white;">Elegido</span>
       <span class="caja no-disponible">No disponible (reservado en ese horario)</span>
       <span class="caja fuera">Fuera de servicio</span>
+	  <span class="caja discap">Para discapacitados</span>
     </div>
     <p id="espacio-elegido" class="espacio-elegido"></p>
 
@@ -105,7 +107,7 @@
                  data-nombre="{{ g.zona }} - N°{{ e.numero }}"
                  {% if form.espacio.value|stringformat:"s" == e.id|stringformat:"s" %}checked{% endif %}
                  {% if e.fuera %}disabled{% endif %}>
-          <span class="caja{% if e.fuera %} fuera{% endif %}">
+          <span class="caja{% if e.fuera %} fuera{% endif %}{% if e.discapacitados %} discap{% endif %}">
             <span class="num">{{ e.numero }}</span>
             <span class="sub">{% if e.fuera %}Fuera de servicio{% else %}Disponible{% endif %}</span>
           </span>
