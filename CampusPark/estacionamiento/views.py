@@ -12,6 +12,7 @@ from django.db.models.functions import TruncDate, TruncHour, TruncMonth
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils.dateparse import parse_date
+from django.utils.http import url_has_allowed_host_and_scheme
 
 import datetime as dt
 import math
@@ -24,7 +25,7 @@ from vehiculos.models import Vehiculo
 
 from .forms import EspacioForm, EspaciosForm, IngresoForm, ReservaForm, ZonaForm, TicketPagoForm, PatenteForm
 from .models import Espacio, Movimiento, Reserva, TipoEstado, TipoEstadoReserva, Zona, Ticket, Pago
-from .ingreso import analizar_patente, agrupar_por_zona
+from .ingreso import analizar_patente, agrupar_por_zona, opciones_reubicacion, marcar_reservados_ahora
 from .cuadricula import contexto_cuadricula
 from .reservas_estado import actualizar_reservas_vencidas
 
@@ -128,14 +129,7 @@ def crear_reserva_view(request):
                 nombre_estado_reserva="Pendiente"
             )
             reserva.tipo_estado_reserva = estado_pendiente
-            reserva.estado_reserva = 1
             reserva.save()
-
-            if timezone.localdate(reserva.fecha_inicio) == timezone.localdate():
-                estado_reservado, _ = TipoEstado.objects.get_or_create(nombre_estado="Reservado")
-                espacio = reserva.espacio
-                espacio.tipo_estado = estado_reservado
-                espacio.save()
 
             return redirect("estacionamiento:reservas_lista")
     else:
@@ -155,24 +149,16 @@ def crear_reserva_view(request):
 
 @login_required
 def cancelar_reserva_view(request, pk):
-    """Cancela una reserva propia del usuario autenticado y libera el espacio."""
+    """Cancela una reserva propia. No toca el estado del espacio (las reservas no lo modifican)."""
     reserva = get_object_or_404(Reserva, pk=pk, usuario=request.user.perfil)
     if request.method == "POST":
         estado_cancelada, _ = TipoEstadoReserva.objects.get_or_create(
             nombre_estado_reserva="Cancelada"
         )
         reserva.tipo_estado_reserva = estado_cancelada
-        reserva.estado_reserva = 0
         reserva.save()
-
-        estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
-        espacio = reserva.espacio
-        espacio.tipo_estado = estado_libre
-        espacio.save()
-
         return redirect("estacionamiento:reservas_lista")
     return render(request, "estacionamiento/reserva_cancelar.html", {"reserva": reserva})
-
 
 @personal_requerido
 def lista_todas_reservas_view(request):
@@ -319,19 +305,28 @@ def lista_espacios_view(request):
         if ver_patentes:
             filtro |= Q(movimientos__patente__icontains=q,
                         movimientos__fecha_hora_salida__isnull=True)
+        if "reserv" in q.lower():
+            ahora = timezone.now()
+            filtro |= Q(
+                reservas__fecha_inicio__lte=ahora,
+                reservas__fecha_fin__gte=ahora,
+                reservas__tipo_estado_reserva__nombre_estado_reserva="Pendiente",
+            )
         espacios = espacios.filter(filtro).distinct()
         
     espacios = espacios.order_by(*campos)
 
     grupos = []
     if vista == "cuadros":
+        espacios = list(espacios)
+        marcar_reservados_ahora(espacios)   # "Reservado" sólo en memoria, según la hora actual
+
         espacios_por_zona = defaultdict(list)
         for e in espacios:
             espacios_por_zona[e.zona_id].append(e)
 
         zonas = Zona.objects.select_related("facultad").order_by("nombre")
         if q:
-            # Con una búsqueda activa, sólo las zonas que tienen resultados.
             zonas = zonas.filter(id__in=espacios_por_zona.keys())
         for zona in zonas:
             items = espacios_por_zona.get(zona.id, [])
@@ -354,6 +349,9 @@ def lista_espacios_view(request):
         paginacion = paginar(request, grupos, "grupos")
     else:
         paginacion = paginar(request, espacios, "espacios")
+        pagina = paginacion["page_obj"]
+        pagina.object_list = list(pagina.object_list)
+        marcar_reservados_ahora(pagina.object_list)
         
     return render(
         request,
@@ -467,6 +465,15 @@ def lista_movimientos_view(request):
             "hasta": hasta if fecha_hasta else "",
         },
     )
+    
+def _url_ingreso(patente, vista="cuadros", espacio_id=None):
+    """Paso 2 del ingreso para 'patente' (con el espacio preseleccionado, si se indica)."""
+    params = {"patente": patente, "vista": vista}
+    if espacio_id:
+        params["espacio"] = espacio_id
+    return f"{reverse('estacionamiento:movimiento_ingreso')}?{urlencode(params)}"
+    
+
 @personal_requerido
 def registrar_ingreso_view(request):
     """
@@ -495,6 +502,20 @@ def registrar_ingreso_view(request):
     if request.method == "POST":
         form = IngresoForm(request.POST)
         if form.is_valid():
+            if form.ocupante is not None:
+                reservado = form.cleaned_data["espacio"]
+                messages.warning(
+                    request,
+                    f"El espacio N°{reservado.numero} de la zona '{reservado.zona}', reservado "
+                    f"para {form.cleaned_data['patente']}, está ocupado por "
+                    f"{form.ocupante.patente}.",
+                )
+                return redirect(
+                    reverse("estacionamiento:movimiento_reubicar", args=[form.ocupante.pk])
+                    + "?"
+                    + urlencode({"patente": form.cleaned_data["patente"], "vista": vista})
+                )
+                
             patente = form.cleaned_data["patente"]
             espacio = form.cleaned_data["espacio"]
             vehiculo = Vehiculo.objects.filter(matricula=patente).select_related("usuario").first()
@@ -545,7 +566,12 @@ def registrar_ingreso_view(request):
         paso1 = PatenteForm(request.GET)
         if paso1.is_valid():
             patente = paso1.cleaned_data["patente"]
-            form = IngresoForm(initial={"patente": patente})
+            inicial = {"patente": patente}
+            
+            if request.GET.get("espacio", "").isdigit():
+                inicial["espacio"] = request.GET["espacio"]   # vuelta desde reubicar/salida
+                
+            form = IngresoForm(initial=inicial)
 
     if patente:
         analisis = analizar_patente(patente)
@@ -593,7 +619,15 @@ def registrar_salida_view(request, pk):
     """
     movimiento = get_object_or_404(Movimiento, pk=pk, fecha_hora_salida__isnull=True)
     form = TicketPagoForm()
- 
+
+    # Si la salida viene de una reubicación imposible, 'siguiente' es la pantalla de
+    # ingreso a la que hay que volver (sólo se acepta una URL del propio sitio).
+    siguiente = request.GET.get("siguiente", "")
+    if not url_has_allowed_host_and_scheme(
+        siguiente, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        siguiente = ""
+
     if request.method == "POST":
         form = TicketPagoForm(request.POST)
         metodo = form.cleaned_data["metodo"] if form.is_valid() else None
@@ -644,10 +678,17 @@ def registrar_salida_view(request, pk):
                 if ticket.estado == Ticket.Estado.PENDIENTE:
                     ticket.registrar_pago(metodo, perfil)  # crea el Pago y deja el ticket 'Pagado'
  
+                if siguiente:
+                    messages.success(
+                        request,
+                        f"Vehículo {movimiento.patente} retirado del estacionamiento. "
+                        f"Ya se puede ingresar el vehículo con reserva.",
+                    )
+                    
                 return render(
                     request,
                     "estacionamiento/salida_recibo.html",
-                    {"movimiento": movimiento, "cuenta": cuenta, "ticket": ticket},
+                    {"movimiento": movimiento, "cuenta": cuenta, "ticket": ticket, "siguiente": siguiente},
                 )
  
     cuenta = movimiento.cobro_vigente()
@@ -662,6 +703,145 @@ def registrar_salida_view(request, pk):
         },
     )
  
+@personal_requerido
+def reubicar_vehiculo_view(request, pk):
+    """
+    Un vehículo con reserva vigente (?patente=) quiere entrar, pero su espacio
+    reservado está ocupado por el vehículo del movimiento 'pk'. Se reubica a ese
+    vehículo ya estacionado:
+      1) en otro espacio libre de su misma zona (cuadrícula de la zona);
+      2) si no hay, en un espacio libre de otra zona que su dueño pueda usar;
+      3) si no hay NINGÚN lugar, se lo retira: se va a la pantalla de cobro y
+         salida, y de ahí se vuelve al ingreso del vehículo con reserva.
+    El espacio de origen queda 'Reservado' (no 'Libre') para que nadie se lo gane
+    al vehículo que tiene la reserva.
+    """
+    vista = request.GET.get("vista", "cuadros")
+    if vista not in ("lista", "cuadros"):
+        vista = "cuadros"
+    patente_reserva = request.GET.get("patente", "").strip().upper()
+    volver = (
+        _url_ingreso(patente_reserva, vista)
+        if patente_reserva
+        else reverse("estacionamiento:movimientos_lista")
+    )
+
+    movimiento = (
+        Movimiento.objects.select_related(
+            "espacio", "espacio__zona", "vehiculo", "vehiculo__usuario"
+        )
+        .filter(pk=pk, fecha_hora_salida__isnull=True)
+        .first()
+    )
+    if movimiento is None:
+        messages.info(request, "Ese vehículo ya no está estacionado.")
+        return redirect(volver)
+
+    # Se vuelve a comprobar que el conflicto es real: no se mueve cualquier vehículo
+    # armando la URL a mano.
+    espacio_reservado = movimiento.espacio
+    analisis = analizar_patente(patente_reserva) if patente_reserva else None
+    if not analisis or espacio_reservado.pk not in analisis["por_espacio"]:
+        messages.info(
+            request,
+            f"{movimiento.patente} ya no está ocupando ningún espacio reservado para "
+            f"{patente_reserva or 'esa chapa'}.",
+        )
+        return redirect(volver)
+    reserva = analisis["por_espacio"][espacio_reservado.pk]
+
+    url_ingreso = _url_ingreso(patente_reserva, vista, espacio_reservado.pk)
+    opciones = opciones_reubicacion(movimiento)
+
+    # --- 3) No hay lugar en ningún lado: se retira el vehículo ---
+    if opciones["alcance"] == "ninguno":
+        messages.warning(
+            request,
+            f"No hay ningún espacio libre disponible para reubicar a {movimiento.patente}. "
+            f"Se lo retira del estacionamiento para dejar el espacio a {patente_reserva}, "
+            f"que tiene una reserva vigente: registrá su salida y el cobro.",
+        )
+        return redirect(
+            reverse("estacionamiento:movimiento_salida", args=[movimiento.pk])
+            + "?"
+            + urlencode({"siguiente": url_ingreso})
+        )
+
+    if request.method == "POST":
+        elegido = next(
+            (
+                e
+                for e in opciones["espacios"]
+                if e.seleccionable and str(e.pk) == request.POST.get("espacio", "")
+            ),
+            None,
+        )
+        if elegido is None:
+            messages.error(request, "Elegí uno de los espacios libres que se muestran.")
+        else:
+            with transaction.atomic():
+                destino = (
+                    Espacio.objects.select_for_update(of=("self",))
+                    .select_related("zona", "tipo_estado")
+                    .get(pk=elegido.pk)
+                )
+                if destino.tipo_estado.nombre_estado != "Libre":
+                    destino = None   # alguien lo ocupó mientras tanto
+                else:
+                    origen = Espacio.objects.select_for_update(of=("self",)).get(
+                        pk=espacio_reservado.pk
+                    )
+                    estado_ocupado, _ = TipoEstado.objects.get_or_create(nombre_estado="Ocupado")
+                    estado_libre, _ = TipoEstado.objects.get_or_create(nombre_estado="Libre")
+
+                    movimiento.espacio = destino
+                    movimiento.save(update_fields=["espacio"])
+                    destino.tipo_estado = estado_ocupado
+                    destino.save(update_fields=["tipo_estado"])
+                    origen.tipo_estado = estado_libre
+                    origen.save(update_fields=["tipo_estado"])
+
+                    # Si el vehículo movido tenía su propia reserva 'Confirmada' en el
+                    # espacio de origen (se pasó de horario), la reserva lo sigue: así
+                    # al registrar su salida se cierra como 'Finalizada'.
+                    if movimiento.vehiculo_id and movimiento.vehiculo.usuario_id:
+                        Reserva.objects.filter(
+                            espacio=origen,
+                            usuario=movimiento.vehiculo.usuario,
+                            tipo_estado_reserva__nombre_estado_reserva="Confirmada",
+                        ).update(espacio=destino)
+
+            if destino is None:
+                messages.error(request, "Ese espacio acaba de ocuparse: elegí otro.")
+            else:
+                otra_zona = destino.zona_id != origen.zona_id
+                messages.success(
+                    request,
+                    f"Vehículo {movimiento.patente} movido al espacio N°{destino.numero} "
+                    f"de la zona '{destino.zona}'" + (" (otra zona)." if otra_zona else "."),
+                )
+                messages.info(
+                    request,
+                    f"El espacio N°{origen.numero} de la zona '{origen.zona}' quedó libre "
+                    f"para {patente_reserva}.",
+                )
+                return redirect(url_ingreso)
+
+    return render(
+        request,
+        "estacionamiento/reubicar_form.html",
+        {
+            "movimiento": movimiento,
+            "patente_reserva": patente_reserva,
+            "reserva": reserva,
+            "alcance": opciones["alcance"],
+            "usuario": opciones["usuario"],
+            "espacios": opciones["espacios"],
+            "grupos": agrupar_por_zona(opciones["espacios"]),
+            "vista": vista,
+        },
+    )
+    
 
 @admin_requerido
 def lista_zonas_view(request):

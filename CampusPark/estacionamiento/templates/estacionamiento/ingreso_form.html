@@ -89,7 +89,10 @@
     {% if con_reserva %}
       <p><strong>Tiene {{ reservas|length }} reserva{{ reservas|length|pluralize }} vigente{{ reservas|length|pluralize }} ahora.</strong>
          Elegí uno de los espacios reservados.</p>
-      <p><small>Si el espacio reservado está ocupado, se asigna automáticamente otro libre de la misma zona.</small></p>
+      <p><small>Si el espacio reservado está ocupado por otro vehículo, se te va a pedir
+         reubicarlo (en la misma zona o, si no hay lugar, en otra). Si no hay ningún espacio
+         libre, se registra su salida y se vuelve a esta pantalla.</small></p>
+		 
     {% else %}
       <p>No tiene reservas vigentes: se muestran todos los espacios de las zonas a las que tiene acceso.
          Sólo se pueden elegir los <strong>libres</strong>.</p>
@@ -147,6 +150,7 @@
                 <span class="num">{{ e.numero }}</span>
                 <span class="sub">
                   {% if not e.seleccionable %}{{ e.tipo_estado }}
+                  {% elif e.ocupante %}Ocupado: {{ e.ocupante.patente }}
                   {% elif e.conflicto %}{{ e.tipo_estado }}
                   {% elif e.reserva %}Reserva {{ e.reserva.fecha_inicio|time:"H:i" }}–{{ e.reserva.fecha_fin|time:"H:i" }}
                   {% else %}Libre{% endif %}
@@ -169,7 +173,7 @@
                     {% if form.espacio.value|stringformat:"s" == e.pk|stringformat:"s" %}selected{% endif %}>
               {{ e.zona }} - N°{{ e.numero }}
               {% if e.reserva %}· Reserva {{ e.reserva.fecha_inicio|time:"H:i" }}–{{ e.reserva.fecha_fin|time:"H:i" }}{% endif %}
-              {% if e.conflicto %}· {{ e.tipo_estado }} (se reasigna){% elif not e.seleccionable %}· {{ e.tipo_estado }}{% endif %}
+              {% if e.ocupante %}· Ocupado por {{ e.ocupante.patente }} (se reubica){% elif e.conflicto %}· {{ e.tipo_estado }} (se reasigna){% elif not e.seleccionable %}· {{ e.tipo_estado }}{% endif %}
             </option>
             {% endfor %}
           </select>

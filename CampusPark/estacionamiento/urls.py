@@ -18,6 +18,7 @@ urlpatterns = [
     path("movimientos/ingreso/", views.registrar_ingreso_view, name="movimiento_ingreso"),
     path("movimientos/<int:pk>/salida/", views.registrar_salida_view, name="movimiento_salida"),
     path("movimientos/<int:pk>/validar/", views.validar_ticket_view, name="ticket_validar"),
+    path("movimientos/<int:pk>/reubicar/", views.reubicar_vehiculo_view, name="movimiento_reubicar"),
 
     path("mis-movimientos/", views.mis_movimientos_view, name="mis_movimientos"),
     

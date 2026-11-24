@@ -31,5 +31,10 @@
   <p><strong>No hay monto a cobrar: el ticket fue validado automáticamente.</strong></p>
 {% endif %}
 
-<p><a href="{% url 'estacionamiento:movimientos_lista' %}" class="btn">Volver a la lista</a></p>
+{% if siguiente %}
+  <p><a href="{{ siguiente }}" class="btn">Continuar con el ingreso del vehículo con reserva</a></p>
+{% else %}
+  <p><a href="{% url 'estacionamiento:movimientos_lista' %}" class="btn">Volver a la lista</a></p>
+{% endif %}
+
 {% endblock %}

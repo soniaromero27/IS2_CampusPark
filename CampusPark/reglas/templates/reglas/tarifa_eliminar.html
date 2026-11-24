@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Eliminar tarifa</h2>
+
+<div class="card">
+  <p><strong>Descripción:</strong> {{ tarifa.descripcion }}</p>
+  <p><strong>Tipo de usuario:</strong> {{ tarifa.tipo }}</p>
+  <p><strong>Valor por hora:</strong> Gs. {{ tarifa.valor_por_hora|floatformat:0 }}</p>
+  <p><strong>Entra en vigencia:</strong> {{ tarifa.vigencia }}</p>
+  <p>Esta tarifa todavía no entró en vigencia, por eso se puede eliminar.
+     Esta acción no se puede deshacer.</p>
+</div>
+
+<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" style="background:#b91c1c;">Sí, eliminar</button>
+  </form>
+  <a href="{% url 'reglas:tarifas_lista' %}" class="btn">Atrás</a>
+</div>
+{% endblock %}

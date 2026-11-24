@@ -138,6 +138,20 @@ class ReservaForm(forms.ModelForm):
         self.instance.fecha_inicio = fecha_inicio
         self.instance.fecha_fin = fecha_fin
 
+        # Un usuario no puede tener dos reservas simultáneas (de cualquier espacio).
+        if self.usuario is not None:
+            propias = Reserva.objects.filter(
+                usuario=self.usuario,
+                fecha_inicio__lt=fecha_fin,
+                fecha_fin__gt=fecha_inicio,
+            ).exclude(tipo_estado_reserva__nombre_estado_reserva="Cancelada")
+            if self.instance.pk:
+                propias = propias.exclude(pk=self.instance.pk)
+            if propias.exists():
+                raise forms.ValidationError(
+                    "Ya tenés una reserva para ese horario. Elegí otro día u horario."
+                )
+
         if espacio:
             solapadas = Reserva.objects.filter(
                 espacio=espacio,
@@ -184,18 +198,18 @@ class IngresoForm(forms.Form):
     """
     Paso 2 del ingreso (sólo Personal o Administrador): elegir el espacio
     para una chapa ya ingresada. Todo se vuelve a validar acá, en el
-    servidor, con ingreso.analizar_patente (no se confía en lo que mostró
-    la pantalla):
+    servidor, con ingreso.analizar_patente.
 
     - Si la chapa tiene reservas vigentes ahora, el espacio tiene que ser
-      uno de los reservados; esa reserva queda en self.reserva_activa para
-      que la vista la marque 'Confirmada'. Si el espacio elegido está
-      Ocupado o Fuera de servicio, se reasigna a otro Libre de la MISMA
-      zona (self.reasignado / self.espacio_original); si no hay ninguno,
-      es un error.
-    - Si no tiene reservas, el espacio tiene que estar Libre y en una zona
-      a la que el usuario tenga acceso (una chapa no registrada sólo
-      accede a zonas sin facultad).
+      uno de los reservados; esa reserva queda en self.reserva_activa.
+      * Si otro vehículo está estacionado en el espacio reservado, el form es
+        válido pero deja ese Movimiento en self.ocupante: la vista NO registra
+        el ingreso, sino que manda al personal a reubicar al vehículo
+        (ver views.reubicar_vehiculo_view).
+      * Si el espacio está Fuera de servicio, se reasigna a otro Libre de la
+        MISMA zona (self.reasignado / self.espacio_original); si no hay, error.
+    - Si no tiene reservas, el espacio tiene que estar Libre y en una zona a
+      la que el usuario tenga acceso.
     """
 
     patente = forms.CharField(max_length=15, widget=forms.HiddenInput)
@@ -209,8 +223,9 @@ class IngresoForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.reserva_activa = None
         self.reasignado = False
-        self.cambio_de_zona = False  # se mantiene por compatibilidad: ya no hay cambio de zona
+        self.cambio_de_zona = False  # se mantiene por compatibilidad
         self.espacio_original = None
+        self.ocupante = None
 
     def clean_patente(self):
         return _normalizar_patente(self.cleaned_data["patente"])
@@ -239,8 +254,13 @@ class IngresoForm(forms.Form):
 
         if analisis["con_reserva"]:
             self.reserva_activa = analisis["por_espacio"][espacio.pk]
-            estado = espacio.tipo_estado.nombre_estado
-            if estado not in ("Libre", "Reservado"):
+
+            if elegido.ocupante is not None:
+                # Lo resuelve la vista: reubicar al vehículo que está ocupando el espacio.
+                self.ocupante = elegido.ocupante
+                return cleaned_data
+
+            if espacio.tipo_estado.nombre_estado == "Fuera de servicio":
                 alternativo = (
                     Espacio.objects.filter(zona=espacio.zona, tipo_estado__nombre_estado="Libre")
                     .exclude(pk=espacio.pk)
@@ -252,7 +272,7 @@ class IngresoForm(forms.Form):
                     self.add_error(
                         "espacio",
                         f"El espacio reservado (N°{espacio.numero}) de la zona '{espacio.zona}' "
-                        f"está {estado.lower()} y no hay otro libre en esa zona.",
+                        f"está fuera de servicio y no hay otro libre en esa zona.",
                     )
                     return cleaned_data
                 self.reasignado = True
@@ -260,18 +280,6 @@ class IngresoForm(forms.Form):
                 espacio = alternativo
                 cleaned_data["espacio"] = espacio
 
-        if espacio and espacio.zona.solo_motos:
-            if not (vehiculo and vehiculo.es_moto):
-                if vehiculo is None:
-                    quien = "la patente no está registrada, así que no se puede verificar el tipo de vehículo"
-                else:
-                    quien = "este vehículo no está registrado como moto/motocicleta"
-                self.add_error(
-                    "espacio",
-                    f"La zona '{espacio.zona}' es exclusiva para motocicletas y {quien}.",
-                )
-                espacio = None
-                
         zona = espacio.zona
         if not zona.permite_a(usuario):
             if usuario is None:
@@ -294,6 +302,7 @@ class IngresoForm(forms.Form):
             self.add_error("espacio", msg)
 
         return cleaned_data
+
 
 class ZonaForm(forms.ModelForm):
     """

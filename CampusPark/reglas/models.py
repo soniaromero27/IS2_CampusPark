@@ -64,6 +64,12 @@ class Tarifa(models.Model):
     def __str__(self):
         return f"{self.descripcion} (Gs. {self.valor_por_hora}/h)"
 
+    @property
+    def es_futura(self):
+        """True si todavía no entró en vigencia (sólo estas se pueden eliminar)."""
+        from django.utils import timezone
+        return self.vigencia > timezone.localdate()
+
 
 class Reglamento(models.Model):
     """

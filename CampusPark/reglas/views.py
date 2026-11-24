@@ -1,7 +1,9 @@
 from datetime import time
 
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from campuspark.paginacion import paginar
 
@@ -12,12 +14,15 @@ from .forms import HorariosForm, ReglamentoTextoForm, TarifaForm
 from .models import Reglamento, Tarifa
 
 
+
 @login_required
 def lista_tarifas_view(request):
     """
-    Ver todas las tarifas: sólo Personal de Estacionamiento o
-    Administrador. Se puede filtrar por el tipo de usuario al que
-    afectan con ?tipo=<id>.
+    Ver todas las tarifas. Se puede filtrar por el tipo de usuario al que
+    afectan con ?tipo=<id>, y con ?vigentes=1 mostrar sólo las vigentes.
+
+    Vigente = la tarifa de fecha de vigencia más reciente de su tipo de
+    usuario, sin contar fechas futuras.
     """
     campos_orden = {
         "descripcion": ["descripcion"],
@@ -37,20 +42,44 @@ def lista_tarifas_view(request):
     campos = campos_orden[orden]
     if direccion == "desc":
         campos = [f"-{c}" for c in campos]
-    
+
     tipos = TipoUsuario.objects.order_by("nombre")
     tipo_id = request.GET.get("tipo", "").strip()
+    solo_vigentes = request.GET.get("vigentes") == "1"
 
-    tarifas = Tarifa.objects.select_related("tipo").order_by("-vigencia", "tipo__nombre")
+    # Id de la tarifa vigente de cada tipo (la más reciente que no sea futura).
+    hoy = timezone.localdate()
+    vigentes_ids = set()
+    vistos = set()
+    for pk, tipo_pk in (
+        Tarifa.objects.filter(vigencia__lte=hoy)
+        .order_by("-vigencia", "-pk")
+        .values_list("pk", "tipo_id")
+    ):
+        if tipo_pk not in vistos:
+            vistos.add(tipo_pk)
+            vigentes_ids.add(pk)
+
+    tarifas = Tarifa.objects.select_related("tipo")
     if tipo_id:
         tarifas = tarifas.filter(tipo_id=tipo_id)
+    if solo_vigentes:
+        tarifas = tarifas.filter(pk__in=vigentes_ids)
 
     tarifas = tarifas.order_by(*campos)
 
     return render(
         request,
         "reglas/tarifas_lista.html",
-        {**paginar(request, tarifas, "tarifas"), "tipos": tipos, "tipo_id": tipo_id, "orden": orden, "dir": direccion},
+        {
+            **paginar(request, tarifas, "tarifas"),
+            "tipos": tipos,
+            "tipo_id": tipo_id,
+            "orden": orden,
+            "dir": direccion,
+            "solo_vigentes": solo_vigentes,
+            "vigentes_ids": vigentes_ids,
+        },
     )
 
 
@@ -82,6 +111,29 @@ def editar_tarifa_view(request, pk):
         request, "reglas/tarifa_form.html", {"form": form, "modo": "editar", "tarifa": tarifa}
     )
 
+@personal_requerido
+def eliminar_tarifa_view(request, pk):
+    """
+    Eliminar una tarifa que todavía no entró en vigencia (fecha futura).
+    Desde el día de su vigencia queda como registro y no se puede borrar.
+    Sólo Personal de Estacionamiento o Administrador.
+    """
+    tarifa = get_object_or_404(Tarifa, pk=pk)
+    if not tarifa.es_futura:
+        messages.error(
+            request,
+            "Esa tarifa ya entró en vigencia: se conserva como registro y no se puede eliminar.",
+        )
+        return redirect("reglas:tarifas_lista")
+
+    if request.method == "POST":
+        descripcion = str(tarifa)
+        tarifa.delete()
+        messages.success(request, f"Se eliminó la tarifa futura: {descripcion}.")
+        return redirect("reglas:tarifas_lista")
+
+    return render(request, "reglas/tarifa_eliminar.html", {"tarifa": tarifa})
+    
 
 @login_required
 def ver_reglamento_view(request):
