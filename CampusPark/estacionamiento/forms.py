@@ -35,14 +35,14 @@ class ReservaForm(forms.ModelForm):
     hora_inicio = forms.TimeField(
         label="Hora de inicio",
         widget=forms.TimeInput(
-            attrs={"type": "time", "step": 1800, "list": "horas-datalist"}
+            attrs={"type": "time", "step": 900, "list": "horas-datalist"}
         ),
-        help_text="Podés escribirla a mano o elegirla de la lista (cada 30 minutos).",
+        help_text="Podés escribirla a mano o elegirla de la lista (cada 15 minutos).",
     )
     hora_fin = forms.TimeField(
         label="Hora de fin",
         widget=forms.TimeInput(
-            attrs={"type": "time", "step": 1800, "list": "horas-datalist"}
+            attrs={"type": "time", "step": 900, "list": "horas-datalist"}
         ),
         help_text="Del mismo día. Podés escribirla a mano o elegirla de la lista.",
     )
@@ -60,7 +60,10 @@ class ReservaForm(forms.ModelForm):
         self.usuario = usuario
         if usuario is not None:
             self.fields["espacio"].queryset = (
-                Espacio.objects.filter(zona__in=Zona.permitidas_para(usuario))
+                Espacio.objects.filter(
+                    zona__in=Zona.permitidas_para(usuario),
+                    zona__solo_motos=False,
+                    )
                 .select_related("zona")
                 .order_by("zona__nombre", "numero")
             )
@@ -189,6 +192,7 @@ class PatenteForm(forms.Form):
             attrs={"list": "patentes-datalist", "autocomplete": "off", "autofocus": True}
         ),
     )
+    es_moto = forms.BooleanField(required=False, label="Es moto", help_text="(Solo se aplica a vehiculos no registrados.)")
 
     def clean_patente(self):
         return _normalizar_patente(self.cleaned_data["patente"])
@@ -213,6 +217,8 @@ class IngresoForm(forms.Form):
     """
 
     patente = forms.CharField(max_length=15, widget=forms.HiddenInput)
+    es_moto = forms.BooleanField(required=False, widget=forms.HiddenInput)
+    
     espacio = forms.ModelChoiceField(
         queryset=Espacio.objects.select_related("zona", "tipo_estado"),
         label="Espacio",
@@ -237,7 +243,7 @@ class IngresoForm(forms.Form):
         if not patente or not espacio:
             return cleaned_data
 
-        analisis = analizar_patente(patente)
+        analisis = analizar_patente(patente, es_moto=bool(cleaned_data.get("es_moto")))
         usuario = analisis["usuario"]
 
         elegido = {e.pk: e for e in analisis["espacios"]}.get(espacio.pk)
@@ -281,6 +287,16 @@ class IngresoForm(forms.Form):
                 cleaned_data["espacio"] = espacio
 
         zona = espacio.zona
+        
+        if zona.solo_motos != analisis["es_moto"]:
+            self.add_error(
+                "espacio",
+                f"La zona '{zona}' es exclusiva para motocicletas."
+                if zona.solo_motos
+                else f"La zona '{zona}' es para autos: este vehículo es una moto.",
+            )
+            return cleaned_data
+            
         if not zona.permite_a(usuario):
             if usuario is None:
                 msg = (
@@ -437,8 +453,6 @@ class EspacioForm(forms.ModelForm):
                 )
 
         return cleaned_data
-
-# AGREGAR a estacionamiento/forms.py (y importar Ticket en el from .models import ...)
 
 class TicketPagoForm(forms.Form):
     metodo = forms.ChoiceField(choices=Ticket.Metodo.choices, label="Método de pago")

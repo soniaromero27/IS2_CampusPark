@@ -134,7 +134,7 @@ def crear_reserva_view(request):
             return redirect("estacionamiento:reservas_lista")
     else:
         form = ReservaForm(usuario=usuario)
-    horas_sugeridas = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 30)]
+    horas_sugeridas = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 15)]
     reglamento = Reglamento.objects.first()
     if reglamento:
         apertura = reglamento.hora_apertura.strftime("%H:%M")
@@ -498,7 +498,8 @@ def registrar_ingreso_view(request):
     form = None      # formulario del paso 2
     paso1 = None     # formulario del paso 1
     patente = ""
-
+    es_moto = False
+    
     if request.method == "POST":
         form = IngresoForm(request.POST)
         if form.is_valid():
@@ -558,15 +559,21 @@ def registrar_ingreso_view(request):
             return redirect("estacionamiento:movimientos_lista")
 
         patente = form.cleaned_data.get("patente") or ""
+        es_moto = bool(form.cleaned_data.get("es_moto"))
+        
         if not patente:  # la chapa dejó de ser válida entre un paso y el otro
-            paso1 = PatenteForm({"patente": request.POST.get("patente", "")})
+            paso1 = PatenteForm({
+                "patente": request.POST.get("patente", ""),
+                "es_moto": "on" if es_moto else "",
+            })
             paso1.is_valid()
 
     elif request.GET.get("patente"):
         paso1 = PatenteForm(request.GET)
         if paso1.is_valid():
             patente = paso1.cleaned_data["patente"]
-            inicial = {"patente": patente}
+            es_moto = paso1.cleaned_data["es_moto"]                   # NUEVO
+            inicial = {"patente": patente, "es_moto": es_moto}
             
             if request.GET.get("espacio", "").isdigit():
                 inicial["espacio"] = request.GET["espacio"]   # vuelta desde reubicar/salida
@@ -574,7 +581,7 @@ def registrar_ingreso_view(request):
             form = IngresoForm(initial=inicial)
 
     if patente:
-        analisis = analizar_patente(patente)
+        analisis = analizar_patente(patente, es_moto=es_moto)
         return render(
             request,
             "estacionamiento/ingreso_form.html",
@@ -582,6 +589,9 @@ def registrar_ingreso_view(request):
                 "paso": 2,
                 "form": form,
                 "vista": vista,
+                "es_moto": analisis["es_moto"],                      
+                "checkbox_ignorado": analisis["checkbox_ignorado"],  
+                "reservas_ignoradas": analisis["reservas_ignoradas"],
                 "patente": patente,
                 "usuario": analisis["usuario"],
                 "reservas": analisis["reservas"],
@@ -589,6 +599,7 @@ def registrar_ingreso_view(request):
                 "espacios": analisis["espacios"],
                 "grupos": agrupar_por_zona(analisis["espacios"]),
                 "hay_seleccionables": any(e.seleccionable for e in analisis["espacios"]),
+                "vehiculo": analisis["vehiculo"]
             },
         )
 

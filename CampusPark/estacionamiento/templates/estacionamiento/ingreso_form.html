@@ -64,6 +64,13 @@
       {{ form.patente }}
       {{ form.patente.errors }}
     </div>
+	<div class="form-row">
+      <label for="{{ form.es_moto.id_for_label }}" style="display:flex; align-items:center; gap:8px;">
+        {{ form.es_moto }} {{ form.es_moto.label }}
+		{% if form.es_moto.help_text %}<p><small>{{ form.es_moto.help_text }}</small></p>{% endif %}
+      </label>
+    </div>
+	
     <input type="hidden" name="vista" value="{{ vista }}">
     <div class="acciones">
       <button type="submit">Continuar</button>
@@ -86,7 +93,19 @@
       <p><strong>Patente no registrada:</strong> sólo puede usar zonas públicas (sin facultad).</p>
     {% endif %}
 
-    {% if con_reserva %}
+	{% if checkbox_ignorado %}
+	  <p><small>Se ignoró la casilla "Es moto": el vehículo está registrado como
+		 <strong>{{ vehiculo.tipo_vehiculo }}</strong>.</small></p>
+	{% endif %}
+
+    {% if es_moto %}
+      <p><strong>Ingreso en moto:</strong> se muestran sólo las zonas de motos.</p>
+      {% if reservas_ignoradas %}
+        <p><small>Tiene {{ reservas_ignoradas|length }} reserva{{ reservas_ignoradas|length|pluralize }}
+           vigente{{ reservas_ignoradas|length|pluralize }} en espacios de auto: se ignora{{ reservas_ignoradas|length|pluralize:",n" }}.
+           El espacio sigue reservado hasta que venza.</small></p>
+      {% endif %}
+    {% elif con_reserva %}
       <p><strong>Tiene {{ reservas|length }} reserva{{ reservas|length|pluralize }} vigente{{ reservas|length|pluralize }} ahora.</strong>
          Elegí uno de los espacios reservados.</p>
       <p><small>Si el espacio reservado está ocupado por otro vehículo, se te va a pedir
@@ -100,8 +119,8 @@
   </div>
 
   <div class="toggle-vista">
-    <a data-sin-aviso href="?patente={{ patente|urlencode }}&vista=lista" class="{% if vista == 'lista' %}activo{% endif %}">Lista</a>
-    <a data-sin-aviso href="?patente={{ patente|urlencode }}&vista=cuadros" class="{% if vista == 'cuadros' %}activo{% endif %}">Cuadrícula</a>
+    <a data-sin-aviso href="?patente={{ patente|urlencode }}&vista=lista{% if es_moto %}&es_moto=on{% endif %}" class="{% if vista == 'lista' %}activo{% endif %}">Lista</a>
+    <a data-sin-aviso href="?patente={{ patente|urlencode }}&vista=cuadros{% if es_moto %}&es_moto=on{% endif %}" class="{% if vista == 'cuadros' %}activo{% endif %}">Cuadrícula</a>
   </div>
 
   <form method="post" data-aviso-siempre>
@@ -110,6 +129,7 @@
     <input type="hidden" name="vista" value="{{ vista }}">
     {{ form.non_field_errors }}
     {{ form.patente.errors }}
+    {{ form.es_moto }}
 
     {% if not espacios %}
       <p>No hay espacios para esta chapa en este momento.</p>
@@ -148,6 +168,7 @@
                      {% if form.espacio.value|stringformat:"s" == e.pk|stringformat:"s" %}checked{% endif %}>
               <span class="caja{% if not e.seleccionable %} estado-{{ e.tipo_estado.nombre_estado|slugify }}{% elif e.conflicto %} conflicto{% elif e.reserva %} reservado{% endif %}{% if e.para_discapacitados %} discap{% endif %}">
                 <span class="num">{{ e.numero }}</span>
+				{% if e.para_discapacitados %}<span class="material-symbols-outlined" style="font-size:18px">accessible</span>{% endif %}
                 <span class="sub">
                   {% if not e.seleccionable %}{{ e.tipo_estado }}
                   {% elif e.ocupante %}Ocupado: {{ e.ocupante.patente }}

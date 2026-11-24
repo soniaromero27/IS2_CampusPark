@@ -58,20 +58,27 @@ def marcar_reservados_ahora(espacios, usuario=None):
             e.tipo_estado = reservado
             
 
-def analizar_patente(patente):
+def analizar_patente(patente, es_moto=False):
     vehiculo = (
         Vehiculo.objects.filter(matricula=patente)
         .select_related("usuario", "usuario__tipo", "usuario__facultad")
         .first()
     )
     usuario = vehiculo.usuario if vehiculo else None
-
+    
+    # El checkbox sólo vale para patentes NO registradas.
+    # Si está registrada, manda el tipo real del vehículo.
+    marcado = es_moto
+    if vehiculo is not None:
+        es_moto = vehiculo.es_moto
+    checkbox_ignorado = vehiculo is not None and marcado != es_moto
+    
     reservas = []
     if usuario is not None:
         ahora = timezone.now()
         reservas = list(
             Reserva.objects.filter(
-                usuario=usuario, fecha_inicio__lte=ahora, fecha_fin__gte=ahora
+                usuario=usuario, fecha_inicio__lte=ahora, fecha_fin__gte=ahora, espacio__zona__solo_motos=False,
             )
             .exclude(
                 tipo_estado_reserva__nombre_estado_reserva__in=[
@@ -84,6 +91,10 @@ def analizar_patente(patente):
             .order_by("fecha_inicio")
         )
 
+    reservas_ignoradas = []
+    if es_moto:
+        reservas_ignoradas, reservas = reservas, []
+        
     por_espacio = {}
     for r in reservas:
         por_espacio.setdefault(r.espacio_id, r)
@@ -104,7 +115,10 @@ def analizar_patente(patente):
         }
     else:
         espacios = list(
-            Espacio.objects.filter(zona__in=Zona.permitidas_para(usuario))
+            Espacio.objects.filter(
+                zona__in=Zona.permitidas_para(usuario),
+                zona__solo_motos=es_moto,
+                )
             .select_related("zona", "zona__facultad", "tipo_estado")
             .order_by("zona__nombre", "numero")
         )
@@ -114,12 +128,16 @@ def analizar_patente(patente):
         e.reserva = por_espacio.get(e.pk)
         e.ocupante = ocupantes.get(e.pk)
         estado = e.tipo_estado.nombre_estado
+        
         if reservas:
             e.conflicto = e.ocupante is not None or estado == "Fuera de servicio"
             e.seleccionable = True
         else:
             e.conflicto = False
             e.seleccionable = estado == "Libre"
+            if e.zona.solo_motos and not es_moto:
+                e.seleccionable = False
+
 
     return {
         "vehiculo": vehiculo,
@@ -128,6 +146,9 @@ def analizar_patente(patente):
         "con_reserva": bool(reservas),
         "por_espacio": por_espacio,
         "espacios": espacios,
+        "reservas_ignoradas": reservas_ignoradas,      # NUEVO
+        "es_moto": es_moto,                          # el efectivo, no el marcado
+        "checkbox_ignorado": checkbox_ignorado,      # para avisar en pantalla
     }
 
 
@@ -163,7 +184,9 @@ def opciones_reubicacion(movimiento):
     if any(e.seleccionable for e in espacios):
         return {"alcance": "zona", "espacios": espacios, "usuario": usuario}
 
-    espacios = preparar(Zona.permitidas_para(usuario).exclude(pk=actual.zona_id))
+    espacios = preparar(
+        Zona.permitidas_para(usuario).exclude(pk=actual.zona_id).filter(solo_motos=False)
+    )
     if any(e.seleccionable for e in espacios):
         return {"alcance": "campus", "espacios": espacios, "usuario": usuario}
 

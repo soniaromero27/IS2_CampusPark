@@ -109,6 +109,7 @@
                  {% if e.fuera %}disabled{% endif %}>
           <span class="caja{% if e.fuera %} fuera{% endif %}{% if e.discapacitados %} discap{% endif %}">
             <span class="num">{{ e.numero }}</span>
+            {% if e.discapacitados %}<span class="material-symbols-outlined" style="font-size:18px">accessible</span>{% endif %}
             <span class="sub">{% if e.fuera %}Fuera de servicio{% else %}Disponible{% endif %}</span>
           </span>
         </label>
