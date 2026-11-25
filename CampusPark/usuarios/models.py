@@ -120,7 +120,7 @@ class Usuario(models.Model):
     fecha_nacimiento = models.DateField()
     correo = models.EmailField(unique=True)
     telefono = models.CharField(max_length=30, blank=True)
-    nro_licencia = models.IntegerField(
+    nro_licencia = models.CharField(
         null=True, blank=True, help_text="Número de licencia de conducir (si aplica)."
     )
     tipo = models.ForeignKey(

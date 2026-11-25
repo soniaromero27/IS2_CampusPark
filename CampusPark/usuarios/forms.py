@@ -22,7 +22,8 @@ class RegistroUsuarioForm(UserCreationForm):
     apellido = forms.CharField(max_length=150, label="Apellido")
     documento = forms.CharField(max_length=20, label="Documento")
     fecha_nacimiento = forms.DateField(
-        label="Fecha de nacimiento", widget=forms.DateInput(attrs={"type": "date"})
+        label="Fecha de nacimiento",
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
     )
     correo = forms.EmailField(label="Correo electrónico")
     telefono = forms.CharField(max_length=30, required=False, label="Teléfono")
@@ -163,7 +164,7 @@ class UsuarioEditForm(forms.ModelForm):
             "facultad",
         ]
         widgets = {
-            "fecha_nacimiento": forms.DateInput(attrs={"type": "date"}),
+            "fecha_nacimiento": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
 
     def __init__(self, *args, **kwargs):

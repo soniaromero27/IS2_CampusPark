@@ -54,6 +54,9 @@ def editar_perfil_view(request):
         form = UsuarioEditForm(request.POST, instance=perfil)
         if form.is_valid():
             form.save()
+            messages.success(
+                request, f"Se guardaron los cambios del perfil."
+            )
             return redirect("usuarios:perfil")
     else:
         form = UsuarioEditForm(instance=perfil)

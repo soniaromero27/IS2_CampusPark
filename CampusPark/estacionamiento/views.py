@@ -134,7 +134,7 @@ def crear_reserva_view(request):
             return redirect("estacionamiento:reservas_lista")
     else:
         form = ReservaForm(usuario=usuario)
-    horas_sugeridas = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 15)]
+    horas_sugeridas = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 15, 30, 45)]
     reglamento = Reglamento.objects.first()
     if reglamento:
         apertura = reglamento.hora_apertura.strftime("%H:%M")
