@@ -63,12 +63,14 @@ search
 			Fecha de Registro{% if orden == 'fecha_registro' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}
 		  </a>
 		</th>
+		<th>Estado</th>
 		<th></th>
+		{% if user.perfil.es_administrador %}<th></th>{% endif %}
 	  </tr>
 
 
 	  {% for u in usuarios %}
-	  <tr>
+	  <tr{% if not u.user.is_active %} style="opacity:.6"{% endif %}>
 		<td>{{ u.nombre }}</td>
 		<td>{{ u.apellido }}</td>
 		<td>{{ u.documento }}</td>
@@ -79,12 +81,35 @@ search
 		<td>{{ u.tipo }}</td>
 		<td>{{ u.facultad|default:"—" }}</td>
 		<td>{{ u.fecha_registro }}</td>
+		<td>
+		  {% if u.user.is_active %}Activo{% else %}<span style="color:#b91c1c; font-weight:600;">Deshabilitado</span>{% endif %}
+		</td>
 		<td><a href="{% url 'usuarios:detalle' u.pk %}" title="Ver detalle">
 			<span class="material-symbols-outlined">description</span></a>
 		</td>
+		{% if user.perfil.es_administrador %}
+		<td>
+		  {% if u.user_id != user.pk %}
+		  <form method="post" action="{% url 'usuarios:cambiar_estado' u.pk %}" data-sin-aviso
+				onsubmit="return confirm('{% if u.user.is_active %}¿Deshabilitar a {{ u.nombre|escapejs }} {{ u.apellido|escapejs }}? Se cerrará su sesión y no podrá volver a ingresar.{% else %}¿Habilitar nuevamente a {{ u.nombre|escapejs }} {{ u.apellido|escapejs }}?{% endif %}');">
+			{% csrf_token %}
+			<input type="hidden" name="next" value="{{ request.get_full_path }}">
+			{% if u.user.is_active %}
+			  <button type="submit" title="Deshabilitar usuario" style="background:#b91c1c; padding:6px 10px;">
+				<span class="material-symbols-outlined">block</span>
+			  </button>
+			{% else %}
+			  <button type="submit" title="Habilitar usuario" style="background:green; padding:6px 10px;">
+				<span class="material-symbols-outlined">check_circle</span>
+			  </button>
+			{% endif %}
+		  </form>
+		  {% endif %}
+		</td>
+		{% endif %}
 	  </tr>
 	  {% empty %}
-	  <tr><td colspan="7">No hay usuarios que coincidan con la búsqueda.</td></tr>
+	  <tr><td colspan="9">No hay usuarios que coincidan con la búsqueda.</td></tr>
 	  {% endfor %}
 	</table>
 </div>

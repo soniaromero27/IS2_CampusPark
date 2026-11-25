@@ -59,8 +59,9 @@ def marcar_reservados_ahora(espacios, usuario=None):
             
 
 def analizar_patente(patente, es_moto=False):
+    
     vehiculo = (
-        Vehiculo.objects.filter(matricula=patente)
+        Vehiculo.objects.filter(matricula=patente, usuario__user__is_active=True)
         .select_related("usuario", "usuario__tipo", "usuario__facultad")
         .first()
     )

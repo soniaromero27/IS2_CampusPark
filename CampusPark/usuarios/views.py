@@ -6,9 +6,10 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.db import transaction
 from django.db.models import Q, Count
 from django.shortcuts import redirect, render, get_object_or_404
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.core.exceptions import ValidationError
 from django.views.decorators.http import require_POST
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from .decorators import personal_requerido, admin_requerido
 from .forms import RegistroUsuarioForm, UsuarioEditForm, CambiarPasswordForm, TipoUsuarioForm
@@ -303,3 +304,62 @@ def detalle_usuario_view(request, pk):
         "usuarios/perfil.html",
         {"perfil": perfil, "solo_lectura": True},
     )
+
+@admin_requerido
+@require_POST
+def cambiar_estado_usuario_view(request, pk):
+    """
+    Deshabilita o vuelve a habilitar a un usuario (User.is_active). Un usuario
+    deshabilitado pierde la sesión en su próxima petición, no puede volver a
+    ingresar (para el login es como si no existiera), se le cancelan las
+    reservas pendientes y su vehículo se trata como no registrado al ingresar.
+    Sólo Administrador, y no se puede deshabilitar la propia cuenta.
+    """
+    from django.utils import timezone
+
+    from estacionamiento.models import Reserva, TipoEstadoReserva
+
+    perfil = get_object_or_404(Usuario.objects.select_related("user"), pk=pk)
+
+    # Volver a la lista con los mismos filtros (sólo se acepta una URL del propio sitio).
+    siguiente = request.POST.get("next", "")
+    if not url_has_allowed_host_and_scheme(
+        siguiente, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        siguiente = reverse("usuarios:lista")
+
+    if perfil.user_id == request.user.pk:
+        messages.error(request, "No podés deshabilitar tu propia cuenta.")
+        return redirect(siguiente)
+
+    user = perfil.user
+    with transaction.atomic():
+        user.is_active = not user.is_active
+        user.save(update_fields=["is_active"])
+
+        canceladas = 0
+        if not user.is_active:
+            # Sólo las pendientes que todavía no terminaron: las vencidas las
+            # sigue marcando el proceso de reservas vencidas.
+            estado_cancelada, _ = TipoEstadoReserva.objects.get_or_create(
+                nombre_estado_reserva="Cancelada"
+            )
+            canceladas = Reserva.objects.filter(
+                usuario=perfil,
+                tipo_estado_reserva__nombre_estado_reserva="Pendiente",
+                fecha_fin__gte=timezone.now(),
+            ).update(tipo_estado_reserva=estado_cancelada)
+
+    if user.is_active:
+        messages.success(
+            request, f"Se habilitó a {perfil.nombre} {perfil.apellido}: ya puede volver a ingresar."
+        )
+    else:
+        texto = (
+            f"Se deshabilitó a {perfil.nombre} {perfil.apellido}: se le cerró la sesión "
+            f"y no podrá ingresar al sistema."
+        )
+        if canceladas:
+            texto += f" Se cancelaron {canceladas} reserva{'s' if canceladas != 1 else ''} pendiente{'s' if canceladas != 1 else ''}."
+        messages.success(request, texto)
+    return redirect(siguiente)

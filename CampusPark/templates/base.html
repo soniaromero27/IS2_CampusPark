@@ -1,9 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+	<link rel="icon" type="image/png" href="{% static 'img/logo-emblema.png' %}">
     <title>CampusPark</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -74,19 +76,21 @@
         }
 
         .logo-icon {
-            width: 42px;
-            height: 42px;
+            height: 54px;
+            padding: 4px 6px;
             background: white;
-            color: #174a86;
             border-radius: 10px;
 
             display: flex;
             align-items: center;
             justify-content: center;
-
-            font-size: 22px;
-            font-weight: bold;
             flex-shrink: 0;
+        }
+
+        .logo-icon img {
+            height: 100%;
+            width: auto;
+            display: block;
         }
 
         .logo-text {
@@ -440,6 +444,16 @@
             padding-left: 18px;
         }
 
+        /* ===== AVISO DE CAMPO REQUERIDO ===== */
+
+        .req-msg {
+            display: block;
+            margin-top: 4px;
+            color: #b91c1c;
+            font-size: 13px;
+            font-weight: 600;
+        }
+		
         /* ===== PIE DE PÁGINA ===== */
 
         footer {
@@ -554,9 +568,7 @@
 
         @media (max-width: 480px) {
             .logo-icon {
-                width: 36px;
-                height: 36px;
-                font-size: 18px;
+                height: 42px;
             }
 
             .logo-text {
@@ -644,7 +656,7 @@
         <a href="{% url 'inicio' %}" class="logo">
 
             <div class="logo-icon">
-                P
+                <img src="{% static 'img/logo-emblema.png' %}" alt="Logo de CampusPark">
             </div>
 
             <span class="logo-text">
@@ -956,6 +968,99 @@
         });
     })();
     </script>
+
+<script>
+    // Campos requeridos: al intentar enviar un formulario con campos obligatorios
+    // vacíos, no se envía y se muestra "*este campo es requerido" en rojo bajo
+    // TODOS los campos obligatorios (no sólo bajo el que falta).
+    // - Un formulario con data-req-siempre muestra los avisos desde que carga la página.
+    // - Se desactiva la validación nativa del navegador (novalidate), que sólo marca
+    //   el primer campo vacío; las demás validaciones (formato, rangos) las sigue
+    //   haciendo el servidor con los formularios de Django.
+    // - El formulario de cerrar sesión (data-logout) queda exento.
+    (function () {
+        var TEXTO = "*este campo es requerido";
+
+        // Lista de campos obligatorios del formulario (un solo ítem por grupo de radios).
+        function requeridos(form) {
+            var grupos = {}, lista = [];
+            Array.prototype.forEach.call(form.elements, function (el) {
+                if (!el.required || el.type === "hidden" || !el.name) { return; }
+                if (el.type === "radio") {
+                    if (grupos[el.name]) { return; }
+                    grupos[el.name] = true;
+                    lista.push({ el: el, radio: true });
+                } else if (!el.disabled) {
+                    lista.push({ el: el, radio: false });
+                }
+            });
+            return lista;
+        }
+
+        function estaVacio(item, form) {
+            var el = item.el;
+            if (item.radio) {
+                var marcados = form.querySelectorAll(
+                    'input[type="radio"][name="' + CSS.escape(el.name) + '"]:checked'
+                );
+                return marcados.length === 0;
+            }
+            if (el.type === "checkbox") { return !el.checked; }
+            if (el.type === "file") { return el.files.length === 0; }
+            return el.value.trim() === "";
+        }
+
+        function mostrar(form, items) {
+            Array.prototype.forEach.call(form.querySelectorAll(".req-msg"), function (m) { m.remove(); });
+            items.forEach(function (item) {
+                var el = item.el;
+                var msg = document.createElement("small");
+                msg.className = "req-msg";
+                msg.textContent = TEXTO;
+                if (item.radio) {
+                    (el.closest(".form-row") || el.parentNode).appendChild(msg);
+                } else {
+                    (el.closest(".pw-wrap") || el).insertAdjacentElement("afterend", msg);
+                }
+            });
+        }
+
+        document.querySelectorAll("form").forEach(function (form) {
+            if (form.hasAttribute("data-logout")) { return; }
+            var items = requeridos(form);
+            if (!items.length) { return; }
+            form.noValidate = true;
+            if (form.hasAttribute("data-req-siempre")) { mostrar(form, items); }
+        });
+
+        // En fase de captura y con stopImmediatePropagation, para que el aviso
+        // "¿desea salir de la página?" no crea que se está enviando el formulario.
+        document.addEventListener("submit", function (e) {
+            var form = e.target;
+            if (!form || form.tagName !== "FORM" || form.hasAttribute("data-logout")) { return; }
+            var items = requeridos(form);
+            if (!items.length) { return; }
+
+            var primero = null;
+            items.forEach(function (item) {
+                if (!primero && estaVacio(item, form)) { primero = item; }
+            });
+            if (!primero) { return; }   // todo completo: se envía normalmente
+
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            mostrar(form, items);
+
+            if (primero.radio) {
+                var fila = primero.el.closest(".form-row") || primero.el;
+                fila.scrollIntoView({ behavior: "smooth", block: "center" });
+            } else {
+                primero.el.scrollIntoView({ behavior: "smooth", block: "center" });
+                primero.el.focus({ preventScroll: true });
+            }
+        }, true);
+    })();
+</script>
 
 </body>
 </html>

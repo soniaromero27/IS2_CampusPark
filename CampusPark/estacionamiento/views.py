@@ -519,7 +519,11 @@ def registrar_ingreso_view(request):
                 
             patente = form.cleaned_data["patente"]
             espacio = form.cleaned_data["espacio"]
-            vehiculo = Vehiculo.objects.filter(matricula=patente).select_related("usuario").first()
+            vehiculo = (
+                Vehiculo.objects.filter(matricula=patente, usuario__user__is_active=True)
+                .select_related("usuario")
+                .first()
+            )
 
             Movimiento.objects.create(
                 patente=patente,

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
 {% url 'usuarios:login' as login_url %}
 <style>
@@ -34,6 +35,16 @@
     background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.3);
   }
 
+  .hero .logo-hero {
+    display: block;
+    width: min(320px, 75%);
+    margin: 0 auto 22px;
+    padding: 14px 18px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  }
+  
   /* ===== Secciones ===== */
   .seccion { margin-top: 52px; }
   .seccion > h2 { text-align: center; margin-bottom: 8px; }
@@ -112,7 +123,7 @@
 
 <!-- PORTADA -->
 <section class="hero">
-  <div class="marca">P</div>
+    <img src="{% static 'img/logo-completo.png' %}" alt="CampusPark" class="logo-hero">
   <h1>Tu estacionamiento universitario, sin vueltas</h1>
   <p class="bajada">
     CampusPark es el sistema de gestión del estacionamiento del campus: reservá tu espacio,

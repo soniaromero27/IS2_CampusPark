@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Registrar usuario</h2>
-<form method="post">
+<form method="post" data-req-siempre>
   {% csrf_token %}
   {{ form.non_field_errors }}
   {% for field in form %}
-	{% if field.help_text %}<small>{{ field.help_text|safe }}</small>{% endif %}
     <div class="form-row">
       <label for="{{ field.id_for_label }}">{{ field.label }}</label>
       {{ field }}
+      {% if field.help_text %}<small>{{ field.help_text|safe }}</small>{% endif %}
       {{ field.errors }}
     </div>
   {% endfor %}

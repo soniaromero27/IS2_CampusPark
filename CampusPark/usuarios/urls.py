@@ -17,6 +17,7 @@ urlpatterns = [
     path("logout/", auth_views.LogoutView.as_view(next_page="usuarios:login"), name="logout"),
     path("lista/", views.lista_usuarios_view, name="lista"),
     path("<int:pk>/", views.detalle_usuario_view, name="detalle"),
+    path("<int:pk>/estado/", views.cambiar_estado_usuario_view, name="cambiar_estado"),
     
     path("solicitudes/", views.lista_solicitudes_view, name="solicitudes"),
     path("solicitudes/<int:pk>/aprobar/", views.aprobar_solicitud_view, name="solicitud_aprobar"),
