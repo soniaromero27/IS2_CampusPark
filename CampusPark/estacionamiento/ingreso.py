@@ -27,6 +27,8 @@ from vehiculos.models import Vehiculo
 
 from .models import Espacio, Movimiento, Reserva, TipoEstado, Zona
 
+from datetime import datetime, time, timedelta
+
 ESTADOS_UTILES = ("Libre", "Reservado")
 
 
@@ -124,6 +126,7 @@ def analizar_patente(patente, es_moto=False):
             .order_by("zona__nombre", "numero")
         )
         marcar_reservados_ahora(espacios, usuario)
+        adjuntar_reservas_hoy(espacios)
         
     for e in espacios:
         e.reserva = por_espacio.get(e.pk)
@@ -207,4 +210,35 @@ def agrupar_por_zona(espacios):
         if e.tipo_estado.nombre_estado == "Libre":
             g["libres"] += 1
     return grupos
+
+def adjuntar_reservas_hoy(espacios):
+    """
+    Agrega a cada espacio el atributo .reservas_hoy: las reservas Pendientes
+    de HOY que todavía no terminaron (futuras o en curso), ordenadas por hora.
+    No se calcula para espacios Ocupados ni Fuera de servicio.
+    """
+    for e in espacios:
+        e.reservas_hoy = []
+
+    candidatos = {
+        e.pk: e for e in espacios
+        if e.tipo_estado.nombre_estado not in ("Ocupado", "Fuera de servicio")
+    }
+    if not candidatos:
+        return
+
+    ahora = timezone.now()
+    inicio_dia = timezone.make_aware(datetime.combine(timezone.localdate(), time.min))
+    fin_dia = inicio_dia + timedelta(days=1)
+
+    reservas = Reserva.objects.filter(
+        espacio_id__in=list(candidatos),
+        tipo_estado_reserva__nombre_estado_reserva="Pendiente",
+        fecha_inicio__lt=fin_dia,
+        fecha_fin__gte=ahora,
+    ).order_by("fecha_inicio")
+
+    for r in reservas:
+        candidatos[r.espacio_id].reservas_hoy.append(r)
+
 

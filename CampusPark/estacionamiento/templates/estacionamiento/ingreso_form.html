@@ -37,6 +37,7 @@
   }
   .caja .num { font-weight: 700; font-size: 17px; }
   .caja .sub { font-size: 12px; }
+  .caja .sub.res-hoy { font-size: 11px; font-weight: 600; opacity: 0.9; }
   .caja.discap { background: #dbeafe; border-color: #2563eb; color: #1e3a8a; }
   .caja.reservado { background: #fef3c7; border-color: #d97706; color: #78350f; }
   .caja.conflicto { background: #fee2e2; border-color: #dc2626; color: #7f1d1d; }
@@ -176,6 +177,9 @@
                   {% elif e.reserva %}Reserva {{ e.reserva.fecha_inicio|time:"H:i" }}–{{ e.reserva.fecha_fin|time:"H:i" }}
                   {% else %}Libre{% endif %}
                 </span>
+                {% for r in e.reservas_hoy %}
+                  <span class="sub res-hoy">Reserva {{ r.fecha_inicio|time:"H:i" }}–{{ r.fecha_fin|time:"H:i" }}</span>
+                {% endfor %}
               </span>
             </label>
             {% endfor %}
@@ -194,6 +198,7 @@
                     {% if form.espacio.value|stringformat:"s" == e.pk|stringformat:"s" %}selected{% endif %}>
               {{ e.zona }} - N°{{ e.numero }}
               {% if e.reserva %}· Reserva {{ e.reserva.fecha_inicio|time:"H:i" }}–{{ e.reserva.fecha_fin|time:"H:i" }}{% endif %}
+              {% for r in e.reservas_hoy %}· Reserva hoy {{ r.fecha_inicio|time:"H:i" }}–{{ r.fecha_fin|time:"H:i" }}{% endfor %}
               {% if e.ocupante %}· Ocupado por {{ e.ocupante.patente }} (se reubica){% elif e.conflicto %}· {{ e.tipo_estado }} (se reasigna){% elif not e.seleccionable %}· {{ e.tipo_estado }}{% endif %}
             </option>
             {% endfor %}
